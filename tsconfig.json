@@ -1,7 +1,10 @@
 {
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    { "path": "./apps/api/tsconfig.json" },
+    { "path": "./apps/dashboard/tsconfig.app.json" },
+    { "path": "./apps/dashboard/tsconfig.node.json" },
+    { "path": "./apps/widget/tsconfig.json" },
+    { "path": "./packages/shared-types/tsconfig.json" }
   ]
 }

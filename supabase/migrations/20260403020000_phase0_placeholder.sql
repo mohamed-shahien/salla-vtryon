@@ -1,0 +1,2 @@
+-- Phase 0 placeholder migration file.
+-- Real schema migrations begin in Phase 2 according to the approved plan.

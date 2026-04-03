@@ -1,75 +1,79 @@
-# React + TypeScript + Vite
+# Virtual Try-On for Salla
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AI-powered Virtual Try-On SaaS for Salla merchants.
 
-Currently, two official plugins are available:
+This repository follows the governance and planning documents under `docs/` and is currently scoped to **Phase 0 - Project Setup & Infrastructure** only.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Source of truth
 
-## React Compiler
+Read these before non-trivial work:
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+- `AGENTS.md`
+- `docs/00-governance/SKILL.md`
+- `docs/01-product/prd-virtual-tryon.md`
+- `docs/02-architecture/erd-virtual-tryon.md`
+- `docs/02-architecture/salla-virtual-tryon-decision-pack.md`
+- `docs/03-delivery/virtual-tryon-execution-plan.md`
+- `docs/03-delivery/virtual-tryon-project-plan.md`
+- `docs/99-tracking/STATUS.md`
+- `docs/99-tracking/DECISIONS_LOG.md`
+- `docs/99-tracking/HANDOFF.md`
 
-Note: This will impact Vite dev & build performances.
+## Locked stack
 
-## Expanding the ESLint configuration
+- Dashboard: React 19 + Vite + shadcn/ui + Tailwind CSS 4
+- API: Node.js 20 + Express 5
+- Database: Supabase PostgreSQL + Realtime via direct Supabase JS client
+- AI: Replicate API
+- Storage/CDN: Bunny.net
+- Storefront widget: Vanilla JS bundled as IIFE
+- Validation: Zod
+- Image processing: Sharp
+- Dashboard state: Zustand
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Workspace layout
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```txt
+apps/
+  api/
+  dashboard/
+  widget/
+docs/
+packages/
+  shared-types/
+supabase/
+  migrations/
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Phase 0 scope
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+This scaffold is limited to infrastructure only:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- monorepo workspace setup
+- API bootstrap with `GET /health`
+- dashboard bootstrap shell
+- widget bootstrap shell
+- shared types package
+- environment template
+- Supabase migrations directory
+
+Do not treat this scaffold as feature-complete. Salla auth, webhook handling, credit logic, AI jobs, and storefront behavior are intentionally left for later phases.
+
+## Commands
+
+Run from the repository root:
+
+```bash
+pnpm install
+pnpm dev:api
+pnpm dev:dashboard
+pnpm dev:widget
+pnpm build
+pnpm lint
+```
+
+API health check after starting the backend:
+
+```bash
+curl http://localhost:3001/health
 ```
