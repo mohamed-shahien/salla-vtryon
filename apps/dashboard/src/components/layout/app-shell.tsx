@@ -1,11 +1,15 @@
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { useAppShell } from '@/hooks/use-app-shell'
+import { logoutCurrentMerchant } from '@/lib/api'
 import { navigationItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 export function AppShell() {
   const { mode, setMode } = useAppShell()
+  const identity = useAuthStore((state) => state.identity)
+  const setUnauthenticated = useAuthStore((state) => state.setUnauthenticated)
 
   return (
     <div className="min-h-screen px-4 py-6 text-slate-100 md:px-6">
@@ -13,16 +17,14 @@ export function AppShell() {
         <aside className="rounded-[24px] border border-white/10 bg-slate-900/70 p-5">
           <div className="space-y-3">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-sky-300/80">
-                Phase 0
-              </p>
+              <p className="text-sm uppercase tracking-[0.3em] text-sky-300/80">Phase 1</p>
               <h1 className="mt-2 text-2xl font-semibold">
                 Virtual Try-On for Salla
               </h1>
             </div>
             <p className="text-sm leading-7 text-slate-300">
-              Workspace shell for the merchant dashboard. Auth, credits, jobs,
-              and storefront logic are intentionally deferred to later phases.
+              External React dashboard for merchants. Salla OAuth happens through
+              the backend, not through embedded iframe auth.
             </p>
           </div>
 
@@ -57,13 +59,32 @@ export function AppShell() {
               <button
                 type="button"
                 onClick={() =>
-                  setMode(mode === 'standalone-dev' ? 'embedded-ready' : 'standalone-dev')
+                  setMode(mode === 'standalone-dev' ? 'external-oauth' : 'standalone-dev')
                 }
                 className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-slate-100 transition hover:border-white/20 hover:bg-white/15"
               >
                 Toggle
               </button>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+              Auth Context
+            </p>
+            <p className="mt-2 text-white">merchant_id: {identity?.merchant_id ?? 'unknown'}</p>
+            <p className="mt-1 text-white">user_id: {identity?.user_id ?? 'unknown'}</p>
+            <p className="mt-1 text-white">store_name: {identity?.store_name ?? 'unknown'}</p>
+            <button
+              type="button"
+              onClick={async () => {
+                await logoutCurrentMerchant()
+                setUnauthenticated()
+              }}
+              className="mt-4 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-slate-100 transition hover:border-white/20 hover:bg-white/15"
+            >
+              Logout
+            </button>
           </div>
         </aside>
 

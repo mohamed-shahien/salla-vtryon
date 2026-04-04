@@ -30,7 +30,9 @@ export function getConfigReadiness() {
     },
     app: {
       configured:
-        isConfigured(env.JWT_SECRET) && isConfigured(env.ENCRYPTION_KEY),
+        isConfigured(env.ENCRYPTION_KEY) &&
+        isConfigured(env.DASHBOARD_URL) &&
+        (isConfigured(env.SALLA_CALLBACK_URL) || isConfigured(env.API_URL)),
     },
   }
 }

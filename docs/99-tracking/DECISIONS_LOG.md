@@ -1,6 +1,51 @@
 # DECISIONS LOG
 
-## 2026-04-03 — Repository governance layer added
+## 2026-04-04 - External dashboard replaces embedded dashboard auth
+**Status:** accepted
+
+By direct user instruction, the merchant dashboard is now an external React dashboard rather than a Salla embedded page.
+
+The canonical auth direction is now:
+- merchant starts OAuth from the external dashboard
+- Salla redirects back to the backend callback URL with `code` and `state`
+- backend exchanges the code for Salla tokens
+- backend stores tokens server-side only
+- backend hands off a local dashboard session to the React app
+
+**Reason:**  
+The user explicitly confirmed an external dashboard and requested that embedded auth be removed.
+
+**Impact:**  
+- `embedded.init()`, `embedded.auth.getToken()`, and `embedded.ready()` are no longer part of the dashboard flow
+- the frontend now assumes an external login page and callback handoff flow
+- backend auth now centers on Salla OAuth callback handling plus a local dashboard session
+- the backend still keeps webhook-based token handling for `app.store.authorize`
+
+**Official docs note:**  
+Salla documentation states that Custom Mode is for testing use cases and that Easy Mode is the only allowed mode for published App Store apps. The external dashboard choice is therefore being implemented as a user-directed architecture decision for the current project path.
+
+## 2026-04-03 - Direct Salla token auth replaces local JWT session
+**Status:** accepted
+
+By direct user instruction, the project will not use a local JWT or convenience session for merchant authentication.
+
+The canonical auth direction is now:
+- frontend gets the embedded Salla token
+- backend introspects the Salla token directly
+- protected backend routes accept the Salla token as the auth credential
+
+**Reason:**  
+The user explicitly requested to rely on Salla authentication directly whenever the user has a valid token, instead of layering a local JWT session on top.
+
+**Impact:**  
+- `JWT_SECRET` is no longer part of the auth flow
+- `POST /api/auth/verify` validates the Salla token directly
+- `GET /api/auth/me` uses Salla token auth directly
+- future protected API routes should use the same direct Salla token model unless the user changes direction again
+
+---
+
+## 2026-04-03 - Repository governance layer added
 **Status:** accepted
 
 Created the governance layer that controls Codex execution through:
@@ -16,7 +61,7 @@ All future implementation must read and respect the governance docs before codin
 
 ---
 
-## 2026-04-03 — Stack locked for MVP
+## 2026-04-03 - Stack locked for MVP
 **Status:** accepted
 
 The stack is fixed to:
@@ -35,7 +80,7 @@ No stack substitutions without explicit user approval.
 
 ---
 
-## 2026-04-03 — Hybrid architecture confirmed
+## 2026-04-03 - Hybrid architecture confirmed
 **Status:** accepted
 
 The platform will use:
@@ -51,7 +96,7 @@ Do not attempt embedded-only or widget-only architecture.
 
 ---
 
-## 2026-04-03 — Tenant identity fixed to merchant_id
+## 2026-04-03 - Tenant identity fixed to merchant_id
 **Status:** accepted
 
 The primary tenant identifier is:
@@ -68,7 +113,7 @@ Auth, data modeling, and access checks must all center around merchant identity.
 
 ---
 
-## 2026-04-03 — Database-driven queue chosen for MVP
+## 2026-04-03 - Database-driven queue chosen for MVP
 **Status:** accepted
 
 Async job processing will use Supabase/PostgreSQL-backed job polling instead of Redis/BullMQ.
@@ -81,7 +126,7 @@ Job processor implementation must use DB-safe polling, locking, timeout handling
 
 ---
 
-## 2026-04-03 — Canonical self endpoint fixed
+## 2026-04-03 - Canonical self endpoint fixed
 **Status:** accepted
 
 Canonical endpoint:
@@ -102,7 +147,7 @@ Only add alias compatibility for `/api/merchants/me` if needed later.
 
 ---
 
-## 2026-04-03 — Credit policy fixed for MVP
+## 2026-04-03 - Credit policy fixed for MVP
 **Status:** accepted
 
 Credit rules:
@@ -121,7 +166,7 @@ Any job creation flow that skips these rules is invalid.
 
 ---
 
-## 2026-04-03 — Out-of-scope features locked
+## 2026-04-03 - Out-of-scope features locked
 **Status:** accepted
 
 Not in MVP:

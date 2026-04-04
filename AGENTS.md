@@ -70,7 +70,7 @@ No custom AI training in MVP.
 ### 1) Hybrid Architecture
 Use the approved hybrid model:
 
-- **Salla Embedded App** for merchant dashboard and merchant-side app entry
+- **External React Dashboard** for merchant operations outside the Salla iframe
 - **Storefront Widget** for shopper experience on product pages
 - **Backend API** for orchestration, credits, uploads, products proxy, webhooks, and AI jobs
 - **Supabase** as system database and job state store
@@ -119,14 +119,14 @@ The widget must remain:
 
 ## Salla Rules
 
-### Embedded Auth
+### External Dashboard Auth
 Dashboard auth flow must follow:
-1. `embedded.init()`
-2. `embedded.auth.getToken()`
-3. send token to backend
-4. backend introspects token
-5. create short-lived app session
-6. `embedded.ready()`
+1. merchant starts Salla OAuth from the external dashboard
+2. Salla redirects to the backend callback with `code` and `state`
+3. backend exchanges the code for access and refresh tokens
+4. backend fetches merchant identity from Salla user info
+5. backend stores encrypted tokens server-side
+6. backend creates a short-lived app session for dashboard access
 
 ### Webhooks
 Handle Salla webhooks through:

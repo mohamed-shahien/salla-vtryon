@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-type AppShellMode = 'standalone-dev' | 'embedded-ready'
+type AppShellMode = 'standalone-dev' | 'external-oauth'
 
 interface AppShellState {
   mode: AppShellMode
@@ -8,6 +8,6 @@ interface AppShellState {
 }
 
 export const useAppShellStore = create<AppShellState>((set) => ({
-  mode: 'standalone-dev',
+  mode: 'external-oauth',
   setMode: (mode) => set({ mode }),
 }))

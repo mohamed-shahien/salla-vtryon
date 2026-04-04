@@ -1,5 +1,7 @@
+import { AuthGate } from '@/components/auth/auth-gate'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
+import { AuthCallbackPage } from '@/components/auth/auth-callback-page'
 import { AppShell } from '@/components/layout/app-shell'
 import { CreditsPage } from '@/pages/credits-page'
 import { DashboardPage } from '@/pages/dashboard-page'
@@ -11,7 +13,14 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppShell />}>
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route
+          element={
+            <AuthGate>
+              <AppShell />
+            </AuthGate>
+          }
+        >
           <Route index element={<Navigate replace to="/dashboard" />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/try-on" element={<TryOnPage />} />

@@ -10,8 +10,8 @@ export function DashboardPage() {
     <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
       <Panel
         eyebrow="Governance"
-        title="Phase 0 governance verified"
-        description="AGENTS.md and the docs tree were read before implementation. This page is only a shell for future merchant features."
+        title="Phase 1 governance verified"
+        description="AGENTS.md and the docs tree were read before implementation. The dashboard now assumes external OAuth rather than embedded auth."
       >
         <div className="grid gap-3 text-sm text-slate-300 md:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -24,7 +24,7 @@ export function DashboardPage() {
           </div>
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
             <p className="text-slate-400">Current Phase</p>
-            <p className="mt-2 font-medium text-white">Project Setup</p>
+            <p className="mt-2 font-medium text-white">Salla Integration</p>
           </div>
         </div>
       </Panel>
@@ -32,7 +32,7 @@ export function DashboardPage() {
       <Panel
         eyebrow="Environment"
         title="Infrastructure readiness snapshot"
-        description="This panel reads the backend Phase 0 health endpoint and shows which external integrations are configured locally."
+        description="This panel reads the backend health endpoint and shows which external integrations are configured for the external dashboard flow."
       >
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
