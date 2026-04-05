@@ -7,7 +7,7 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     error: 'RATE_LIMITED',
-    message: 'Too many requests for the Phase 0 API shell.',
+    message: 'Too many requests for the current API surface.',
   },
 })
 

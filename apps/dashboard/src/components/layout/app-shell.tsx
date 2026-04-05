@@ -17,14 +17,14 @@ export function AppShell() {
         <aside className="rounded-[24px] border border-white/10 bg-slate-900/70 p-5">
           <div className="space-y-3">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-sky-300/80">Phase 1</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-sky-300/80">Phase 6/7</p>
               <h1 className="mt-2 text-2xl font-semibold">
                 Virtual Try-On for Salla
               </h1>
             </div>
             <p className="text-sm leading-7 text-slate-300">
-              External React dashboard for merchants. Salla OAuth happens through
-              the backend, not through embedded iframe auth.
+              External React dashboard for merchant operations. Shopper uploads and
+              try-on execution belong to the storefront widget, not this dashboard.
             </p>
           </div>
 
@@ -75,6 +75,10 @@ export function AppShell() {
             <p className="mt-2 text-white">merchant_id: {identity?.merchant_id ?? 'unknown'}</p>
             <p className="mt-1 text-white">user_id: {identity?.user_id ?? 'unknown'}</p>
             <p className="mt-1 text-white">store_name: {identity?.store_name ?? 'unknown'}</p>
+            <p className="mt-1 text-white">plan: {identity?.merchant.plan ?? 'unknown'}</p>
+            <p className="mt-1 text-white">
+              credits_remaining: {identity?.credits?.remaining_credits ?? 'unknown'}
+            </p>
             <button
               type="button"
               onClick={async () => {
@@ -95,12 +99,13 @@ export function AppShell() {
                 Locked Stack
               </p>
               <h2 className="text-3xl font-semibold">
-                React 19, Tailwind 4, Zustand, Router, shadcn-ready scaffold
+                Merchant control dashboard on top of a widget-first shopper flow
               </h2>
             </div>
             <div className="grid gap-2 text-sm text-slate-300 md:text-right">
-              <span>Canonical API shell: `GET /health`</span>
-              <span>Tenant identity remains `merchant_id` only</span>
+              <span>Core API live: `GET /api/credits`, `GET /api/products`, `GET /api/jobs`, `GET /api/widget/settings`, `PUT /api/widget/settings`</span>
+              <span>Background worker active: pending jobs are picked up asynchronously</span>
+              <span>Storefront widget handles shopper image upload and result polling</span>
             </div>
           </header>
 

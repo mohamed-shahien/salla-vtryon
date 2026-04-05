@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'node:crypto'
+import { createHmac } from 'node:crypto'
 
 import type { Response } from 'express'
 
@@ -10,7 +10,7 @@ const SESSION_TTL_MS = 1000 * 60 * 60 * 8
 const HANDOFF_TTL_MS = 1000 * 60 * 5
 const STATE_TTL_MS = 1000 * 60 * 10
 
-interface DashboardSessionPayload {
+export interface DashboardSessionPayload {
   merchant_uuid: string
   merchant_id: number
   user_id: number | null
@@ -19,17 +19,15 @@ interface DashboardSessionPayload {
   exp: string
 }
 
-interface StoredHandoff {
+interface DashboardAuthHandoffPayload {
   session: DashboardSessionPayload
-  expiresAt: number
+  exp: string
 }
 
 interface OAuthStatePayload {
   redirectTo: string
   exp: string
 }
-
-const handoffStore = new Map<string, StoredHandoff>()
 
 function getSessionSigningKey() {
   if (!env.ENCRYPTION_KEY?.trim()) {
@@ -79,20 +77,27 @@ function createSessionPayload(input: {
   } satisfies DashboardSessionPayload
 }
 
-function serializeSession(session: DashboardSessionPayload) {
-  const payload = base64UrlEncode(JSON.stringify(session))
+function serializeSignedPayload(value: object) {
+  const payload = base64UrlEncode(JSON.stringify(value))
   const signature = signPayload(payload)
 
   return `${payload}.${signature}`
 }
 
-function cleanupExpiringMaps() {
-  const now = Date.now()
+function parseSignedPayload<T>(value: string, errorCode: string, errorMessage: string) {
+  const [payload, signature] = value.split('.')
+  if (!payload || !signature) {
+    throw new AppError(errorMessage, 400, errorCode)
+  }
 
-  for (const [token, value] of handoffStore.entries()) {
-    if (value.expiresAt <= now) {
-      handoffStore.delete(token)
-    }
+  if (signPayload(payload) !== signature) {
+    throw new AppError(errorMessage, 400, errorCode)
+  }
+
+  try {
+    return JSON.parse(base64UrlDecode(payload)) as T
+  } catch {
+    throw new AppError(errorMessage, 400, errorCode)
   }
 }
 
@@ -167,27 +172,24 @@ export function createDashboardSession(input: {
 }
 
 export function createDashboardAuthHandoff(session: DashboardSessionPayload) {
-  cleanupExpiringMaps()
-
-  const token = randomBytes(24).toString('base64url')
-  handoffStore.set(token, {
+  return serializeSignedPayload({
     session,
-    expiresAt: Date.now() + HANDOFF_TTL_MS,
-  })
-
-  return token
+    exp: new Date(Date.now() + HANDOFF_TTL_MS).toISOString(),
+  } satisfies DashboardAuthHandoffPayload)
 }
 
 export function consumeDashboardAuthHandoff(token: string) {
-  cleanupExpiringMaps()
+  const parsed = parseSignedPayload<DashboardAuthHandoffPayload>(
+    token,
+    'INVALID_AUTH_HANDOFF',
+    'Auth handoff is invalid or expired.',
+  )
 
-  const match = handoffStore.get(token)
-  if (!match) {
+  if (Number.isNaN(Date.parse(parsed.exp)) || Date.parse(parsed.exp) <= Date.now()) {
     throw new AppError('Auth handoff is invalid or expired.', 400, 'INVALID_AUTH_HANDOFF')
   }
 
-  handoffStore.delete(token)
-  return match.session
+  return parsed.session
 }
 
 export function readDashboardSession(cookieHeader?: string | null) {
@@ -198,16 +200,16 @@ export function readDashboardSession(cookieHeader?: string | null) {
     return null
   }
 
-  const [payload, signature] = rawCookie.split('.')
-  if (!payload || !signature) {
+  let session: DashboardSessionPayload
+  try {
+    session = parseSignedPayload<DashboardSessionPayload>(
+      rawCookie,
+      'INVALID_DASHBOARD_SESSION',
+      'Dashboard session is invalid.',
+    )
+  } catch {
     return null
   }
-
-  if (signPayload(payload) !== signature) {
-    return null
-  }
-
-  const session = JSON.parse(base64UrlDecode(payload)) as DashboardSessionPayload
 
   if (Date.parse(session.exp) <= Date.now()) {
     return null
@@ -217,7 +219,7 @@ export function readDashboardSession(cookieHeader?: string | null) {
 }
 
 export function setDashboardSessionCookie(response: Response, session: DashboardSessionPayload) {
-  response.cookie(SESSION_COOKIE_NAME, serializeSession(session), {
+  response.cookie(SESSION_COOKIE_NAME, serializeSignedPayload(session), {
     httpOnly: true,
     sameSite: 'lax',
     secure: env.NODE_ENV === 'production',

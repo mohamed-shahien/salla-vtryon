@@ -6,8 +6,8 @@ import { AppShell } from '@/components/layout/app-shell'
 import { CreditsPage } from '@/pages/credits-page'
 import { DashboardPage } from '@/pages/dashboard-page'
 import { JobsPage } from '@/pages/jobs-page'
+import { ProductsPage } from '@/pages/products-page'
 import { SettingsPage } from '@/pages/settings-page'
-import { TryOnPage } from '@/pages/tryon-page'
 
 function App() {
   return (
@@ -23,7 +23,8 @@ function App() {
         >
           <Route index element={<Navigate replace to="/dashboard" />} />
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/try-on" element={<TryOnPage />} />
+          <Route path="/try-on" element={<Navigate replace to="/products" />} />
+          <Route path="/products" element={<ProductsPage />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/credits" element={<CreditsPage />} />
           <Route path="/settings" element={<SettingsPage />} />

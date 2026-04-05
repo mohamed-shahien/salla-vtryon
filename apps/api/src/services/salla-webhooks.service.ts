@@ -9,7 +9,6 @@ import {
   PLAN_CREDIT_ALLOCATIONS,
   cancelPendingJobsForMerchant,
   deactivateMerchant,
-  ensureCreditsRecord,
   ensureMerchantRecord,
   findMerchantBySallaMerchantId,
   setMerchantPlan,
@@ -18,6 +17,7 @@ import {
   type SupportedPlan,
   updateMerchantSettings,
 } from './merchant.service.js'
+import { resetMerchantCredits } from './credits.service.js'
 import { inferMerchantPlanFromSalla } from './salla-api.service.js'
 
 const webhookSchema = z.object({
@@ -212,11 +212,11 @@ async function handleInstalled(payload: SallaWebhookPayload) {
     planStatus: 'active',
   })
 
-  await ensureCreditsRecord({
-    merchantId: merchant.id,
-    totalCredits: PLAN_CREDIT_ALLOCATIONS.free,
-    usedCredits: 0,
-  })
+  await resetMerchantCredits(
+    merchant.id,
+    PLAN_CREDIT_ALLOCATIONS.free,
+    'Free plan credits assigned on app installation',
+  )
 }
 
 async function handleStoreAuthorize(payload: SallaWebhookPayload) {
@@ -260,11 +260,17 @@ async function handleSubscriptionStarted(payload: SallaWebhookPayload) {
   }
 
   const plan = await resolveSubscriptionPlan(payload)
-  await setMerchantPlan({
+  const result = await setMerchantPlan({
     sallaMerchantId: payload.merchant,
     plan,
     planStatus: 'active',
   })
+
+  await resetMerchantCredits(
+    result.merchant.id,
+    PLAN_CREDIT_ALLOCATIONS[plan],
+    `Credits reset for ${plan} subscription start`,
+  )
 }
 
 async function handleSubscriptionRenewed(payload: SallaWebhookPayload) {
@@ -273,11 +279,17 @@ async function handleSubscriptionRenewed(payload: SallaWebhookPayload) {
   }
 
   const plan = await resolveSubscriptionPlan(payload)
-  await setMerchantPlan({
+  const result = await setMerchantPlan({
     sallaMerchantId: payload.merchant,
     plan,
     planStatus: 'active',
   })
+
+  await resetMerchantCredits(
+    result.merchant.id,
+    PLAN_CREDIT_ALLOCATIONS[plan],
+    `Credits reset for ${plan} subscription renewal`,
+  )
 }
 
 async function handleSubscriptionStopped(payload: SallaWebhookPayload) {
@@ -289,11 +301,17 @@ async function handleSubscriptionStopped(payload: SallaWebhookPayload) {
 }
 
 async function handleTrialStarted(payload: SallaWebhookPayload) {
-  await setMerchantPlan({
+  const result = await setMerchantPlan({
     sallaMerchantId: payload.merchant,
     plan: 'trial',
     planStatus: 'active',
   })
+
+  await resetMerchantCredits(
+    result.merchant.id,
+    PLAN_CREDIT_ALLOCATIONS.trial,
+    'Trial credits assigned',
+  )
 }
 
 async function handleTrialStopped(payload: SallaWebhookPayload) {

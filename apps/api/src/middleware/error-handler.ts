@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express'
+import { MulterError } from 'multer'
 import { ZodError } from 'zod'
 
 import { AppError, isErrorWithStatusCode } from '../utils/app-error.js'
@@ -24,6 +25,18 @@ export function errorHandler(
       error: 'VALIDATION_ERROR',
       message: 'Request validation failed.',
       details: error.flatten(),
+    })
+    return
+  }
+
+  if (error instanceof MulterError) {
+    response.status(400).json({
+      error: 'UPLOAD_VALIDATION_ERROR',
+      message: error.message,
+      details: {
+        code: error.code,
+        field: error.field,
+      },
     })
     return
   }

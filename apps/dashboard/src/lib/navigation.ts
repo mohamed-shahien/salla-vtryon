@@ -1,7 +1,7 @@
 export const navigationItems = [
-  { to: '/dashboard', label: 'Overview', badge: 'Shell' },
-  { to: '/try-on', label: 'Try-On', badge: 'Stub' },
-  { to: '/jobs', label: 'Jobs', badge: 'Stub' },
-  { to: '/credits', label: 'Credits', badge: 'Stub' },
-  { to: '/settings', label: 'Settings', badge: 'Stub' },
+  { to: '/dashboard', label: 'Overview', badge: 'Live' },
+  { to: '/products', label: 'Products', badge: 'Live' },
+  { to: '/jobs', label: 'Jobs', badge: 'Live' },
+  { to: '/credits', label: 'Credits', badge: 'Live' },
+  { to: '/settings', label: 'Settings', badge: 'Live' },
 ]

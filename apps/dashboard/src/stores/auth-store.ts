@@ -1,15 +1,15 @@
 import { create } from 'zustand'
 
-import type { VerifiedMerchantIdentity } from '@/lib/api'
+import type { DashboardMerchantIdentity } from '@/lib/api'
 
 type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'error'
 
 interface AuthState {
   status: AuthStatus
-  identity: VerifiedMerchantIdentity | null
+  identity: DashboardMerchantIdentity | null
   error: string | null
   setLoading: () => void
-  setAuthenticated: (identity: VerifiedMerchantIdentity) => void
+  setAuthenticated: (identity: DashboardMerchantIdentity) => void
   setUnauthenticated: () => void
   setError: (message: string) => void
 }

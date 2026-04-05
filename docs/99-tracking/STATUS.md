@@ -4,27 +4,29 @@
 Virtual Try-On for Salla
 
 ## Current Phase
-Phase 1 - Salla Integration
+Phase 6/7 - Merchant Controls & Storefront Widget
 
 ## Current Task
-Realign Phase 1 around an external React dashboard with Salla OAuth callback auth instead of embedded auth.
+Align the product to the clarified business flow:
+- merchant dashboard manages widget settings, enabled products, credits, and jobs
+- storefront widget handles shopper upload, async job creation, polling, and result display
 
 ## Overall Status
-Phase 0 scaffold is complete enough to support concrete Phase 1 integrations.
-Governance files were verified before implementation.
-The locked stack, hybrid architecture, and approved phase order were confirmed against `AGENTS.md` and `docs/`.
-External dashboard auth is now the canonical direction by direct user override.
-Phase 1 now includes real backend integration points for Salla webhooks, merchant-side API access, and an external OAuth callback flow.
+The platform now has:
+- working external Salla OAuth for the merchant dashboard
+- encrypted Salla token storage and webhook handling
+- live credits, products, and jobs APIs
+- an active async job processor
+- merchant dashboard pages for products, jobs, credits, and widget settings
+- public storefront widget APIs
+- a real widget bundle that can request config, upload a shopper photo, create a job, poll status, and render the result when AI succeeds
+
+The remaining blocker is external:
+- Replicate is currently failing real completions with `402 Payment Required` and `429 Too Many Requests` until billing/payment is fixed
 
 ## Done
-- Verified governance entrypoints:
-  - `AGENTS.md`
-  - `docs/00-governance/*`
-  - `docs/01-product/*`
-  - `docs/02-architecture/*`
-  - `docs/03-delivery/*`
-  - `docs/99-tracking/*`
-- Confirmed locked stack:
+- Re-read `AGENTS.md` and the governance/product/architecture/delivery/tracking docs before continuing
+- Preserved the locked stack:
   - React 19 + Vite + shadcn/ui + Tailwind CSS 4
   - Node.js 20 + Express 5
   - Supabase direct client
@@ -34,90 +36,104 @@ Phase 1 now includes real backend integration points for Salla webhooks, merchan
   - Zustand
   - Zod
   - Sharp
-- Confirmed canonical architecture:
-  - Salla embedded dashboard
-  - backend orchestration layer
-  - storefront widget
-  - async AI job model
-  - `merchant_id` / `salla_merchant_id` as tenant identity
-- Confirmed phase order from Phase 0 through Phase 9
-- Converted the repository into a workspace monorepo
-- Added root workspace config in `package.json` and `pnpm-workspace.yaml`
-- Added shared `.env.example`
-- Bootstrapped `apps/api`, `apps/dashboard`, `apps/widget`, `packages/shared-types`, and `supabase/`
-- Added `supabase/config.toml` and root Supabase helper scripts
-- Replaced embedded auth with external OAuth assumptions:
+- Preserved the direct user override to keep the dashboard external
+- Completed the auth and merchant runtime baseline:
   - `GET /api/auth/salla/start`
   - `GET /api/auth/salla/callback`
-  - `POST /api/auth/verify` now completes an OAuth handoff into a local dashboard session
-  - `GET /api/auth/me` now reads the local dashboard session cookie
-  - frontend auth gate now shows an external sign-in flow instead of waiting for embedded SDK auth
-  - frontend callback route now finalizes auth from a `handoff` query parameter
-- Added merchant persistence helpers backed by Supabase:
-  - merchant ensure/find helpers keyed by `salla_merchant_id`
-  - plan and credits upsert helpers
-  - encrypted token storage helpers
-- Added backend webhook integration:
+  - `POST /api/auth/verify`
+  - `GET /api/auth/me`
   - `POST /webhooks/salla`
-  - raw-body signature verification against `X-Salla-Signature`
-  - idempotency reserve/mark flow in `webhook_events`
-  - handlers for install, authorize, uninstall, subscription, trial, and settings events
-- Added Salla admin API service bootstrap:
-  - access token decryption
-  - refresh-token lock to avoid duplicate refresh races
-  - product list/detail helpers
-- Added the first real schema migration in-repo:
-  - `supabase/migrations/20260404181500_initial_schema.sql`
-  - creates `merchants`, `credits`, `tryon_jobs`, `webhook_events`, and `credit_transactions`
-  - creates `update_updated_at`, `deduct_credit`, and `refund_credit`
-- Fixed workspace env loading:
-  - API now loads the root `.env`
-  - dashboard Vite config now uses the workspace root as `envDir`
-- Updated `AGENTS.md` so the repository’s highest-precedence local instruction now reflects the external dashboard decision
-- Verified:
-  - `pnpm lint`
-  - `pnpm build`
-  - OAuth authorization URL generation using the configured public callback URL
-  - invalid `POST /webhooks/salla` request is rejected with `401`
+- Completed the core merchant APIs:
+  - `GET /api/credits`
+  - `GET /api/products`
+  - `GET /api/products/:id`
+  - `POST /api/upload`
+  - `POST /api/jobs`
+  - `GET /api/jobs`
+  - `GET /api/jobs/:id`
+- Completed the async job engine:
+  - Replicate prediction submission and polling
+  - Bunny result upload
+  - timeout handling
+  - refund protection on failure
+- Re-aligned the dashboard to the clarified merchant use case:
+  - `/products` now manages widget product eligibility instead of merchant photo upload
+  - `/settings` now manages widget enablement, all-vs-selected mode, button text, and default category
+  - `/jobs` and `/credits` remain merchant monitoring surfaces
+- Added normalized widget settings handling on the backend:
+  - merchant settings are normalized server-side
+  - selected product ids are validated and stored in the merchant settings JSON
+- Added public storefront widget APIs:
+  - `GET /api/widget/config/:merchantId`
+  - `GET /api/widget/settings`
+  - `PUT /api/widget/settings`
+  - `POST /api/widget/job`
+  - `GET /api/widget/job/:id`
+- Added signed widget tokens so shopper requests can create and poll jobs without using dashboard auth cookies
+- Added a real storefront widget runtime:
+  - body-mounted CTA with fixed positioning as the current stable storefront strategy
+  - modal panel
+  - two shopper entry actions:
+    - camera capture
+    - file upload
+  - category selection
+  - blur/loading overlay during generation
+  - async job submission
+  - polling
+  - result state with download link
+- Simplified storefront installation by making the widget a single JavaScript bundle with runtime CSS injection
+- Added automatic `productId` discovery from `window.salla.config.get('page.id')` when the storefront provides it
+- Added fallback `productId` discovery from Salla slider markup such as `details-slider-<productId>`
+- Added slider image extraction so the widget can send the first main product image from the slider to the backend as the garment image source
+- Hardened widget bootstrap so it can survive delayed Salla web component hydration while remaining mounted at the end of `body`
+- Added automatic re-bootstrap on `load` and DOM mutations so the widget can survive delayed Salla web component hydration
+- Changed widget startup order so the CTA root is injected first, then widget config/product eligibility is loaded asynchronously
+- Rebuilt the storefront widget around a Shadow DOM host to isolate its styles and interactions from the Salla storefront theme
+- Changed widget interaction flow so clicking the CTA opens the dialog immediately, then loads product/widget config inside the modal
+- Fixed a widget init runtime crash that could leave the CTA visible but without bound click behavior
+- Expanded storefront product detection to include slider ids, wishlist `data-id`, and gallery `data-fslightbox` markup
+- Added clearer shopper-facing error messaging when product context is missing or the product is not enabled
+- Stopped forcing a fresh widget-config fetch on every CTA press; the widget now reuses warmed config and waits briefly for delayed product context before failing
+- Added shopper-friendly failure mapping for backend/AI throttling errors such as Replicate `429` and `402`
+
+## Verification
+- `pnpm.cmd lint`
+- `pnpm.cmd build`
+- `GET /health` returns `Phase 6/7 - Merchant Controls & Storefront Widget`
+- `GET /api/widget/config/939837259?productId=1220688598` returned `200` and a real widget token for the active merchant/product
+- `POST /api/widget/job` succeeded for a real merchant/product and created real jobs from a shopper-style uploaded image
+- `GET /api/widget/job/:id` returned the created widget jobs
+- Worker failure path is still verified live:
+  - Replicate returned `402 Payment Required`
+  - Replicate also returned `429 Too Many Requests`
+  - both failures marked the job `failed`
+  - merchant credits returned to `10 / 0`
 
 ## In Progress
-- Runtime verification still depends on a real Salla OAuth round-trip through the public callback URL
-- The currently running local API process must be restarted so it reloads the updated `.env` values and auth flow
-- The current Supabase project does not yet have the app schema applied, so auth currently stops at the first merchant lookup
-
-## Next Recommended Task
-Finish the runtime validation of the external OAuth path, then move into Phase 2:
-
-- apply `supabase/migrations/20260404181500_initial_schema.sql` to the active Supabase project
-- restart `pnpm dev:api` and `pnpm dev:dashboard`
-- trigger `GET /api/auth/salla/start` from the local dashboard
-- complete the Salla OAuth approval flow so the backend callback stores merchant tokens and redirects back to `localhost`
-- verify `GET /api/auth/me` and then verify merchant product access end-to-end using the new Salla API service
-- then start Phase 2 with `/api/products`, `/api/credits`, and migration alignment in-repo
+- Full successful `completed` widget result verification is blocked until Replicate billing/payment is usable
 
 ## Blockers
-- A real Salla OAuth callback round-trip is still needed to verify the new external dashboard session flow end-to-end
-- The current local API watch process still has stale environment values loaded until it is restarted
-- The active Supabase project is missing the application schema, which currently causes `MERCHANT_LOOKUP_FAILED`
-- The `DATABASE_URL` currently configured is not reachable from this environment over direct PostgreSQL, so the schema could not be applied automatically from the agent
-- Salla docs state Custom Mode is for testing and Easy Mode is the only allowed mode for published App Store apps, so publication constraints must be re-evaluated later if this external dashboard direction is kept
+- Replicate account state is still blocking real completions:
+  - `402 Payment Required`
+  - `429 Too Many Requests` until a payment method is added
+- The staged DB hardening migration is still not applied remotely because the direct Postgres host in `DATABASE_URL` is not reachable from this environment:
+  - `supabase/migrations/20260405011500_phase3_credit_jobs.sql`
+
+## Next Recommended Task
+Fix the external Replicate blocker, then run one successful storefront widget job end-to-end:
+
+1. add billing credit and a payment method to the Replicate account behind `REPLICATE_API_TOKEN`
+2. load the real storefront widget on an enabled product page
+3. upload a shopper photo through the widget
+4. confirm the worker writes `result_image_url`
+5. confirm the widget renders the final Bunny result image
+6. then apply the staged Phase 3 migration from an environment that can reach the direct Postgres host
 
 ## Canonical Implementation Direction
 - Keep the hybrid architecture
-- Keep `merchant_id` as tenant identity
-- Keep the dashboard external
-- Keep backend trust rooted in Salla OAuth plus server-side token storage
-- Keep local dashboard auth as a short-lived app session, not JWT
+- Keep the external dashboard
+- Keep `merchant_id` / `salla_merchant_id` as tenant identity
+- Keep the dashboard merchant-only
+- Keep shopper uploads in the storefront widget
 - Keep AI processing asynchronous
-- Keep the widget as a lightweight IIFE bundle
-- Keep stack and phase order unchanged
-
-## Notes
-- `GET /api/auth/me` is the canonical self endpoint
-- `GET /health` reports config readiness for Salla, Supabase, Replicate, Bunny, and app secrets
-- Supabase CLI is not installed globally; root helper scripts use `pnpm dlx supabase`
-- `DECISIONS_LOG.md` was updated because the dashboard architecture changed
-- The app now depends on the root workspace `.env`; package-local `.env` files are no longer assumed
-- `app.subscription.*` payloads can omit `plan_name` in Salla docs, so the webhook handler uses Salla lookup first and then a conservative paid-tier fallback if the plan still cannot be resolved
-- `API_URL` is now used as the public backend base for the Salla OAuth callback, while the dashboard itself continues to run locally on `DASHBOARD_URL`
-- `supabase-js` confirmed that the current project’s Data API cannot access the expected tables yet because the schema has not been applied to the active project
+- Keep credits atomic and refundable on AI failure

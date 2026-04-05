@@ -14,12 +14,18 @@ import {
   createDashboardSession,
   createOauthState,
   setDashboardSessionCookie,
+  type DashboardSessionPayload,
 } from '../services/dashboard-session.service.js'
-import { ensureMerchantRecord, storeMerchantOauthTokens } from '../services/merchant.service.js'
+import {
+  ensureMerchantRecord,
+  getDashboardMerchantProfile,
+  storeMerchantOauthTokens,
+} from '../services/merchant.service.js'
 import {
   buildSallaAuthorizationUrl,
   exchangeAuthorizationCode,
   fetchMerchantUserInfo,
+  fetchMerchantUserInfoForMerchant,
 } from '../services/salla-api.service.js'
 import { AppError } from '../utils/app-error.js'
 
@@ -33,6 +39,28 @@ const callbackQuerySchema = z.object({
 })
 
 export const authRouter = Router()
+
+async function buildDashboardIdentity(session: DashboardSessionPayload) {
+  const profile = await getDashboardMerchantProfile(session.merchant_uuid)
+
+  let sallaProfile: Awaited<ReturnType<typeof fetchMerchantUserInfoForMerchant>> | null = null
+
+  try {
+    sallaProfile = await fetchMerchantUserInfoForMerchant(session.merchant_id)
+  } catch (error) {
+    console.warn(
+      '[api] failed to fetch live Salla profile for dashboard identity snapshot',
+      error,
+    )
+  }
+
+  return {
+    ...session,
+    merchant: profile.merchant,
+    credits: profile.credits,
+    salla_profile: sallaProfile,
+  }
+}
 
 authRouter.get('/salla/start', authLimiter, (request, response, next) => {
   try {
@@ -89,23 +117,28 @@ authRouter.post('/verify', authLimiter, async (request, response, next) => {
     setDashboardSessionCookie(response, session)
     response.status(200).json({
       ok: true,
-      data: session,
+      data: await buildDashboardIdentity(session),
     })
   } catch (error) {
     next(error)
   }
 })
 
-authRouter.get('/me', authLimiter, requireDashboardSession, (request: DashboardAuthenticatedRequest, response) => {
-  if (!request.dashboardSession) {
-    throw new AppError('Dashboard session context is missing.', 401, 'DASHBOARD_AUTH_REQUIRED')
-  }
+authRouter.get(
+  '/me',
+  authLimiter,
+  requireDashboardSession,
+  async (request: DashboardAuthenticatedRequest, response) => {
+    if (!request.dashboardSession) {
+      throw new AppError('Dashboard session context is missing.', 401, 'DASHBOARD_AUTH_REQUIRED')
+    }
 
-  response.status(200).json({
-    ok: true,
-    data: request.dashboardSession,
-  })
-})
+    response.status(200).json({
+      ok: true,
+      data: await buildDashboardIdentity(request.dashboardSession),
+    })
+  },
+)
 
 authRouter.post('/logout', authLimiter, (_request, response) => {
   clearDashboardSessionCookie(response)

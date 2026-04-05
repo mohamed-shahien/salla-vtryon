@@ -1,6 +1,122 @@
-const DEFAULT_API_URL = 'http://localhost:3001'
+export type WidgetCategory = 'upper_body' | 'lower_body' | 'dresses'
+export type WidgetJobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'canceled'
 
-export function getWidgetApiUrl(path: string) {
+export interface WidgetConfigResponse {
+  merchant_id: number
+  current_product_id: string | null
+  overall_enabled: boolean
+  current_product_enabled: boolean
+  widget_mode: 'all' | 'selected'
+  widget_products: number[]
+  button_text: string
+  default_category: WidgetCategory
+  widget_token: string | null
+  reason: string | null
+}
+
+export interface WidgetJobResponse {
+  id: string
+  merchant_id: string
+  status: WidgetJobStatus
+  user_image_url: string
+  product_image_url: string
+  product_id: string | null
+  category: WidgetCategory
+  result_image_url: string | null
+  replicate_prediction_id: string | null
+  error_message: string | null
+  metadata: Record<string, unknown>
+  processing_started_at: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface ApiEnvelope<TData> {
+  ok: true
+  data: TData
+}
+
+function normalizeBaseUrl(value: string) {
+  return value.replace(/\/$/, '')
+}
+
+async function parseApiResponse<TData>(response: Response, fallbackMessage: string) {
+  if (!response.ok) {
+    let message = fallbackMessage
+
+    try {
+      const payload = (await response.json()) as { message?: string }
+      if (payload.message) {
+        message = payload.message
+      }
+    } catch {
+      const text = await response.text()
+      if (text) {
+        message = text
+      }
+    }
+
+    throw new Error(message)
+  }
+
+  return (await response.json()) as ApiEnvelope<TData>
+}
+
+export function getWidgetApiUrl(baseUrl: string, path: string) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return `${DEFAULT_API_URL}${normalizedPath}`
+  return `${normalizeBaseUrl(baseUrl)}${normalizedPath}`
+}
+
+export async function fetchWidgetConfig(baseUrl: string, merchantId: number, productId: string) {
+  const url = new URL(getWidgetApiUrl(baseUrl, `/api/widget/config/${merchantId}`))
+  url.searchParams.set('productId', productId)
+
+  const response = await fetch(url.toString())
+
+  return parseApiResponse<WidgetConfigResponse>(
+    response,
+    `Widget config request failed with status ${response.status}`,
+  )
+}
+
+export async function createWidgetJob(
+  baseUrl: string,
+  token: string,
+  file: File,
+  category: WidgetCategory,
+  productImageUrl?: string | null,
+) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('category', category)
+  if (productImageUrl) {
+    formData.append('product_image_url', productImageUrl)
+  }
+
+  const response = await fetch(getWidgetApiUrl(baseUrl, '/api/widget/job'), {
+    method: 'POST',
+    headers: {
+      'X-Widget-Token': token,
+    },
+    body: formData,
+  })
+
+  return parseApiResponse<WidgetJobResponse>(
+    response,
+    `Widget job creation failed with status ${response.status}`,
+  )
+}
+
+export async function fetchWidgetJob(baseUrl: string, token: string, jobId: string) {
+  const response = await fetch(getWidgetApiUrl(baseUrl, `/api/widget/job/${jobId}`), {
+    headers: {
+      'X-Widget-Token': token,
+    },
+  })
+
+  return parseApiResponse<WidgetJobResponse>(
+    response,
+    `Widget job lookup failed with status ${response.status}`,
+  )
 }

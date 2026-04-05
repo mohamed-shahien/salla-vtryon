@@ -24,15 +24,25 @@ const envSchema = z.object({
   SALLA_ADMIN_API_BASE_URL: z.string().default('https://api.salla.dev/admin/v2'),
   SALLA_ACCOUNTS_BASE_URL: z.string().default('https://accounts.salla.sa'),
   SALLA_CALLBACK_URL: z.string().optional(),
-  SALLA_OAUTH_SCOPES: z.string().default('offline_access'),
+  SALLA_OAUTH_SCOPES: z.string().default('offline_access settings.read products.read'),
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
   DATABASE_URL: z.string().optional(),
   REPLICATE_API_TOKEN: z.string().optional(),
+  REPLICATE_MODEL: z.string().default('cuuupid/idm-vton'),
+  REPLICATE_MODEL_VERSION: z.string().optional(),
+  REPLICATE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
+  REPLICATE_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
   BUNNY_STORAGE_ZONE: z.string().optional(),
   BUNNY_API_KEY: z.string().optional(),
   BUNNY_CDN_URL: z.string().optional(),
+  JOB_PROCESSOR_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  JOB_PROCESSOR_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
+  JOB_PROCESSOR_BATCH_SIZE: z.coerce.number().int().min(1).max(20).default(5),
   ENCRYPTION_KEY: z.string().optional(),
 })
 

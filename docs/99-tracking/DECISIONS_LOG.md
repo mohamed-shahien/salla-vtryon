@@ -1,5 +1,36 @@
 # DECISIONS LOG
 
+## 2026-04-05 - Shopper try-on flow is storefront-widget-only
+**Status:** accepted
+
+By direct user instruction, the canonical shopper try-on flow now lives in the storefront widget only.
+
+The dashboard is merchant-facing control software for:
+- credits
+- jobs
+- widget settings
+- product enablement
+
+The shopper-facing flow is:
+- widget appears on eligible product pages
+- shopper captures or uploads a photo
+- widget sends the shopper photo plus the selected product to the backend
+- backend creates the async try-on job
+- result returns to the shopper inside the widget
+
+**Reason:**  
+The user clarified that the dashboard should not be the main surface for uploading shopper photos or running try-on as a merchant workflow. The primary business flow is storefront-first.
+
+**Impact:**  
+- dashboard product browsing is now for widget eligibility management, not merchant selfie upload
+- dashboard settings are now centered on widget enablement, mode, button text, and default category
+- the canonical public widget routes are now:
+  - `GET /api/widget/config/:merchantId`
+  - `POST /api/widget/job`
+  - `GET /api/widget/job/:id`
+- older dashboard try-on page behavior should be treated as superseded by this clarified product direction
+- backend job orchestration remains valid and is reused by the widget flow
+
 ## 2026-04-04 - External dashboard replaces embedded dashboard auth
 **Status:** accepted
 

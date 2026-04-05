@@ -8,7 +8,20 @@ const MERCHANT_SELECT =
 const CREDITS_SELECT =
   'id,merchant_id,total_credits,used_credits,reset_at,created_at,updated_at'
 
-const DEFAULT_SETTINGS = {
+const WIDGET_SETTING_CATEGORIES = ['upper_body', 'lower_body', 'dresses'] as const
+
+export type WidgetCategory = (typeof WIDGET_SETTING_CATEGORIES)[number]
+export type WidgetMode = 'all' | 'selected'
+
+export interface WidgetSettings {
+  widget_enabled: boolean
+  widget_mode: WidgetMode
+  widget_products: number[]
+  widget_button_text: string
+  default_category: WidgetCategory
+}
+
+const DEFAULT_SETTINGS: WidgetSettings = {
   widget_enabled: true,
   widget_mode: 'all',
   widget_products: [],
@@ -42,6 +55,157 @@ export interface MerchantRecord {
   uninstalled_at: string | null
   created_at: string
   updated_at: string
+}
+
+export interface CreditsRecord {
+  id: string
+  merchant_id: string
+  total_credits: number
+  used_credits: number
+  reset_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DashboardMerchantProfile {
+  merchant: Pick<
+    MerchantRecord,
+    | 'id'
+    | 'salla_merchant_id'
+    | 'store_name'
+    | 'plan'
+    | 'plan_status'
+    | 'is_active'
+    | 'settings'
+    | 'installed_at'
+    | 'uninstalled_at'
+    | 'created_at'
+    | 'updated_at'
+  >
+  credits: {
+    total_credits: number
+    used_credits: number
+    remaining_credits: number
+    reset_at: string | null
+  } | null
+}
+
+function getPlanCredits(plan: string | null | undefined) {
+  if (!plan) {
+    return PLAN_CREDIT_ALLOCATIONS.free
+  }
+
+  if (plan in PLAN_CREDIT_ALLOCATIONS) {
+    return PLAN_CREDIT_ALLOCATIONS[plan as SupportedPlan]
+  }
+
+  return PLAN_CREDIT_ALLOCATIONS.free
+}
+
+function normalizeBoolean(value: unknown, fallback: boolean) {
+  if (typeof value === 'boolean') {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+
+    if (normalized === 'true' || normalized === '1') {
+      return true
+    }
+
+    if (normalized === 'false' || normalized === '0') {
+      return false
+    }
+  }
+
+  return fallback
+}
+
+function normalizeWidgetMode(value: unknown): WidgetMode {
+  if (typeof value === 'string' && value.trim().toLowerCase() === 'selected') {
+    return 'selected'
+  }
+
+  return 'all'
+}
+
+function normalizeWidgetCategory(value: unknown): WidgetCategory {
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+
+    if (WIDGET_SETTING_CATEGORIES.includes(normalized as WidgetCategory)) {
+      return normalized as WidgetCategory
+    }
+  }
+
+  return DEFAULT_SETTINGS.default_category
+}
+
+function normalizeWidgetProducts(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => {
+          if (typeof item === 'number') {
+            return Number.isInteger(item) && item > 0 ? item : null
+          }
+
+          if (typeof item === 'string' && item.trim().length > 0) {
+            const parsed = Number(item)
+            return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+          }
+
+          return null
+        })
+        .filter((item): item is number => item != null),
+    ),
+  )
+}
+
+export function normalizeWidgetSettings(settings: Record<string, unknown> | null | undefined) {
+  const source = settings ?? {}
+  const rawMode = source.widget_mode ?? source.mode
+  const rawProducts = source.widget_products ?? source.products
+  const rawButtonText = source.widget_button_text ?? source.button_text
+  const rawEnabled = source.widget_enabled ?? source.enabled
+  const rawDefaultCategory = source.default_category ?? source.category
+
+  const buttonText =
+    typeof rawButtonText === 'string' && rawButtonText.trim().length > 0
+      ? rawButtonText.trim()
+      : DEFAULT_SETTINGS.widget_button_text
+
+  return {
+    widget_enabled: normalizeBoolean(rawEnabled, DEFAULT_SETTINGS.widget_enabled),
+    widget_mode: normalizeWidgetMode(rawMode),
+    widget_products: normalizeWidgetProducts(rawProducts),
+    widget_button_text: buttonText,
+    default_category: normalizeWidgetCategory(rawDefaultCategory),
+  } satisfies WidgetSettings
+}
+
+export function isWidgetEnabledForProduct(settings: WidgetSettings, productId: string | number) {
+  if (!settings.widget_enabled) {
+    return false
+  }
+
+  if (settings.widget_mode === 'all') {
+    return true
+  }
+
+  const normalizedProductId =
+    typeof productId === 'number' ? productId : Number.parseInt(productId, 10)
+
+  if (!Number.isInteger(normalizedProductId) || normalizedProductId <= 0) {
+    return false
+  }
+
+  return settings.widget_products.includes(normalizedProductId)
 }
 
 function getSupabaseClient() {
@@ -103,6 +267,23 @@ export async function findMerchantBySallaMerchantId(sallaMerchantId: number) {
   return data ?? null
 }
 
+export async function findMerchantById(merchantId: string) {
+  const db = getSupabaseClient()
+
+  const { data, error } = await db
+    .from('merchants')
+    .select(MERCHANT_SELECT)
+    .eq('id', merchantId)
+    .limit(1)
+    .maybeSingle<MerchantRecord>()
+
+  if (error) {
+    throw new AppError(error.message, 500, 'MERCHANT_LOOKUP_FAILED')
+  }
+
+  return data ?? null
+}
+
 export async function ensureMerchantRecord(options: {
   sallaMerchantId: number
   storeName?: string | null
@@ -129,10 +310,13 @@ export async function ensureMerchantRecord(options: {
     }
 
     if (Object.keys(patch).length === 0) {
+      await ensureMerchantCreditsBaseline(existing)
       return existing
     }
 
-    return patchMerchant(existing.id, patch)
+    const merchant = await patchMerchant(existing.id, patch)
+    await ensureMerchantCreditsBaseline(merchant)
+    return merchant
   }
 
   const db = getSupabaseClient()
@@ -156,6 +340,7 @@ export async function ensureMerchantRecord(options: {
     throw new AppError(error.message, 500, 'MERCHANT_CREATE_FAILED')
   }
 
+  await ensureMerchantCreditsBaseline(data)
   return data
 }
 
@@ -186,6 +371,38 @@ export async function ensureCreditsRecord(options: {
   }
 
   return data
+}
+
+export async function ensureMerchantCreditsBaseline(merchant: MerchantRecord) {
+  const existingCredits = await getCreditsForMerchant(merchant.id)
+
+  if (existingCredits) {
+    return existingCredits
+  }
+
+  return ensureCreditsRecord({
+    merchantId: merchant.id,
+    totalCredits: getPlanCredits(merchant.plan),
+    usedCredits: 0,
+    resetAt: new Date().toISOString(),
+  })
+}
+
+export async function getCreditsForMerchant(merchantId: string) {
+  const db = getSupabaseClient()
+
+  const { data, error } = await db
+    .from('credits')
+    .select(CREDITS_SELECT)
+    .eq('merchant_id', merchantId)
+    .limit(1)
+    .maybeSingle<CreditsRecord>()
+
+  if (error) {
+    throw new AppError(error.message, 500, 'CREDITS_LOOKUP_FAILED')
+  }
+
+  return data ?? null
 }
 
 export async function ensureMerchantFromEmbeddedAuth(sallaMerchantId: number) {
@@ -247,12 +464,7 @@ export async function setMerchantPlan(options: {
 
   return {
     merchant: updatedMerchant,
-    credits: await ensureCreditsRecord({
-      merchantId: merchant.id,
-      totalCredits: PLAN_CREDIT_ALLOCATIONS[options.plan],
-      usedCredits: options.planStatus === 'active' ? 0 : undefined,
-      resetAt: options.planStatus === 'active' ? new Date().toISOString() : null,
-    }),
+    credits: await getCreditsForMerchant(merchant.id),
   }
 }
 
@@ -275,11 +487,43 @@ export async function updateMerchantSettings(
   const merchant = await ensureMerchantRecord({ sallaMerchantId })
 
   return patchMerchant(merchant.id, {
-    settings: {
-      ...(merchant.settings ?? DEFAULT_SETTINGS),
+    settings: normalizeWidgetSettings({
+      ...normalizeWidgetSettings(merchant.settings),
       ...settings,
-    },
+    }),
   })
+}
+
+export async function getMerchantWidgetSettings(merchantId: string) {
+  const merchant = await findMerchantById(merchantId)
+
+  if (!merchant) {
+    throw new AppError('Merchant record was not found.', 404, 'MERCHANT_NOT_FOUND')
+  }
+
+  return normalizeWidgetSettings(merchant.settings)
+}
+
+export async function updateMerchantWidgetSettings(
+  merchantId: string,
+  settingsPatch: Partial<WidgetSettings>,
+) {
+  const merchant = await findMerchantById(merchantId)
+
+  if (!merchant) {
+    throw new AppError('Merchant record was not found.', 404, 'MERCHANT_NOT_FOUND')
+  }
+
+  const nextSettings = normalizeWidgetSettings({
+    ...normalizeWidgetSettings(merchant.settings),
+    ...settingsPatch,
+  })
+
+  const updatedMerchant = await patchMerchant(merchantId, {
+    settings: nextSettings,
+  })
+
+  return normalizeWidgetSettings(updatedMerchant.settings)
 }
 
 export async function cancelPendingJobsForMerchant(sallaMerchantId: number) {
@@ -341,4 +585,38 @@ export async function updateMerchantRefreshedTokens(options: {
     refresh_token_encrypted: encryptText(options.refreshToken),
     token_expires_at: toIsoDateTime(options.expiresAt),
   })
+}
+
+export async function getDashboardMerchantProfile(merchantId: string) {
+  const merchant = await findMerchantById(merchantId)
+
+  if (!merchant) {
+    throw new AppError('Merchant record was not found.', 404, 'MERCHANT_NOT_FOUND')
+  }
+
+  const credits = await ensureMerchantCreditsBaseline(merchant)
+
+  return {
+    merchant: {
+      id: merchant.id,
+      salla_merchant_id: merchant.salla_merchant_id,
+      store_name: merchant.store_name,
+      plan: merchant.plan,
+      plan_status: merchant.plan_status,
+      is_active: merchant.is_active,
+      settings: normalizeWidgetSettings(merchant.settings),
+      installed_at: merchant.installed_at,
+      uninstalled_at: merchant.uninstalled_at,
+      created_at: merchant.created_at,
+      updated_at: merchant.updated_at,
+    },
+    credits: credits
+      ? {
+          total_credits: credits.total_credits,
+          used_credits: credits.used_credits,
+          remaining_credits: Math.max(credits.total_credits - credits.used_credits, 0),
+          reset_at: credits.reset_at,
+        }
+      : null,
+  } satisfies DashboardMerchantProfile
 }

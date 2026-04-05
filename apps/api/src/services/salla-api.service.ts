@@ -50,6 +50,20 @@ interface SallaUserInfoResponse {
   }
 }
 
+export interface SallaMerchantUserInfo {
+  id: number
+  name: string
+  email: string
+  mobile?: string
+  role?: string
+  merchant: {
+    id: number
+    username?: string
+    name: string
+    avatar?: string
+  }
+}
+
 const refreshLocks = new Map<number, Promise<string>>()
 
 function isTokenExpired(expiresAt: string | null) {
@@ -135,6 +149,10 @@ async function refreshMerchantAccessToken(sallaMerchantId: number) {
 async function getUsableMerchantAccessToken(sallaMerchantId: number) {
   const { merchant, accessToken } = await getMerchantTokensForApi(sallaMerchantId)
 
+  if (!merchant.token_expires_at) {
+    return accessToken
+  }
+
   if (!isTokenExpired(merchant.token_expires_at)) {
     return accessToken
   }
@@ -167,10 +185,24 @@ async function runMerchantApiRequest<TData>(
   }
 
   if (!response.ok) {
+    let upstreamMessage = ''
+
+    try {
+      upstreamMessage = await response.text()
+    } catch {
+      upstreamMessage = ''
+    }
+
+    const scopeHint =
+      (response.status === 401 || response.status === 403) && path.startsWith('/products')
+        ? ' Ensure the Salla app has `products.read` scope and then re-authorize the merchant.'
+        : ''
+
     throw new AppError(
-      `Salla admin request failed with status ${response.status}.`,
+      `Salla admin request failed with status ${response.status}.${scopeHint}`,
       response.status,
       'SALLA_ADMIN_REQUEST_FAILED',
+      upstreamMessage ? { upstream: upstreamMessage } : undefined,
     )
   }
 
@@ -330,5 +362,10 @@ export async function fetchMerchantUserInfo(accessToken: string) {
     throw new AppError('Salla user info payload is missing merchant identity.', 500, 'SALLA_USER_INFO_INVALID')
   }
 
-  return payload.data
+  return payload.data satisfies SallaMerchantUserInfo
+}
+
+export async function fetchMerchantUserInfoForMerchant(sallaMerchantId: number) {
+  const accessToken = await getUsableMerchantAccessToken(sallaMerchantId)
+  return fetchMerchantUserInfo(accessToken)
 }
