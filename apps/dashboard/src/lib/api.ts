@@ -355,3 +355,21 @@ export async function updateWidgetSettings(input: Partial<MerchantWidgetSettings
     `Widget settings update failed with status ${response.status}`,
   )
 }
+
+export interface EmbedScriptData {
+  merchant_id: number
+  api_url: string
+  script_src: string
+  script_tag: string
+}
+
+export async function fetchEmbedScript() {
+  const response = await fetch('/api/widget/embed-script', {
+    credentials: 'same-origin',
+  })
+
+  return parseApiResponse<EmbedScriptData>(
+    response,
+    `Embed script lookup failed with status ${response.status}`,
+  )
+}

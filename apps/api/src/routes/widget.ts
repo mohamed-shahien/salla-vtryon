@@ -2,6 +2,7 @@ import multer from 'multer'
 import { Router } from 'express'
 import { z } from 'zod'
 
+import { env } from '../config/env.js'
 import {
   requireDashboardSession,
   type DashboardAuthenticatedRequest,
@@ -41,6 +42,7 @@ const widgetSettingsSchema = z.object({
   widget_products: z.array(z.coerce.number().int().positive()).max(500).optional(),
   widget_button_text: z.string().trim().min(1).max(40).optional(),
   default_category: z.enum(TRYON_CATEGORIES).optional(),
+  onboarding_completed: z.boolean().optional(),
 })
 
 const widgetJobBodySchema = z.object({
@@ -115,6 +117,44 @@ widgetRouter.put(
       response.status(200).json({
         ok: true,
         data: settings,
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+widgetRouter.get(
+  '/embed-script',
+  requireDashboardSession,
+  async (request: DashboardAuthenticatedRequest, response, next) => {
+    try {
+      if (!request.dashboardSession) {
+        throw new AppError('Dashboard session context is missing.', 401, 'DASHBOARD_AUTH_REQUIRED')
+      }
+
+      const publicApiUrl = (env.API_URL ?? '').replace(/\/$/, '')
+
+      if (!publicApiUrl) {
+        throw new AppError(
+          'API_URL is not configured. Set it in your environment to generate the embed script.',
+          500,
+          'CONFIGURATION_ERROR',
+        )
+      }
+
+      const merchantId = request.dashboardSession.merchant_id
+      const scriptSrc = `${publicApiUrl}/widget.js`
+      const scriptTag = `<script src="${scriptSrc}" data-merchant-id="${merchantId}" data-api-url="${publicApiUrl}" defer></script>`
+
+      response.status(200).json({
+        ok: true,
+        data: {
+          merchant_id: merchantId,
+          api_url: publicApiUrl,
+          script_src: scriptSrc,
+          script_tag: scriptTag,
+        },
       })
     } catch (error) {
       next(error)

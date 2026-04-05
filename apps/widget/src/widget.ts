@@ -8,6 +8,11 @@ import {
 
 declare const __WIDGET_CSS__: string
 
+// Capture document.currentScript synchronously at IIFE evaluation time.
+// By the time initWidget() runs inside setTimeout, currentScript is already null.
+const BOOTSTRAP_SCRIPT_ELEMENT: HTMLScriptElement | null =
+  document.currentScript instanceof HTMLScriptElement ? document.currentScript : null
+
 declare global {
   interface Window {
     VirtualTryOnWidgetConfig?: {
@@ -64,12 +69,18 @@ interface WidgetElements {
   categoryButtons: HTMLButtonElement[]
 }
 
-function getBootstrapScript() {
-  if (document.currentScript instanceof HTMLScriptElement) {
-    return document.currentScript
+function getBootstrapScript(): HTMLScriptElement | null {
+  // Prefer the element captured at module evaluation time
+  if (BOOTSTRAP_SCRIPT_ELEMENT) {
+    return BOOTSTRAP_SCRIPT_ELEMENT
   }
 
-  return document.querySelector('script[data-merchant-id]') as HTMLScriptElement | null
+  // Fallback: locate by any of the known widget data attributes
+  return (
+    document.querySelector<HTMLScriptElement>('script[data-merchant-id]') ??
+    document.querySelector<HTMLScriptElement>('script[data-api-url]') ??
+    document.querySelector<HTMLScriptElement>('script[src*="widget.js"]')
+  )
 }
 
 function readDatasetValue(
@@ -95,15 +106,66 @@ function readDatasetValue(
   return null
 }
 
-function readSallaProductId() {
-  const value = window.salla?.config?.get?.('page.id')
+function readSallaMerchantId(): string | null {
+  // Try every config key that Salla themes use across versions
+  const configKeys = ['merchant.id', 'store.id', 'merchant_id', 'store_id']
 
-  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
-    return String(value)
+  for (const key of configKeys) {
+    const value = window.salla?.config?.get?.(key)
+
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+      return String(value)
+    }
+
+    if (typeof value === 'string' && /^\d+$/.test(value.trim()) && value.trim() !== '0') {
+      return value.trim()
+    }
   }
 
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim()
+  // Check meta tag: <meta name="merchant-id" content="123">
+  const metaTag = document.querySelector<HTMLMetaElement>(
+    'meta[name="merchant-id"], meta[name="store-id"], meta[property="store:id"]',
+  )
+  if (metaTag?.content && /^\d+$/.test(metaTag.content.trim())) {
+    return metaTag.content.trim()
+  }
+
+  // Check common Salla global objects set by themes
+  for (const key of ['sallaConfig', 'SallaConfig', 'SALLA_CONFIG']) {
+    const obj = (window as Record<string, unknown>)[key]
+    if (obj && typeof obj === 'object') {
+      const candidate = (obj as Record<string, unknown>)
+      const id = candidate.merchantId ?? candidate.merchant_id ?? candidate.storeId ?? candidate.store_id
+      if (typeof id === 'number' && id > 0) return String(id)
+      if (typeof id === 'string' && /^\d+$/.test(id.trim())) return id.trim()
+    }
+  }
+
+  return null
+}
+
+function readSallaProductId(): string | null {
+  // Try every config key Salla themes use for the current product/page entity
+  const configKeys = ['product.id', 'page.id', 'page.entity_id', 'product_id']
+
+  for (const key of configKeys) {
+    const value = window.salla?.config?.get?.(key)
+
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+      return String(value)
+    }
+
+    if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+      return value.trim()
+    }
+  }
+
+  // Meta tag: <meta name="product-id" content="...">
+  const metaTag = document.querySelector<HTMLMetaElement>(
+    'meta[name="product-id"], meta[name="entity-id"]',
+  )
+  if (metaTag?.content && /^\d+$/.test(metaTag.content.trim())) {
+    return metaTag.content.trim()
   }
 
   return null
@@ -166,7 +228,7 @@ function readProductIdFromGalleryMarkup() {
 }
 
 function resolveBootstrapConfig(script: HTMLScriptElement | null): BootstrapConfig | null {
-  const merchantIdValue = readDatasetValue(script, 'merchantId')
+  const merchantIdValue = readDatasetValue(script, 'merchantId') ?? readSallaMerchantId()
   const apiUrlValue = readDatasetValue(script, 'apiUrl') ?? 'http://localhost:3001'
   const initialProductId =
     readDatasetValue(script, 'productId') ??
@@ -178,7 +240,11 @@ function resolveBootstrapConfig(script: HTMLScriptElement | null): BootstrapConf
   const merchantId = merchantIdValue ? Number.parseInt(merchantIdValue, 10) : Number.NaN
 
   if (!Number.isInteger(merchantId) || merchantId <= 0) {
-    console.warn('[widget] merchantId is required via data-merchant-id or VirtualTryOnWidgetConfig')
+    console.error(
+      '[VirtualTryOn] Cannot initialize: merchant ID not found.\n' +
+      'Fix: add data-merchant-id="YOUR_SALLA_ID" to the script tag.\n' +
+      'Example: <script src="..." data-merchant-id="123456" data-api-url="..." defer></script>',
+    )
     return null
   }
 
@@ -220,8 +286,11 @@ function readProductImageFromSlider() {
   for (const selector of selectors) {
     const image = document.querySelector(selector)
 
-    if (image instanceof HTMLImageElement && image.src) {
-      return image.currentSrc || image.src
+    if (image instanceof HTMLImageElement) {
+      const url = image.currentSrc || image.src
+      if (url.startsWith('https://') || url.startsWith('http://')) {
+        return url
+      }
     }
   }
 
@@ -233,20 +302,17 @@ async function waitForBootstrapConfig(
   attempts = 20,
   waitMs = 350,
 ): Promise<BootstrapConfig | null> {
-  let lastResolvedConfig: BootstrapConfig | null = null
-
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const resolvedConfig = resolveBootstrapConfig(script)
 
     if (resolvedConfig) {
-      lastResolvedConfig = resolvedConfig
       return resolvedConfig
     }
 
     await delay(waitMs)
   }
 
-  return lastResolvedConfig
+  return null
 }
 
 function validateShopperFile(file: File | null) {
@@ -524,6 +590,7 @@ async function initWidget() {
 
   try {
     const elements = createWidgetElements()
+    elements.shell.hidden = true  // stay hidden until config confirms widget is enabled
     let widgetConfig: WidgetConfigResponse | null = null
     let configPromise: Promise<WidgetConfigResponse | null> | null = null
     let selectedCategory: WidgetCategory = 'upper_body'
@@ -649,7 +716,17 @@ async function initWidget() {
     }
 
     async function pollJob(jobId: string) {
+      const POLL_TIMEOUT_MS = 3 * 60 * 1000
+      const startedAt = Date.now()
+
       while (!disposed) {
+        if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+          setStage(elements, 'upload')
+          setPreviewProcessing(elements, false)
+          setStatus(elements, 'error', 'استغرقت العملية وقتاً أطول من المتوقع. حاول مرة أخرى.')
+          return
+        }
+
         const currentConfig = widgetConfig
 
         if (!currentConfig?.widget_token) {
@@ -819,7 +896,6 @@ async function initWidget() {
 
     elements.retryButton.addEventListener('click', () => {
       resetForRetry()
-      setStatus(elements, 'info', null)
     })
 
     window.addEventListener(
@@ -862,7 +938,8 @@ function startWidgetBootstrapLifecycle() {
   })
 
   const observer = new MutationObserver(() => {
-    if (document.querySelector('[data-vtryon-widget="storefront"]')) {
+    if (window.__VTRYON_WIDGET_BOOTED__ || document.querySelector('[data-vtryon-widget="storefront"]')) {
+      observer.disconnect()
       return
     }
 

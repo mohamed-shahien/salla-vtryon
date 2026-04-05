@@ -6,6 +6,7 @@ import {
   type TryOnCategory,
 } from './jobs.service.js'
 import {
+  ensureMerchantRecord,
   findMerchantById,
   findMerchantBySallaMerchantId,
   getMerchantWidgetSettings,
@@ -90,10 +91,12 @@ export async function getWidgetConfig(
   sallaMerchantId: number,
   currentProductId?: string | null,
 ) {
-  const merchant = await findMerchantBySallaMerchantId(sallaMerchantId)
+  // Auto-register the merchant on first widget contact — no manual install step required.
+  // The merchant starts on the free plan (10 credits) with the widget enabled by default.
+  let merchant = await findMerchantBySallaMerchantId(sallaMerchantId)
 
   if (!merchant) {
-    return buildDisabledConfig(sallaMerchantId, currentProductId ?? null, 'Merchant is not installed.')
+    merchant = await ensureMerchantRecord({ sallaMerchantId })
   }
 
   const settings = normalizeWidgetSettings(merchant.settings)
@@ -160,14 +163,30 @@ export async function createWidgetTryOnJob(options: {
     buffer: options.shopperImageBuffer,
   })
 
-  const productPayload = await getMerchantProductDetail(
-    widgetContext.merchant_id,
-    widgetContext.product_id,
-  )
-  const productImageUrl =
-    options.productImageUrl && options.productImageUrl.trim().length > 0
-      ? options.productImageUrl.trim()
-      : extractProductImage(productPayload.data)
+  const clientProductImageUrl = options.productImageUrl?.trim() || null
+
+  // Fetch product details from Salla (best-effort).
+  // If OAuth tokens are absent but the widget already sent an image URL, we proceed without them.
+  let productPayload: Awaited<ReturnType<typeof getMerchantProductDetail>> | null = null
+  try {
+    productPayload = await getMerchantProductDetail(
+      widgetContext.merchant_id,
+      widgetContext.product_id,
+    )
+  } catch (fetchError) {
+    if (!clientProductImageUrl) {
+      // No fallback — cannot proceed without at least one image source
+      throw new AppError(
+        'Product image could not be retrieved. Re-authorize the app in your Salla dashboard.',
+        422,
+        'PRODUCT_IMAGE_MISSING',
+      )
+    }
+    // Log and continue — we have a client-provided image URL
+    console.warn('[widget] Salla product fetch failed, using client-provided product image URL', fetchError instanceof Error ? fetchError.message : fetchError)
+  }
+
+  const productImageUrl = clientProductImageUrl ?? extractProductImage(productPayload?.data)
 
   if (!productImageUrl) {
     throw new AppError(
@@ -185,7 +204,7 @@ export async function createWidgetTryOnJob(options: {
     category: options.category ?? settings.default_category,
     metadata: {
       source: 'widget',
-      product_name: extractProductName(productPayload.data),
+      product_name: extractProductName(productPayload?.data ?? null),
       product_thumbnail: productImageUrl,
       upload_storage_path: upload.storage_path,
     },

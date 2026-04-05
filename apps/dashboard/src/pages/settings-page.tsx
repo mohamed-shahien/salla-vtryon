@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Panel } from '@/components/ui/panel'
 import { StatusPill } from '@/components/ui/status-pill'
 import {
   fetchCurrentMerchant,
+  fetchEmbedScript,
   fetchWidgetSettings,
   updateWidgetSettings,
+  type EmbedScriptData,
   type MerchantWidgetSettings,
   type TryOnCategory,
   type WidgetMode,
@@ -39,42 +41,51 @@ export function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ready' | 'failed'>('idle')
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [embedScript, setEmbedScript] = useState<EmbedScriptData | null>(null)
+  const [copied, setCopied] = useState(false)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     let active = true
 
-    async function loadSettings() {
+    async function loadAll() {
       setStatus('loading')
       setError(null)
 
       try {
-        const response = await fetchWidgetSettings()
+        const [settingsResponse, scriptResponse] = await Promise.all([
+          fetchWidgetSettings(),
+          fetchEmbedScript().catch(() => null),
+        ])
 
-        if (!active) {
-          return
-        }
+        if (!active) return
 
-        setSettings(response.data)
-        setDraft(response.data)
+        setSettings(settingsResponse.data)
+        setDraft(settingsResponse.data)
+        if (scriptResponse) setEmbedScript(scriptResponse.data)
         setStatus('ready')
       } catch (loadError) {
-        if (!active) {
-          return
-        }
-
+        if (!active) return
         setStatus('failed')
-        setError(
-          loadError instanceof Error ? loadError.message : 'Failed to load widget settings.',
-        )
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load widget settings.')
       }
     }
 
-    void loadSettings()
+    void loadAll()
 
     return () => {
       active = false
     }
   }, [])
+
+  function handleCopy() {
+    if (!embedScript) return
+    void navigator.clipboard.writeText(embedScript.script_tag).then(() => {
+      setCopied(true)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2500)
+    })
+  }
 
   async function refreshIdentity() {
     const merchant = await fetchCurrentMerchant()
@@ -157,6 +168,32 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-5">
+      {embedScript && (
+        <Panel
+          eyebrow="Installation"
+          title="Add the widget to your Salla store"
+          description="Paste this script tag into your Salla store's custom code section (Settings → Custom Scripts → Before </body>). The widget will appear automatically on every product page."
+        >
+          <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
+            <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-emerald-300">
+              {embedScript.script_tag}
+            </pre>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-5 py-2.5 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/25"
+            >
+              {copied ? 'Copied!' : 'Copy script tag'}
+            </button>
+            <span className="text-xs text-slate-500">
+              Merchant ID: <span className="font-mono text-slate-300">{embedScript.merchant_id}</span>
+            </span>
+          </div>
+        </Panel>
+      )}
+
       <Panel
         eyebrow="Settings"
         title="Storefront widget configuration"

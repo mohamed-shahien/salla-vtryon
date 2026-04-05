@@ -1,47 +1,42 @@
 # ERD - Virtual Try-On
-# Entity Relationship Diagram (ERD)
-# Virtual Try-On — Database Schema
 
-**Database:** Supabase (PostgreSQL 15+)
-**ORM:** None (direct Supabase JS client)
-**Security:** Row Level Security enabled on all tables
+**Database:** Supabase PostgreSQL  
+**Access Pattern:** direct Supabase JS client from the backend  
+**Security Model:** backend-enforced tenancy with RLS enabled
 
 ---
 
 ## Entity Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        SYSTEM ENTITIES                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  MERCHANTS ──────────┬──── 1:1 ────── CREDITS                  │
-│  (source of truth)   │                (balance)                 │
-│                      │                                          │
-│                      ├──── 1:N ────── TRYON_JOBS                │
-│                      │                (AI processing)           │
-│                      │                                          │
-│                      └──── 1:N ────── CREDIT_TRANSACTIONS       │
-│                                       (audit trail)             │
-│                                                                 │
-│  TRYON_JOBS ──────────────── 1:N ──── CREDIT_TRANSACTIONS       │
-│                                       (job-triggered)           │
-│                                                                 │
-│  WEBHOOK_EVENTS (standalone — idempotency)                      │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+The MVP data model is intentionally small and centered on the merchant tenant.
+
+### Core entities
+
+- `merchants`
+- `credits`
+- `credit_transactions`
+- `tryon_jobs`
+- `webhook_events`
+
+### Key rule
+
+Every business record is rooted in the merchant tenant:
+
+- `merchant_id`
+- `salla_merchant_id`
+
+Email and `user_id` are not tenant roots.
 
 ---
 
-## Mermaid ERD (for rendering tools)
+## Mermaid ERD
 
 ```mermaid
 erDiagram
     MERCHANTS ||--|| CREDITS : has
-    MERCHANTS ||--o{ TRYON_JOBS : creates
+    MERCHANTS ||--o{ TRYON_JOBS : owns
     MERCHANTS ||--o{ CREDIT_TRANSACTIONS : logs
-    TRYON_JOBS ||--o| CREDIT_TRANSACTIONS : triggers
+    TRYON_JOBS ||--o| CREDIT_TRANSACTIONS : may_trigger
 
     MERCHANTS {
         uuid id PK
@@ -111,30 +106,31 @@ erDiagram
 
 ---
 
-## Detailed Table Specifications
+## Table Specifications
 
-### 1. MERCHANTS
+### 1. `merchants`
 
-**Purpose:** Source of truth for every Salla merchant that installs the app. One row per store.
+Source of truth for every installed Salla store.
 
-| Column | Type | Constraints | Default | Description |
-|--------|------|-------------|---------|-------------|
-| id | UUID | PK | gen_random_uuid() | Internal identifier |
-| salla_merchant_id | BIGINT | UNIQUE, NOT NULL | — | Salla's merchant ID (from introspect/webhooks) |
-| store_name | TEXT | — | NULL | Merchant's store name |
-| access_token_encrypted | TEXT | — | NULL | AES-256-GCM encrypted Salla access token |
-| refresh_token_encrypted | TEXT | — | NULL | AES-256-GCM encrypted Salla refresh token |
-| token_expires_at | TIMESTAMPTZ | — | NULL | Token expiration timestamp |
-| plan | TEXT | CHECK IN (...) | 'free' | Current plan: free, trial, basic, professional, enterprise, diamond |
-| plan_status | TEXT | CHECK IN (...) | 'active' | Plan state: active, inactive |
-| is_active | BOOLEAN | — | true | false = app uninstalled (soft delete) |
-| settings | JSONB | — | (see below) | Widget configuration |
-| installed_at | TIMESTAMPTZ | — | now() | First installation date |
-| uninstalled_at | TIMESTAMPTZ | — | NULL | Uninstallation date (soft delete) |
-| created_at | TIMESTAMPTZ | — | now() | Row creation |
-| updated_at | TIMESTAMPTZ | — | now() | Last modification (auto-trigger) |
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Internal merchant UUID |
+| `salla_merchant_id` | `bigint` | UNIQUE, NOT NULL | Store identifier from Salla OAuth and webhooks |
+| `store_name` | `text` | nullable | Merchant store name |
+| `access_token_encrypted` | `text` | nullable | Encrypted Salla access token |
+| `refresh_token_encrypted` | `text` | nullable | Encrypted Salla refresh token |
+| `token_expires_at` | `timestamptz` | nullable | Token expiry timestamp |
+| `plan` | `text` | NOT NULL | free, trial, basic, professional, enterprise |
+| `plan_status` | `text` | NOT NULL | active or inactive |
+| `is_active` | `boolean` | NOT NULL | Whether the app is currently active for the store |
+| `settings` | `jsonb` | NOT NULL | Normalized widget settings |
+| `installed_at` | `timestamptz` | nullable | Install timestamp |
+| `uninstalled_at` | `timestamptz` | nullable | Soft-delete uninstall timestamp |
+| `created_at` | `timestamptz` | NOT NULL | Row creation time |
+| `updated_at` | `timestamptz` | NOT NULL | Row update time |
 
-**Settings JSONB Default:**
+### Canonical `settings` shape
+
 ```json
 {
   "widget_enabled": true,
@@ -145,176 +141,129 @@ erDiagram
 }
 ```
 
-**Settings Fields:**
-| Field | Type | Values | Description |
-|-------|------|--------|-------------|
-| widget_enabled | boolean | true/false | Master switch for widget |
-| widget_mode | string | "all" / "selected" | Show on all products or selected only |
-| widget_products | string[] | Product IDs | Products to show widget on (if mode=selected) |
-| widget_button_text | string | Any text | Custom button label |
-| default_category | string | upper_body/lower_body/dresses | Default garment category |
+---
+
+### 2. `credits`
+
+Exactly one row per merchant for balance tracking.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Internal row id |
+| `merchant_id` | `uuid` | FK, UNIQUE | Owning merchant |
+| `total_credits` | `int` | NOT NULL | Allocated credits for the cycle |
+| `used_credits` | `int` | NOT NULL | Credits consumed so far |
+| `reset_at` | `timestamptz` | nullable | Last renewal/reset timestamp |
+| `created_at` | `timestamptz` | NOT NULL | Row creation time |
+| `updated_at` | `timestamptz` | NOT NULL | Row update time |
+
+### Derived balance
+
+`remaining_credits = total_credits - used_credits`
 
 ---
 
-### 2. CREDITS
+### 3. `tryon_jobs`
 
-**Purpose:** Tracks credit balance per merchant. Exactly one row per merchant (1:1 relationship).
+Tracks every shopper or merchant-originated try-on attempt.
 
-| Column | Type | Constraints | Default | Description |
-|--------|------|-------------|---------|-------------|
-| id | UUID | PK | gen_random_uuid() | Internal identifier |
-| merchant_id | UUID | FK → merchants.id, UNIQUE | — | One credit record per merchant |
-| total_credits | INT | CHECK >= 0 | 0 | Total monthly allocation |
-| used_credits | INT | CHECK >= 0 | 0 | Credits consumed this period |
-| reset_at | TIMESTAMPTZ | — | NULL | Last reset (on subscription renewal) |
-| created_at | TIMESTAMPTZ | — | now() | Row creation |
-| updated_at | TIMESTAMPTZ | — | now() | Last modification |
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Job id returned to the client |
+| `merchant_id` | `uuid` | FK, NOT NULL | Owning merchant |
+| `status` | `text` | NOT NULL | pending, processing, completed, failed, canceled |
+| `user_image_url` | `text` | NOT NULL | Shopper image on Bunny |
+| `product_image_url` | `text` | NOT NULL | Product image used for the try-on |
+| `product_id` | `text` | nullable | Salla product id |
+| `category` | `text` | NOT NULL | upper_body, lower_body, dresses |
+| `result_image_url` | `text` | nullable | Final Bunny result |
+| `replicate_prediction_id` | `text` | nullable | Replicate prediction id |
+| `error_message` | `text` | nullable | Failure reason |
+| `metadata` | `jsonb` | NOT NULL | Source, thumbnails, upload paths, debug-safe context |
+| `processing_started_at` | `timestamptz` | nullable | Processing start timestamp |
+| `completed_at` | `timestamptz` | nullable | Completion or failure timestamp |
+| `created_at` | `timestamptz` | NOT NULL | Creation time |
+| `updated_at` | `timestamptz` | NOT NULL | Update time |
 
-**Computed:** `remaining = total_credits - used_credits`
+### Status flow
 
-**Credit Allocation by Plan:**
-| Plan | total_credits |
-|------|--------------|
-| free | 10 |
-| trial | 5 |
-| basic | 50 |
-| professional | 200 |
-| enterprise | 1000 |
-| diamond | 500 |
-
----
-
-### 3. TRYON_JOBS
-
-**Purpose:** Every virtual try-on request creates a job. Tracks the full lifecycle from creation to completion/failure.
-
-| Column | Type | Constraints | Default | Description |
-|--------|------|-------------|---------|-------------|
-| id | UUID | PK | gen_random_uuid() | Job identifier (returned to client) |
-| merchant_id | UUID | FK → merchants.id, NOT NULL | — | Owning merchant |
-| status | TEXT | CHECK IN (...) | 'pending' | Job state machine |
-| user_image_url | TEXT | NOT NULL | — | Customer photo URL (Bunny CDN) |
-| product_image_url | TEXT | NOT NULL | — | Product garment image URL |
-| product_id | TEXT | — | NULL | Salla product ID (for tracking) |
-| category | TEXT | CHECK IN (...) | 'upper_body' | Garment type for AI model |
-| result_image_url | TEXT | — | NULL | Final composite image URL (Bunny CDN) |
-| replicate_prediction_id | TEXT | — | NULL | Replicate API prediction ID |
-| error_message | TEXT | — | NULL | Error details if failed |
-| metadata | JSONB | — | '{}' | Extra data (source: widget/dashboard) |
-| processing_started_at | TIMESTAMPTZ | — | NULL | When processing began |
-| completed_at | TIMESTAMPTZ | — | NULL | When job completed/failed |
-| created_at | TIMESTAMPTZ | — | now() | Job creation time |
-| updated_at | TIMESTAMPTZ | — | now() | Last modification |
-
-**Status State Machine:**
-```
-pending → processing → completed
-    │         │
-    │         └──→ failed
-    │
-    └──→ canceled (on app.uninstalled)
-```
-
-**Category Values:**
-| Value | Description | AI Model Input |
-|-------|-------------|---------------|
-| upper_body | Tops, shirts, jackets | category: "upper_body" |
-| lower_body | Pants, skirts, shorts | category: "lower_body" |
-| dresses | Full dresses, abayas | category: "dresses" |
+`pending -> processing -> completed | failed | canceled`
 
 ---
 
-### 4. WEBHOOK_EVENTS
+### 4. `webhook_events`
 
-**Purpose:** Idempotency store — ensures each Salla webhook event is processed exactly once.
+Idempotency ledger for Salla webhooks.
 
-| Column | Type | Constraints | Default | Description |
-|--------|------|-------------|---------|-------------|
-| id | UUID | PK | gen_random_uuid() | Internal identifier |
-| event_id | TEXT | UNIQUE, NOT NULL | — | Composite: {event}_{merchant}_{created_at} |
-| event_name | TEXT | NOT NULL | — | e.g., "app.installed" |
-| merchant_id | BIGINT | — | — | Salla merchant ID from payload |
-| payload | JSONB | — | NULL | Full webhook payload (for debugging) |
-| processed | BOOLEAN | — | false | Whether handler completed successfully |
-| created_at | TIMESTAMPTZ | — | now() | When event was received |
-
----
-
-### 5. CREDIT_TRANSACTIONS
-
-**Purpose:** Audit trail for every credit movement. Enables debugging billing issues and generating usage reports.
-
-| Column | Type | Constraints | Default | Description |
-|--------|------|-------------|---------|-------------|
-| id | UUID | PK | gen_random_uuid() | Internal identifier |
-| merchant_id | UUID | FK → merchants.id, NOT NULL | — | Owning merchant |
-| amount | INT | NOT NULL | — | Change: negative = debit, positive = credit |
-| type | TEXT | CHECK IN (...) | — | Transaction type |
-| reason | TEXT | — | NULL | Human-readable reason |
-| job_id | UUID | FK → tryon_jobs.id | NULL | Related job (if applicable) |
-| created_at | TIMESTAMPTZ | — | now() | Transaction time |
-
-**Transaction Types:**
-| Type | Amount | Example Reason |
-|------|--------|---------------|
-| debit | -1 | "Try-on job created" |
-| credit | +50 | "Addon credits purchased" |
-| refund | +1 | "Job failed — credit refunded" |
-| reset | 0 | "Subscription renewed" |
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Internal row id |
+| `event_id` | `text` | UNIQUE, NOT NULL | Stable idempotency key |
+| `event_name` | `text` | NOT NULL | Webhook event name |
+| `merchant_id` | `bigint` | nullable | Salla merchant id from payload |
+| `payload` | `jsonb` | nullable | Full webhook payload |
+| `processed` | `boolean` | NOT NULL | Whether the handler completed |
+| `created_at` | `timestamptz` | NOT NULL | Receipt timestamp |
 
 ---
 
-## Indexes
+### 5. `credit_transactions`
 
-| Index | Table | Columns | Condition | Purpose |
-|-------|-------|---------|-----------|---------|
-| idx_merchants_salla | merchants | salla_merchant_id | — | Webhook lookup by Salla ID |
-| idx_merchants_active | merchants | is_active | WHERE is_active = true | Active merchant queries |
-| idx_jobs_status | tryon_jobs | status | WHERE status IN ('pending','processing') | Job processor polling |
-| idx_jobs_merchant | tryon_jobs | merchant_id | — | Per-merchant job listing |
-| idx_jobs_created | tryon_jobs | created_at DESC | — | Chronological listing |
-| idx_webhook_event_id | webhook_events | event_id | — | Idempotency check |
-| idx_webhook_processed | webhook_events | processed | WHERE processed = false | Retry queue |
-| idx_credit_tx_merchant | credit_transactions | merchant_id | — | Per-merchant audit trail |
+Audit trail for every credit movement.
 
----
-
-## Database Functions
-
-### deduct_credit(merchant_id UUID, job_id UUID) → BOOLEAN
-
-Atomically deducts 1 credit from a merchant's balance. Uses SELECT FOR UPDATE to prevent race conditions. Returns false if insufficient credits. Logs a debit transaction.
-
-### refund_credit(merchant_id UUID, job_id UUID) → VOID
-
-Atomically refunds 1 credit to a merchant's balance (clamped at 0 minimum). Logs a refund transaction linked to the failed job.
-
-### update_updated_at() → TRIGGER
-
-Automatically sets `updated_at = now()` before any UPDATE on merchants, credits, and tryon_jobs tables.
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Internal row id |
+| `merchant_id` | `uuid` | FK, NOT NULL | Owning merchant |
+| `amount` | `int` | NOT NULL | Positive or negative credit movement |
+| `type` | `text` | NOT NULL | debit, refund, reset, topup, credit |
+| `reason` | `text` | nullable | Human-readable reason |
+| `job_id` | `uuid` | FK, nullable | Related try-on job if present |
+| `created_at` | `timestamptz` | NOT NULL | Transaction time |
 
 ---
 
-## Row Level Security
+## Required Indexes
 
-All 5 tables have RLS enabled. Current policy: service role has full access (the Express backend uses the service role key). If client-side access is ever needed (e.g., Supabase Realtime from the dashboard), per-merchant policies must be added:
-
-```sql
-CREATE POLICY "Merchants can read own data" ON tryon_jobs
-  FOR SELECT USING (merchant_id = auth.uid());
-```
+| Index | Purpose |
+|---|---|
+| `idx_merchants_salla` | lookup merchant by Salla id |
+| `idx_jobs_status` | worker polling on pending and processing jobs |
+| `idx_jobs_merchant` | per-merchant jobs listing |
+| `idx_webhook_event_id` | webhook idempotency |
+| `idx_credit_tx_merchant` | merchant credit audit trail |
 
 ---
 
-## Storage Layout (Bunny CDN)
+## Required Database Functions
 
-```
+### `deduct_credit(merchant_id, job_id)`
+
+- locks the merchant credit row
+- verifies balance
+- deducts 1 credit atomically
+- logs a debit transaction
+
+### `refund_credit(merchant_id, job_id)`
+
+- restores 1 credit when the AI job fails
+- logs a refund transaction
+
+### `update_updated_at()`
+
+- keeps `updated_at` current on update for mutable tables
+
+---
+
+## Storage Layout
+
+```txt
 /{salla_merchant_id}/
-├── uploads/          # Customer photos
-│   └── {uuid}.jpg    # Preprocessed, EXIF-stripped
-├── results/          # AI-generated composites
-│   └── {uuid}.jpg    # 30-day TTL, then auto-deleted
-└── products/         # Cached product images (optional)
+├── uploads/
+│   └── {uuid}.jpg
+├── results/
+│   └── {uuid}.jpg
+└── products/
     └── {product_id}.jpg
 ```
 
@@ -322,9 +271,17 @@ CREATE POLICY "Merchants can read own data" ON tryon_jobs
 
 ## Data Flow Summary
 
+```txt
+Salla Webhook -> webhook_events -> merchants/credits/settings
+External OAuth Callback -> merchants -> encrypted tokens -> dashboard session
+Dashboard API Calls -> products/credits/jobs/widget settings
+Widget Job -> credits deduct -> tryon_jobs pending -> Replicate -> Bunny -> widget polls result
 ```
-Salla Webhook → webhook_events (idempotency) → merchants/credits (state change)
-Embedded Token → Salla Introspect → merchants (find/create) → JWT Session
-Dashboard Job → credits (deduct) → tryon_jobs (pending) → Replicate → Bunny → tryon_jobs (completed)
-Widget Job → credits (deduct) → tryon_jobs (pending) → Same pipeline → Widget polls result
-```
+
+---
+
+## Notes
+
+- The ERD is deliberately merchant-centric.
+- Shopper identity is not a first-class tenant concept in MVP.
+- Widget eligibility stays merchant-owned through normalized merchant settings.

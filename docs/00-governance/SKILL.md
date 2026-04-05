@@ -1,329 +1,209 @@
 # SKILL
 
-
 ---
 name: virtual-tryon-salla
 description: |
-  Build and maintain the Virtual Try-On SaaS application integrated with Salla e-commerce platform.
-  Use this skill for ANY task related to: Salla OAuth/Embedded SDK integration, webhook handling,
-  merchant dashboard (React 19 + shadcn), Express API routes, Supabase database schema/queries,
-  Replicate AI virtual try-on pipeline, Bunny CDN storage/delivery, credit system, job queue processing,
-  storefront widget injection, or multi-tenant architecture. Also trigger when the user mentions:
-  try-on, virtual fitting, AI clothing, merchant credits, Salla app, embedded app, webhook events,
-  or any component from the project stack (React 19, Express, Supabase, Replicate, Bunny CDN, shadcn/ui).
+  Governance baseline for the Virtual Try-On for Salla repository.
+  Use this document to keep implementation aligned with the approved product:
+  external merchant dashboard, storefront shopper widget, async backend orchestration,
+  merchant-based tenancy, Salla OAuth/webhooks, credits, jobs, Replicate, and Bunny.
 ---
 
-# Virtual Try-On — Salla SaaS App
+# Virtual Try-On for Salla Governance
 
-## Project Overview
+## 1. Product Identity
 
-Multi-tenant SaaS app integrated with Salla that adds virtual clothing try-on to product pages.
-User uploads photo → AI fits the product on them → returns final image in seconds.
+Virtual Try-On for Salla is a multi-tenant SaaS application that lets Salla merchants offer AI-powered clothing try-on directly on product pages.
 
-## Tech Stack (Locked)
+The product has three canonical surfaces:
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Frontend | React 19 + Vite + shadcn/ui + Tailwind CSS 4 | Merchant Dashboard (Embedded App) |
-| Backend | Node.js 20 + Express 5 | REST API + Webhook handler |
-| Database | Supabase (PostgreSQL + Auth + Realtime) | Multi-tenant data + RLS |
-| AI Engine | Replicate API | Virtual try-on model (async) |
-| Storage/CDN | Bunny.net (Storage Zone + CDN) | Image upload/delivery |
-| Widget | Vanilla JS (injected script) | "Try Now" button on storefront |
+- external React dashboard for the merchant
+- storefront widget for the shopper
+- backend API and worker for orchestration
 
-## Architecture Pattern
+The dashboard is not the primary shopper try-on surface.
 
-```
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Salla       │────▶│  Express API │────▶│  Supabase    │
-│  Dashboard   │     │  (Backend)   │     │  (Database)  │
-│  (Embedded)  │     └──────┬───────┘     └──────────────┘
-└─────────────┘            │
-                           ▼
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Storefront  │────▶│  Job Queue   │────▶│  Replicate   │
-│  Widget      │     │  (in-DB)     │     │  (AI Model)  │
-└─────────────┘     └──────┬───────┘     └──────────────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │  Bunny CDN   │
-                    │  (Storage)   │
-                    └──────────────┘
-```
+## 2. Locked Stack
 
-## Salla Integration Rules (CRITICAL)
+Use this stack unless the user explicitly approves a change:
 
-### Authentication — Embedded App Model
-- Dashboard runs as Embedded App inside Salla merchant dashboard
-- Auth flow: `embedded.init()` → `embedded.auth.getToken()` → Backend introspect → `embedded.ready()`
-- Backend verifies token via POST to `https://api.salla.dev/exchange-authority/v1/introspect`
-- Header required: `S-Source: YOUR_APP_ID`
-- Response gives: `merchant_id`, `user_id`, `exp`
-- NEVER use email as identifier — always `merchant_id`
-- Token refresh via `embedded.auth.refresh()` on 401
+- React 19 + Vite + shadcn/ui + Tailwind CSS 4
+- Node.js 20 + Express 5
+- Supabase PostgreSQL with direct Supabase JS client
+- Supabase Realtime
+- Replicate API
+- Bunny.net
+- Vanilla JS storefront widget bundled as IIFE
+- Zustand
+- Zod
+- Sharp
 
-### Webhook Events to Handle
-| Event | Action |
-|-------|--------|
-| `app.installed` | Create merchant record + assign free credits |
-| `app.store.authorize` | Store encrypted access_token + refresh_token |
-| `app.uninstalled` | Soft-delete merchant, revoke tokens |
-| `app.subscription.started` | Activate plan, set credit quota |
-| `app.subscription.renewed` | Reset monthly credits |
-| `app.subscription.canceled` | Mark plan inactive, block new jobs |
-| `app.subscription.expired` | Same as canceled |
-| `app.trial.started` | Activate trial with limited credits |
-| `app.trial.expired` | Block if no paid subscription |
-| `app.settings.updated` | Sync merchant settings |
+No ORM.
+No Redis/BullMQ in MVP.
+No Next.js dashboard.
+No custom AI training in MVP.
 
-### Webhook Security
-- Verify `X-Salla-Signature` header using HMAC-SHA256 with SALLA_WEBHOOK_SECRET
-- Reject if signature mismatch
-- Idempotency: store event_id, skip duplicates
+## 3. Canonical Product Flow
 
-### Salla Merchant API Usage
-- Base URL: `https://api.salla.dev/admin/v2`
-- Auth: `Bearer {access_token}` from `app.store.authorize` event
-- Use Products API to fetch product images for try-on
-- Rate limit: respect Salla's rate limiting headers
+### Merchant flow
 
-### Embedded SDK Modules to Use
-- `embedded.auth` — Token management
-- `embedded.page.resize()` — Auto-resize iframe
-- `embedded.page.setTitle()` — Set page title
-- `embedded.ui.toast()` — Show notifications
-- `embedded.ui.loading()` — Loading states
-- `embedded.checkout.create()` — Trigger addon/credit purchases
-- `embedded.checkout.onResult()` — Handle payment results
+1. merchant installs and authorizes the app through Salla
+2. merchant opens the external dashboard
+3. merchant manages:
+   - eligible products
+   - widget settings
+   - jobs
+   - credits
 
-## Project Structure
+### Shopper flow
 
-```
-virtual-tryon/
-├── apps/
-│   ├── api/                    # Express Backend
-│   │   ├── src/
-│   │   │   ├── config/         # env, supabase client, replicate client
-│   │   │   ├── middleware/      # auth, rate-limit, webhook-verify, error-handler
-│   │   │   ├── routes/          # merchants, jobs, credits, webhooks, widget
-│   │   │   ├── services/        # salla, replicate, bunny, credits, jobs
-│   │   │   ├── jobs/            # job processor (poll-based)
-│   │   │   ├── utils/           # crypto, validators, helpers
-│   │   │   └── app.js
-│   │   ├── package.json
-│   │   └── .env
-│   │
-│   ├── dashboard/              # React 19 Embedded App
-│   │   ├── src/
-│   │   │   ├── components/     # shadcn/ui based components
-│   │   │   ├── pages/          # Dashboard, TryOn, Credits, Settings
-│   │   │   ├── hooks/          # useSalla, useAuth, useCredits, useJobs
-│   │   │   ├── lib/            # api client, salla-embedded, utils
-│   │   │   ├── stores/         # zustand stores
-│   │   │   └── App.jsx
-│   │   ├── package.json
-│   │   └── vite.config.js
-│   │
-│   └── widget/                 # Storefront Widget
-│       ├── src/
-│       │   ├── widget.js       # Main entry (IIFE)
-│       │   ├── ui.js           # DOM manipulation
-│       │   ├── api.js          # Communication with backend
-│       │   └── styles.css      # Scoped styles
-│       └── build.js            # Bundle to single file
-│
-├── supabase/
-│   └── migrations/             # SQL migrations
-│
-└── package.json                # Monorepo root (workspaces)
-```
+1. shopper opens an eligible product page
+2. widget shows a CTA on or near product media
+3. shopper opens the dialog immediately
+4. shopper takes or uploads a photo
+5. widget sends shopper image plus product image and category
+6. backend creates an async try-on job
+7. result returns in the same dialog
 
-## Database Schema (Supabase)
+## 4. Tenant Identity Rules
 
-```sql
--- Merchants (source of truth)
-CREATE TABLE merchants (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  salla_merchant_id BIGINT UNIQUE NOT NULL,
-  store_name TEXT,
-  access_token_encrypted TEXT,
-  refresh_token_encrypted TEXT,
-  token_expires_at TIMESTAMPTZ,
-  plan TEXT DEFAULT 'free',
-  plan_status TEXT DEFAULT 'active',
-  is_active BOOLEAN DEFAULT true,
-  settings JSONB DEFAULT '{}',
-  installed_at TIMESTAMPTZ DEFAULT now(),
-  uninstalled_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+The source of truth for tenancy is:
 
--- Credits
-CREATE TABLE credits (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE,
-  total_credits INT DEFAULT 0,
-  used_credits INT DEFAULT 0,
-  reset_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(merchant_id)
-);
+- `merchant_id`
+- `salla_merchant_id`
 
--- Try-On Jobs
-CREATE TABLE tryon_jobs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE,
-  status TEXT DEFAULT 'pending',  -- pending, processing, completed, failed
-  user_image_url TEXT NOT NULL,
-  product_image_url TEXT NOT NULL,
-  product_id TEXT,
-  result_image_url TEXT,
-  replicate_prediction_id TEXT,
-  error_message TEXT,
-  metadata JSONB DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+Never use these as the tenant root:
 
--- Webhook Events (idempotency)
-CREATE TABLE webhook_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_id TEXT UNIQUE,
-  event_name TEXT NOT NULL,
-  merchant_id BIGINT,
-  payload JSONB,
-  processed BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
+- email
+- staff account identity
+- `user_id`
 
--- Credit Transactions (audit trail)
-CREATE TABLE credit_transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE,
-  amount INT NOT NULL,
-  type TEXT NOT NULL, -- 'debit' | 'credit' | 'reset'
-  reason TEXT,
-  job_id UUID REFERENCES tryon_jobs(id),
-  created_at TIMESTAMPTZ DEFAULT now()
-);
+`user_id` may appear as contextual actor data, but not as the key for settings, credits, jobs, or widget access.
 
--- RLS Policies
-ALTER TABLE merchants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE credits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tryon_jobs ENABLE ROW LEVEL SECURITY;
+## 5. Merchant Auth Rules
 
--- Indexes
-CREATE INDEX idx_jobs_status ON tryon_jobs(status) WHERE status IN ('pending', 'processing');
-CREATE INDEX idx_jobs_merchant ON tryon_jobs(merchant_id);
-CREATE INDEX idx_merchants_salla ON merchants(salla_merchant_id);
-CREATE INDEX idx_webhook_event_id ON webhook_events(event_id);
-```
+The dashboard uses external Salla OAuth.
 
-## API Routes
+Canonical auth shape:
 
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| POST | `/webhooks/salla` | Signature | Handle Salla webhook events |
-| POST | `/api/auth/verify` | Embedded Token | Verify embedded token, create session |
-| GET | `/api/merchants/me` | Session | Get current merchant info |
-| GET | `/api/credits` | Session | Get credit balance |
-| POST | `/api/jobs` | Session | Create try-on job |
-| GET | `/api/jobs` | Session | List merchant jobs |
-| GET | `/api/jobs/:id` | Session | Get job status + result |
-| POST | `/api/widget/job` | Widget Token | Create job from widget |
-| GET | `/api/widget/job/:id` | Widget Token | Poll job from widget |
-| GET | `/api/widget/config/:merchantId` | Public | Get widget config |
+1. `GET /api/auth/salla/start`
+2. `GET /api/auth/salla/callback`
+3. backend stores encrypted Salla tokens server-side
+4. backend creates a short-lived app session
+5. frontend reads merchant state through `GET /api/auth/me`
 
-## AI Pipeline (Replicate)
+Do not reintroduce embedded dashboard auth as canonical.
+Do not store Salla tokens in the frontend.
 
-```javascript
-// Use virtual-try-on model on Replicate
-const prediction = await replicate.predictions.create({
-  model: "cuuupid/idm-vton",  // or latest virtual-try-on model
-  input: {
-    human_img: userImageUrl,
-    garm_img: productImageUrl,
-    category: "upper_body", // upper_body | lower_body | dresses
-  }
-});
-// Poll prediction.status until 'succeeded' or 'failed'
-// Upload result to Bunny CDN
-```
+## 6. Webhook Rules
 
-### Job Processing Flow
-1. Job created with status `pending`
-2. Processor picks up pending jobs (polling every 5s)
-3. Submit to Replicate → status `processing`
-4. Poll Replicate prediction until done
-5. Upload result image to Bunny CDN
-6. Update job with `result_image_url` → status `completed`
-7. On error → status `failed` + `error_message`
+All Salla webhooks must be:
 
-## Bunny CDN Integration
+- signature verified
+- idempotent
+- retry-safe
+- logged
 
-```javascript
-// Upload to Bunny Storage
-const uploadToBunny = async (buffer, filename) => {
-  const url = `https://storage.bunnycdn.com/${STORAGE_ZONE}/${filename}`;
-  await fetch(url, {
-    method: 'PUT',
-    headers: {
-      'AccessKey': BUNNY_API_KEY,
-      'Content-Type': 'application/octet-stream',
-    },
-    body: buffer,
-  });
-  return `${BUNNY_CDN_URL}/${filename}`;
-};
-```
+Critical events:
 
-## Credit System Rules
-- Free plan: 10 credits/month
-- Check credits BEFORE creating job
-- Deduct 1 credit per successful job submission
-- Refund credit if job fails (AI error, not user error)
-- Track all transactions in credit_transactions table
-- Reset credits on subscription renewal
+- `app.installed`
+- `app.store.authorize`
+- `app.uninstalled`
+- `app.subscription.started`
+- `app.subscription.renewed`
+- `app.subscription.canceled`
+- `app.subscription.expired`
+- `app.trial.started`
+- `app.trial.expired`
+- `app.settings.updated`
 
-## Security Checklist
-- [ ] Encrypt Salla tokens at rest (AES-256)
-- [ ] Verify webhook signatures (HMAC-SHA256)
-- [ ] Rate limit all API endpoints
-- [ ] Signed URLs for user uploads (expire in 15min)
-- [ ] CORS restricted to Salla domains + your domain
-- [ ] Input validation on all uploads (image type, size < 5MB)
-- [ ] Helmet.js for Express security headers
-- [ ] No tokens in frontend — server-only
+Required outcomes:
 
-## Design System (Dashboard)
-- Use shadcn/ui as base component library
-- RTL support required (Arabic merchants)
-- Follow Salla's embedded app design guidelines
-- Dark/light mode via Salla's theme detection
-- Mobile responsive (merchants use mobile dashboard)
-- Toast notifications via `embedded.ui.toast()`
+- merchant activation and lifecycle updates
+- encrypted token storage
+- plan and credits sync
+- widget settings sync
 
-## Project Decisions (Locked)
-- Dashboard: Embedded inside Salla + Standalone dev mode (dual mode)
-  - Dev mode: uses mock auth with fake merchant_id for local development
-  - Production: uses Salla Embedded SDK auth flow
-- Widget: Supports both "all products" and "selected products" via toggle in merchant settings
-  - Default: all products enabled
-  - Merchant can toggle to "selected only" and pick specific products from dashboard
-  - Widget checks config endpoint before rendering on product page
-- Execution order: Phase 0+1 first (Setup + Salla Auth)
+## 7. Credit and Job Rules
 
-## Anti-Patterns (NEVER DO)
-- ❌ Sync AI processing in request handler
-- ❌ Store Salla tokens in frontend/localStorage
-- ❌ Use email instead of merchant_id
-- ❌ Build AI model from scratch
-- ❌ Skip webhook signature verification
-- ❌ Process jobs without credit check
-- ❌ Use polling interval < 3 seconds
-- ❌ Skip error handling on Replicate calls
-- ❌ Hardcode Salla API URLs (use env vars)
-- ❌ Skip idempotency on webhook processing
+Credits are platform-managed.
+
+Always:
+
+- check credits before job creation
+- deduct credits atomically
+- create jobs asynchronously
+- refund automatically on AI failure when applicable
+- log all credit movements in `credit_transactions`
+
+Canonical async job flow:
+
+1. validate request
+2. create job request
+3. deduct 1 credit atomically
+4. store job as `pending`
+5. worker picks it up
+6. send to Replicate
+7. upload result to Bunny
+8. update final job state
+9. refund on failure when applicable
+
+## 8. Storefront Widget Rules
+
+The widget must remain:
+
+- lightweight
+- non-blocking
+- style-isolated
+- mobile-friendly
+- RTL-friendly
+- safe on unstable storefront markup
+
+Canonical widget behavior:
+
+- show CTA over or near product media when possible
+- use a safe fallback placement when markup is unstable
+- open the dialog immediately on click
+- support camera and upload
+- show preview before generation
+- show polished loading state during async processing
+- show shopper-friendly errors
+
+## 9. Canonical Route Baseline
+
+- `GET /api/auth/salla/start`
+- `GET /api/auth/salla/callback`
+- `POST /api/auth/verify`
+- `GET /api/auth/me`
+- `POST /webhooks/salla`
+- `GET /api/credits`
+- `POST /api/jobs`
+- `GET /api/jobs`
+- `GET /api/jobs/:id`
+- `GET /api/products`
+- `GET /api/products/:id`
+- `POST /api/upload`
+- `GET /api/widget/config/:merchantId`
+- `GET /api/widget/settings`
+- `PUT /api/widget/settings`
+- `POST /api/widget/job`
+- `GET /api/widget/job/:id`
+- `GET /health`
+
+## 10. Anti-Drift Rules
+
+Do not drift into:
+
+- embedded merchant dashboard as canonical admin
+- dashboard-first shopper try-on as the main product journey
+- synchronous AI processing
+- email or `user_id` tenancy
+- stack substitutions without explicit approval
+
+## 11. Current Delivery Priority
+
+The current priority is:
+
+- finish storefront widget UX hardening on real Salla product pages
+- verify one successful end-to-end widget completion
+- then move to testing and security hardening

@@ -1,9 +1,26 @@
 # DECISIONS LOG
 
+## 2026-04-05 - Source docs realigned to external dashboard and widget-first shopper flow
+**Status:** accepted
+
+The source-of-truth docs are now explicitly aligned to the clarified product:
+
+- external React dashboard for merchants
+- storefront widget for shoppers
+- async backend orchestration for credits, jobs, AI, and storage
+
+**Reason:**
+Older docs still described embedded dashboard auth and dashboard-first try-on as canonical, while the approved product direction had already moved away from that.
+
+**Impact:**
+- PRD, architecture, and delivery docs now describe the real product direction
+- delivery sequencing now prioritizes storefront widget UX hardening instead of admin-side try-on work
+- future work should be judged against the merchant-admin plus shopper-widget split
+
 ## 2026-04-05 - Shopper try-on flow is storefront-widget-only
 **Status:** accepted
 
-By direct user instruction, the canonical shopper try-on flow now lives in the storefront widget only.
+By direct user instruction, the canonical shopper try-on flow lives in the storefront widget only.
 
 The dashboard is merchant-facing control software for:
 - credits
@@ -11,86 +28,54 @@ The dashboard is merchant-facing control software for:
 - widget settings
 - product enablement
 
-The shopper-facing flow is:
-- widget appears on eligible product pages
-- shopper captures or uploads a photo
-- widget sends the shopper photo plus the selected product to the backend
-- backend creates the async try-on job
-- result returns to the shopper inside the widget
+**Reason:**
+The user clarified that the business value is the shopper experience on the product page, not a merchant selfie flow inside the admin dashboard.
 
-**Reason:**  
-The user clarified that the dashboard should not be the main surface for uploading shopper photos or running try-on as a merchant workflow. The primary business flow is storefront-first.
-
-**Impact:**  
-- dashboard product browsing is now for widget eligibility management, not merchant selfie upload
-- dashboard settings are now centered on widget enablement, mode, button text, and default category
-- the canonical public widget routes are now:
-  - `GET /api/widget/config/:merchantId`
-  - `POST /api/widget/job`
-  - `GET /api/widget/job/:id`
-- older dashboard try-on page behavior should be treated as superseded by this clarified product direction
-- backend job orchestration remains valid and is reused by the widget flow
+**Impact:**
+- dashboard try-on must not be treated as the main product journey
+- widget APIs and widget UX are first-class product surfaces
+- merchant dashboard pages exist to configure and monitor the widget flow
 
 ## 2026-04-04 - External dashboard replaces embedded dashboard auth
 **Status:** accepted
 
-By direct user instruction, the merchant dashboard is now an external React dashboard rather than a Salla embedded page.
+By direct user instruction, the merchant dashboard is an external React dashboard rather than a Salla embedded page.
 
-The canonical auth direction is now:
+The canonical auth direction is:
 - merchant starts OAuth from the external dashboard
 - Salla redirects back to the backend callback URL with `code` and `state`
 - backend exchanges the code for Salla tokens
 - backend stores tokens server-side only
-- backend hands off a local dashboard session to the React app
+- backend creates a short-lived dashboard session
 
-**Reason:**  
+**Reason:**
 The user explicitly confirmed an external dashboard and requested that embedded auth be removed.
 
-**Impact:**  
-- `embedded.init()`, `embedded.auth.getToken()`, and `embedded.ready()` are no longer part of the dashboard flow
-- the frontend now assumes an external login page and callback handoff flow
-- backend auth now centers on Salla OAuth callback handling plus a local dashboard session
-- the backend still keeps webhook-based token handling for `app.store.authorize`
-
-**Official docs note:**  
-Salla documentation states that Custom Mode is for testing use cases and that Easy Mode is the only allowed mode for published App Store apps. The external dashboard choice is therefore being implemented as a user-directed architecture decision for the current project path.
+**Impact:**
+- `embedded.init()`, `embedded.auth.getToken()`, and `embedded.ready()` are not part of the dashboard flow
+- backend auth centers on Salla OAuth callback handling plus a server-managed session
+- webhook-based token lifecycle handling remains part of the system
 
 ## 2026-04-03 - Direct Salla token auth replaces local JWT session
-**Status:** accepted
+**Status:** superseded
 
-By direct user instruction, the project will not use a local JWT or convenience session for merchant authentication.
+This decision was superseded on 2026-04-04 by the accepted external dashboard OAuth decision.
 
-The canonical auth direction is now:
-- frontend gets the embedded Salla token
-- backend introspects the Salla token directly
-- protected backend routes accept the Salla token as the auth credential
-
-**Reason:**  
-The user explicitly requested to rely on Salla authentication directly whenever the user has a valid token, instead of layering a local JWT session on top.
-
-**Impact:**  
-- `JWT_SECRET` is no longer part of the auth flow
-- `POST /api/auth/verify` validates the Salla token directly
-- `GET /api/auth/me` uses Salla token auth directly
-- future protected API routes should use the same direct Salla token model unless the user changes direction again
-
----
+The project no longer treats direct embedded Salla token auth as the canonical merchant auth path.
 
 ## 2026-04-03 - Repository governance layer added
 **Status:** accepted
 
-Created the governance layer that controls Codex execution through:
+Created the governance layer that controls execution through:
 - `AGENTS.md`
 - `README.md`
 - `docs/99-tracking/*`
 
-**Reason:**  
-The project already has product, architecture, delivery, and schema docs, but it needs repository-level operating instructions and continuity files so implementation sessions do not drift.
+**Reason:**
+The project needed a repository-level operating layer so implementation sessions do not drift.
 
-**Impact:**  
+**Impact:**
 All future implementation must read and respect the governance docs before coding.
-
----
 
 ## 2026-04-03 - Stack locked for MVP
 **Status:** accepted
@@ -103,29 +88,25 @@ The stack is fixed to:
 - Bunny.net
 - Vanilla JS widget
 
-**Reason:**  
-This stack is already defined across the existing project governance docs and delivery plans.
+**Reason:**
+This stack is already defined across the governance and delivery docs.
 
-**Impact:**  
+**Impact:**
 No stack substitutions without explicit user approval.
-
----
 
 ## 2026-04-03 - Hybrid architecture confirmed
 **Status:** accepted
 
-The platform will use:
-- Salla embedded dashboard for merchants
+The platform uses:
+- external merchant dashboard
 - storefront widget for shoppers
 - backend orchestration for jobs, credits, uploads, and integrations
 
-**Reason:**  
-This is the approved architectural direction for the product and best matches the business and UX requirements.
+**Reason:**
+This architecture best matches the product's merchant-admin plus shopper-widget split.
 
-**Impact:**  
-Do not attempt embedded-only or widget-only architecture.
-
----
+**Impact:**
+Do not attempt embedded-only, dashboard-only, or widget-only architecture.
 
 ## 2026-04-03 - Tenant identity fixed to merchant_id
 **Status:** accepted
@@ -134,28 +115,26 @@ The primary tenant identifier is:
 - `merchant_id`
 - `salla_merchant_id`
 
-Email is not a primary tenant identifier.
+The following are not primary tenant identifiers:
+- email
+- `user_id`
 
-**Reason:**  
-Merchant tenancy must remain stable even if team users or emails change.
+**Reason:**
+Merchant tenancy must remain stable even if staff users or emails change.
 
-**Impact:**  
-Auth, data modeling, and access checks must all center around merchant identity.
-
----
+**Impact:**
+Auth, data modeling, access checks, credits, and widget settings must all center around merchant identity.
 
 ## 2026-04-03 - Database-driven queue chosen for MVP
 **Status:** accepted
 
-Async job processing will use Supabase/PostgreSQL-backed job polling instead of Redis/BullMQ.
+Async job processing uses Supabase/PostgreSQL-backed job polling instead of Redis/BullMQ.
 
-**Reason:**  
-Simpler MVP operations, already aligned with current plans, and sufficient for initial launch scope.
+**Reason:**
+Simpler MVP operations and already aligned with the approved scope.
 
-**Impact:**  
-Job processor implementation must use DB-safe polling, locking, timeout handling, and retry logic.
-
----
+**Impact:**
+Job processing must use DB-safe polling, locking, timeout handling, and retry logic.
 
 ## 2026-04-03 - Canonical self endpoint fixed
 **Status:** accepted
@@ -166,17 +145,11 @@ Canonical endpoint:
 Legacy reference:
 - `GET /api/merchants/me`
 
-**Reason:**  
-Some planning docs reference `auth/me` while others reference `merchants/me`.  
-The repository will standardize on `auth/me` because it aligns directly with the current auth verification flow:
-- `POST /api/auth/verify`
-- `GET /api/auth/me`
+**Reason:**
+The repo standardizes on `auth/me` to match the current auth bootstrap flow.
 
-**Impact:**  
-Use `GET /api/auth/me` in new implementation.  
-Only add alias compatibility for `/api/merchants/me` if needed later.
-
----
+**Impact:**
+Use `GET /api/auth/me` in new implementation.
 
 ## 2026-04-03 - Credit policy fixed for MVP
 **Status:** accepted
@@ -189,13 +162,11 @@ Credit rules:
 - reset on subscription renewal
 - audit every movement in `credit_transactions`
 
-**Reason:**  
+**Reason:**
 This is the current commercial and technical operating model of the product.
 
-**Impact:**  
+**Impact:**
 Any job creation flow that skips these rules is invalid.
-
----
 
 ## 2026-04-03 - Out-of-scope features locked
 **Status:** accepted
@@ -210,8 +181,8 @@ Not in MVP:
 - advanced analytics suite
 - 3D body fitting
 
-**Reason:**  
-Keeps the MVP focused and executable within the approved timeline.
+**Reason:**
+Keeps the MVP focused and executable.
 
-**Impact:**  
+**Impact:**
 Do not introduce these features unless the user expands scope.

@@ -1,176 +1,189 @@
 # Salla Virtual Try-On Decision Pack
 
----
-
-## `docs/02-architecture/salla-virtual-tryon-decision-pack.md`
-
-```md
-# Salla Virtual Try-On — Decision Pack
-
-## Version
-v1.0
-
-## Date
-2026-04-01
+**Version:** 2.0
+**Date:** 2026-04-05
+**Status:** Active Source of Truth
 
 ## Purpose
-This document locks the approved product and technical direction for the Virtual Try-On project on Salla.
 
-It exists to prevent architectural drift and to make implementation decisions explicit before code execution begins.
+This document locks the approved product and technical direction for Virtual Try-On for Salla.
+
+Use it to prevent drift between:
+- merchant dashboard behavior
+- storefront widget behavior
+- backend orchestration
+- delivery sequencing
+
+If older docs or older code disagree with this document, this document wins unless the user explicitly overrides it.
 
 ---
 
 ## 1. Executive Decision
 
-Virtual Try-On for Salla is approved as a **hybrid multi-tenant SaaS application**.
+Virtual Try-On for Salla is approved as a hybrid multi-tenant SaaS product with three core surfaces:
 
-### Salla is responsible for:
-- app installation
-- authorization
-- embedded authentication
-- subscription lifecycle
-- storefront integration entry points
+- an external React dashboard for merchants
+- a lightweight storefront widget for shoppers
+- a backend API and async worker for orchestration
 
-### Our platform is responsible for:
-- merchant dashboard
-- local merchant session
-- product enablement rules
-- credits and billing usage logic
-- try-on job orchestration
-- AI processing
-- result storage and delivery
+This product is not defined as an embedded merchant dashboard with shopper try-on inside the admin surface.
 
-This hybrid model is the canonical architectural direction for MVP.
+The canonical business flow is:
+
+1. merchant installs and authorizes the app through Salla
+2. merchant manages products, widget settings, jobs, and credits in the external dashboard
+3. shopper uses the widget on an eligible product page
+4. backend creates and processes the async try-on job
+5. result returns to the shopper inside the widget dialog
 
 ---
 
-## 2. Product Definition
+## 2. Responsibility Split
 
-The product is a SaaS app for Salla fashion merchants.
+### Salla is responsible for
 
-### Merchant-side outcome
-Merchants install the app, open the dashboard, choose how the widget behaves, decide which products should show the try-on experience, and monitor jobs and credits.
+- app installation
+- OAuth authorization entry and redirect
+- lifecycle webhooks
+- subscription lifecycle
+- merchant product authority
+- storefront page context and integration entry points
 
-### Shopper-side outcome
-Shoppers see a try-on widget on eligible product pages, upload a photo or use the camera, and receive a try-on result image within seconds.
+### Our platform is responsible for
+
+- external dashboard session handling
+- merchant settings and widget controls
+- product eligibility rules
+- credits and transaction audit
+- try-on job lifecycle
+- AI orchestration through Replicate
+- result storage and delivery through Bunny
 
 ---
 
 ## 3. Approved Architecture
 
-The project is built on three connected layers:
+The approved MVP architecture is:
 
-### A) Salla Integration Layer
-Used for:
-- install / authorize
-- embedded app auth
-- app lifecycle webhooks
-- subscription state
-- settings synchronization
+- `apps/dashboard`: external React dashboard for the merchant
+- `apps/widget`: vanilla JS IIFE bundle for storefront shoppers
+- `apps/api`: Express backend for auth, webhooks, products proxy, credits, uploads, widget config, and jobs
+- `Supabase`: source of truth for merchants, credits, jobs, webhook idempotency, and widget settings
+- `Replicate`: async virtual try-on inference
+- `Bunny.net`: uploaded shopper images and result image delivery
 
-### B) Merchant Control Layer
-Used for:
-- dashboard UI
-- merchant session
-- enabled product configuration
-- credits and transactions
-- recent jobs and settings
-
-### C) Storefront + AI Processing Layer
-Used for:
-- storefront widget
-- shopper upload flow
-- async try-on jobs
-- AI processing
-- result delivery
-
-All three layers are required for the approved MVP.
+The dashboard and the widget serve different actors and must stay separate in both UX and implementation responsibilities.
 
 ---
 
-## 4. Tenant and Identity Decision
+## 4. Tenant Identity Decision
 
-The system is tenant-first.
+The source of truth for tenancy is:
 
-### Canonical tenant identifier
 - `merchant_id`
 - `salla_merchant_id`
 
-### Not valid as source of truth
+The following are not valid tenant identifiers:
+
 - merchant email
-- employee email
-- local user email
+- staff email
+- `user_id`
+- any client-provided label that is not tied to the store
 
-A user may change.
-The store remains the tenant.
-
-This rule applies to:
-- auth
-- data access
-- credits
-- product rules
-- jobs
-- widget behavior
+`user_id` may exist as actor context, but never as the root tenant key for config, credits, jobs, or widget access.
 
 ---
 
-## 5. Authentication Decision
+## 5. Merchant Authentication Decision
 
-### Merchant authentication
-Merchant trust begins from Salla embedded auth.
+The merchant dashboard uses external Salla OAuth.
 
-Approved dashboard flow:
+### Canonical flow
 
-1. `embedded.init()`
-2. `embedded.auth.getToken()`
-3. frontend sends token to backend
-4. backend introspects token
-5. backend starts local session
-6. `embedded.ready()`
+1. merchant starts login from the external dashboard
+2. backend redirects to Salla OAuth
+3. Salla redirects back to the backend callback with `code` and `state`
+4. backend exchanges the code for access and refresh tokens
+5. backend fetches merchant identity from Salla
+6. backend stores encrypted tokens server-side
+7. backend creates a short-lived dashboard session
+8. frontend bootstraps the merchant state through `GET /api/auth/me`
 
-### Local session decision
-A local session is allowed for convenience, but it does not replace Salla as the trust source.
+### Explicit decisions
 
-### Security decision
-Do not generate passwords automatically and email them.
-If an external login is introduced later, it must use:
-- magic link
-- or secure set-password after verified onboarding
-
----
-
-## 6. Salla Integration Decision
-
-### Embedded dashboard
-Merchant dashboard must run as a Salla embedded app.
-
-### Storefront widget delivery
-Shopper-facing try-on must be delivered through the approved storefront integration path, such as:
-- App Snippet
-- Device Mode style injection
-- or the validated storefront script mechanism
-
-### Why hybrid instead of embedded-only?
-Because:
-- embedded dashboard serves merchants
-- storefront widget serves shoppers
-- backend orchestration serves both
-
-An embedded-only architecture is not sufficient.
+- embedded dashboard auth is not canonical
+- frontend must not store Salla tokens directly
+- backend is the only system allowed to hold access and refresh tokens
+- `POST /api/auth/verify` is allowed as a session bootstrap helper, not as a reason to reintroduce embedded auth
 
 ---
 
-## 7. Webhook Decision
+## 6. Dashboard Decision
 
-Webhook processing is a critical subsystem.
+The dashboard is merchant-facing control software only.
 
-All webhook handling must be:
-- signature-verified
+### Canonical dashboard responsibilities
+
+- overview and store status
+- product eligibility management
+- widget settings management
+- job monitoring
+- credit monitoring and audit visibility
+
+### Non-canonical dashboard behavior
+
+The dashboard is not the primary shopper try-on surface.
+
+If a temporary internal testing flow exists inside the dashboard, treat it as secondary and do not use it to redefine the product.
+
+---
+
+## 7. Storefront Widget Decision
+
+The widget is the canonical shopper experience.
+
+### Widget requirements
+
+- vanilla JS bundled as a single IIFE
+- lightweight and non-blocking
+- isolated from storefront CSS and behavior
+- mobile-friendly
+- RTL-friendly
+- safe for unstable or delayed storefront markup
+
+### Widget UX contract
+
+1. widget resolves product context from the storefront page
+2. CTA appears over or near product media when possible
+3. safe fallback places the CTA in a fixed body-mounted position
+4. shopper clicks CTA and the dialog opens immediately
+5. shopper chooses camera capture or file upload
+6. shopper previews the selected image
+7. widget sends the shopper image plus the current product image and category
+8. widget shows a polished processing state while the async job runs
+9. widget displays the result in the same dialog when successful
+
+### Widget security decision
+
+- public widget calls must use a backend-issued signed widget token
+- the storefront must not receive privileged merchant API tokens
+- shopper-facing errors must be clean and retry-friendly
+
+---
+
+## 8. Webhook Decision
+
+Webhook processing is mandatory for MVP.
+
+### Mandatory properties
+
+- signature verified
 - idempotent
 - retry-safe
-- logged
+- audited
 
-### Critical events for MVP
+### Critical events
+
 - `app.installed`
 - `app.store.authorize`
 - `app.uninstalled`
@@ -182,87 +195,104 @@ All webhook handling must be:
 - `app.trial.expired`
 - `app.settings.updated`
 
-### Mandatory behavior
-- create merchant on install
+### Required outcomes
+
+- create or activate merchant records
 - store encrypted tokens on authorize
-- deactivate merchant on uninstall
-- sync plan / limits on subscription events
-- reset credits on renewals
-- sync merchant settings when updated
+- deactivate merchant access on uninstall when appropriate
+- sync plan and credit state on subscription changes
+- sync merchant-side settings updates
 
 ---
 
-## 8. Data Model Decision
+## 9. Credits and Job Processing Decision
 
-The simplified canonical MVP data model is based on these core tables:
+Credits and AI jobs are platform-level backend responsibilities.
+
+### Fixed rules
+
+- each try-on attempt consumes 1 credit
+- credits are checked before job creation
+- deduction must be atomic
+- refund must happen automatically on AI failure when applicable
+- subscription renewals reset monthly usage
+- every movement is logged in `credit_transactions`
+
+### Canonical async flow
+
+1. create job request
+2. check credits
+3. deduct 1 credit atomically
+4. store job as `pending`
+5. worker picks the job
+6. send the job to Replicate
+7. upload result to Bunny on success
+8. update final job state
+9. refund automatically on failure when applicable
+
+Running the full AI pipeline synchronously in the request handler is not allowed.
+
+---
+
+## 10. Canonical Data Model
+
+The minimum approved MVP domain model is:
 
 - `merchants`
 - `credits`
+- `credit_transactions`
 - `tryon_jobs`
 - `webhook_events`
-- `credit_transactions`
 
-This keeps the MVP practical while preserving:
-- tenant isolation
-- credit accounting
-- job tracking
-- webhook idempotency
-- auditability
+Merchant widget controls may remain stored in merchant settings as long as the backend normalizes and validates:
 
-Future expansion may add more explicit domain tables, but MVP should stay aligned with the current approved ERD.
+- widget enabled state
+- widget mode
+- selected product ids
+- button text
+- default category
 
 ---
 
-## 9. Credit System Decision
+## 11. Security and Reliability Rules
 
-Credits are a platform-level consumption model layered on top of Salla subscriptions.
+Always:
 
-### Rules
-- each try-on attempt costs 1 credit
-- credits must be checked before job creation
-- deduction must be atomic
-- refund must happen on AI failure when applicable
-- credits must reset on subscription renewal
-- every movement must be logged in `credit_transactions`
-
-### Billing split
-- Salla manages commercial subscription plans
-- Our platform manages operational credit consumption
-
-This split is approved and must not be silently changed.
+- encrypt Salla access and refresh tokens at rest
+- keep tokens server-side only
+- verify `X-Salla-Signature`
+- rate-limit public widget routes
+- validate uploaded images
+- treat tenant checks as mandatory on every sensitive path
+- keep provider-specific errors out of the primary shopper UI
 
 ---
 
-## 10. AI Processing Decision
+## 12. Explicit Anti-Decisions
 
-AI processing is handled through Replicate.
+The following are not part of the approved MVP direction:
 
-### Model direction
-Use IDM-VTON or the currently approved equivalent virtual try-on model.
-
-### Processing rules
-- uploads must be validated
-- images must be optimized before inference
-- jobs must run asynchronously
-- failures must be stored as job state
-- result images must be uploaded to Bunny
-- stuck jobs must timeout and be cleaned up
-
-### Explicit anti-decision
-Do not build or train a custom AI model in MVP.
+- embedded merchant dashboard as the canonical admin surface
+- using `user_id` instead of `merchant_id` for tenancy
+- dashboard-first shopper try-on as the main user journey
+- synchronous AI processing in request handlers
+- custom AI model training in MVP
+- stack substitutions outside the locked stack
 
 ---
 
-## 11. Storage Decision
+## 13. Canonical Summary
 
-Use Bunny.net for:
-- shopper image uploads
-- result image storage
-- CDN delivery
+The approved product is:
 
-### Storage layout
-```txt
-/{salla_merchant_id}/
-├── uploads/
-├── results/
-└── products/
+- an external merchant dashboard
+- a storefront shopper widget
+- an async backend orchestration layer
+
+Any older references to:
+
+- embedded dashboard auth as canonical
+- merchant try-on inside the dashboard as the main workflow
+- `user_id` as the tenant root
+
+should be treated as superseded.

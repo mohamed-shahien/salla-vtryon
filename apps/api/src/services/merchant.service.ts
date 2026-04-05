@@ -19,14 +19,16 @@ export interface WidgetSettings {
   widget_products: number[]
   widget_button_text: string
   default_category: WidgetCategory
+  onboarding_completed: boolean
 }
 
 const DEFAULT_SETTINGS: WidgetSettings = {
   widget_enabled: true,
-  widget_mode: 'all',
+  widget_mode: 'selected',   // widget invisible until merchant picks products
   widget_products: [],
   widget_button_text: 'جرّب الآن',
   default_category: 'upper_body',
+  onboarding_completed: false,
 }
 
 export const PLAN_CREDIT_ALLOCATIONS = {
@@ -180,12 +182,15 @@ export function normalizeWidgetSettings(settings: Record<string, unknown> | null
       ? rawButtonText.trim()
       : DEFAULT_SETTINGS.widget_button_text
 
+  const rawOnboardingCompleted = source.onboarding_completed
+
   return {
     widget_enabled: normalizeBoolean(rawEnabled, DEFAULT_SETTINGS.widget_enabled),
     widget_mode: normalizeWidgetMode(rawMode),
     widget_products: normalizeWidgetProducts(rawProducts),
     widget_button_text: buttonText,
     default_category: normalizeWidgetCategory(rawDefaultCategory),
+    onboarding_completed: normalizeBoolean(rawOnboardingCompleted, false),
   } satisfies WidgetSettings
 }
 

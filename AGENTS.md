@@ -7,7 +7,7 @@ This repository builds and maintains **Virtual Try-On for Salla**:
 a multi-tenant SaaS application that lets Salla merchants offer AI-powered clothing try-on to shoppers directly inside product pages.
 
 The system is built around:
-- **Salla** for app installation, authorization, embedded auth, subscriptions, and storefront integration
+- **Salla** for app installation, OAuth authorization, webhooks, subscriptions, and storefront integration
 - **Our platform** for dashboard operations, product enablement rules, credits, job orchestration, and AI processing
 
 This repository is the execution source for the product described in the project docs.
@@ -160,6 +160,8 @@ Always:
 
 Use these routes as the canonical baseline unless the user explicitly changes them:
 
+- `GET /api/auth/salla/start`
+- `GET /api/auth/salla/callback`
 - `POST /api/auth/verify`
 - `GET /api/auth/me`
 - `POST /webhooks/salla`
@@ -171,6 +173,8 @@ Use these routes as the canonical baseline unless the user explicitly changes th
 - `GET /api/products/:id`
 - `POST /api/upload`
 - `GET /api/widget/config/:merchantId`
+- `GET /api/widget/settings`
+- `PUT /api/widget/settings`
 - `POST /api/widget/job`
 - `GET /api/widget/job/:id`
 - `GET /health`

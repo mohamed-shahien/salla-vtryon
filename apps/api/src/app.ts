@@ -1,3 +1,6 @@
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import compression from 'compression'
 import cors from 'cors'
 import express from 'express'
@@ -15,6 +18,9 @@ import { productsRouter } from './routes/products.js'
 import { uploadRouter } from './routes/upload.js'
 import { widgetRouter } from './routes/widget.js'
 import { webhookRouter } from './routes/webhooks.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const widgetDistPath = resolve(__dirname, '../../widget/dist')
 
 const allowedOrigins = [env.APP_URL, env.DASHBOARD_URL].filter(Boolean)
 const dashboardCors = cors({
@@ -40,8 +46,19 @@ export function createApp() {
   app.set('trust proxy', 1)
 
   app.use(helmet())
+
+  // Helmet sets Cross-Origin-Resource-Policy: same-origin globally.
+  // Widget routes are loaded by Salla storefronts (cross-origin) — override it here,
+  // after Helmet runs, so the correct header reaches the browser.
   app.use((request, response, next) => {
-    if (request.path.startsWith('/api/widget')) {
+    if (request.path.startsWith('/api/widget') || request.path === '/widget.js') {
+      response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    }
+    next()
+  })
+
+  app.use((request, response, next) => {
+    if (request.path.startsWith('/api/widget') || request.path === '/widget.js') {
       widgetCors(request, response, next)
       return
     }
@@ -50,6 +67,23 @@ export function createApp() {
   })
   app.use(compression())
   app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'))
+
+  // Serve the compiled widget bundle — must be reachable cross-origin by Salla storefronts
+  const widgetFilePath = resolve(widgetDistPath, 'widget.js')
+
+  app.get('/widget.js', (_req, res) => {
+    // Override Helmet's same-origin CORP so Salla storefronts can load this script cross-origin
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+    res.setHeader(
+      'Cache-Control',
+      env.NODE_ENV === 'production'
+        ? 'public, max-age=300, stale-while-revalidate=60'
+        : 'no-store',
+    )
+    res.sendFile(widgetFilePath)
+  })
+
   app.use('/webhooks', webhookRouter)
   app.use(express.json({ limit: '1mb' }))
   app.use(express.urlencoded({ extended: true }))

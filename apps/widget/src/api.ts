@@ -41,20 +41,32 @@ function normalizeBaseUrl(value: string) {
   return value.replace(/\/$/, '')
 }
 
+/**
+ * Base headers sent with every widget API request.
+ *
+ * ngrok-skip-browser-warning: bypasses ngrok's HTML interstitial page in
+ * development. The header is silently ignored by any non-ngrok server, so it
+ * is safe to include unconditionally.
+ */
+function baseHeaders(extra?: Record<string, string>): Record<string, string> {
+  return {
+    'ngrok-skip-browser-warning': '1',
+    ...extra,
+  }
+}
+
 async function parseApiResponse<TData>(response: Response, fallbackMessage: string) {
   if (!response.ok) {
     let message = fallbackMessage
 
     try {
-      const payload = (await response.json()) as { message?: string }
+      const text = await response.text()
+      const payload = JSON.parse(text) as { message?: string }
       if (payload.message) {
         message = payload.message
       }
     } catch {
-      const text = await response.text()
-      if (text) {
-        message = text
-      }
+      // keep fallback message
     }
 
     throw new Error(message)
@@ -72,7 +84,9 @@ export async function fetchWidgetConfig(baseUrl: string, merchantId: number, pro
   const url = new URL(getWidgetApiUrl(baseUrl, `/api/widget/config/${merchantId}`))
   url.searchParams.set('productId', productId)
 
-  const response = await fetch(url.toString())
+  const response = await fetch(url.toString(), {
+    headers: baseHeaders(),
+  })
 
   return parseApiResponse<WidgetConfigResponse>(
     response,
@@ -96,9 +110,7 @@ export async function createWidgetJob(
 
   const response = await fetch(getWidgetApiUrl(baseUrl, '/api/widget/job'), {
     method: 'POST',
-    headers: {
-      'X-Widget-Token': token,
-    },
+    headers: baseHeaders({ 'X-Widget-Token': token }),
     body: formData,
   })
 
@@ -110,9 +122,7 @@ export async function createWidgetJob(
 
 export async function fetchWidgetJob(baseUrl: string, token: string, jobId: string) {
   const response = await fetch(getWidgetApiUrl(baseUrl, `/api/widget/job/${jobId}`), {
-    headers: {
-      'X-Widget-Token': token,
-    },
+    headers: baseHeaders({ 'X-Widget-Token': token }),
   })
 
   return parseApiResponse<WidgetJobResponse>(
