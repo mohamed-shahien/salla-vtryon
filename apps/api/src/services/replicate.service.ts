@@ -26,11 +26,16 @@ const DEFAULT_MODEL = 'cuuupid/idm-vton'
  *  2. REPLICATE_MODEL          (model slug → works for official deployment models like flux)
  */
 function getPredictionIdentifier() {
-  if (env.REPLICATE_MODEL_VERSION?.trim()) {
-    return { version: env.REPLICATE_MODEL_VERSION.trim() } as const
+  const model = (env.REPLICATE_MODEL ?? DEFAULT_MODEL).trim()
+  const version = env.REPLICATE_MODEL_VERSION?.trim()
+
+  // Use version hash if provided (priority for community models like IDM-VTON)
+  if (version) {
+    return { version } as const
   }
 
-  return { model: (env.REPLICATE_MODEL ?? DEFAULT_MODEL).trim() } as const
+  // Fallback to model slug (works for official models like flux-1.1-pro)
+  return { model } as const
 }
 
 // ─── Model family detection ───────────────────────────────────────────────────
@@ -46,10 +51,14 @@ function getPredictionIdentifier() {
  *                Inputs: text prompt only — cannot perform real try-on
  */
 function getModelFamily(): 'idm-vton' | 'flux' {
-  const identifier = env.REPLICATE_MODEL_VERSION?.trim() || env.REPLICATE_MODEL?.trim() || DEFAULT_MODEL
-  const id = identifier.toLowerCase()
+  const model = (env.REPLICATE_MODEL ?? DEFAULT_MODEL).toLowerCase()
+  const version = (env.REPLICATE_MODEL_VERSION ?? '').toLowerCase()
+  
+  // Check both slug and version for "vton" or "idm-vton"
+  if (model.includes('idm-vton') || model.includes('vton') || version.includes('vton')) {
+    return 'idm-vton'
+  }
 
-  if (id.includes('idm-vton') || id.includes('vton')) return 'idm-vton'
   return 'flux'
 }
 
@@ -140,11 +149,26 @@ function getReplicateClient() {
  */
 export async function createTryOnPrediction(input: CreateTryOnPredictionInput) {
   const client = getReplicateClient()
+  const identifier = getPredictionIdentifier()
+  const family = getModelFamily()
 
-  return client.predictions.create({
-    ...getPredictionIdentifier(),
-    input: buildTryOnInput(input),
-  })
+  console.log(`[replicate] Creating prediction. family=${family} identifier=${'version' in identifier ? (identifier.version ? identifier.version.slice(0, 8) + '...' : 'unknown') : identifier.model}`)
+
+  try {
+    return await client.predictions.create({
+      ...identifier,
+      input: buildTryOnInput(input),
+    })
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('401')) {
+      throw new AppError(
+        'Replicate authentication failed. Please verify your REPLICATE_API_TOKEN in the .env file.',
+        401,
+        'REPLICATE_AUTH_FAILED',
+      )
+    }
+    throw error
+  }
 }
 
 export async function getPrediction(predictionId: string) {

@@ -6,7 +6,13 @@ import { z } from 'zod'
 
 const currentFilePath = fileURLToPath(import.meta.url)
 const currentDirectory = dirname(currentFilePath)
+// apps/api/src/config/env.ts -> ../../../../.env is the root
 const workspaceEnvPath = resolve(currentDirectory, '../../../../.env')
+
+import { existsSync } from 'node:fs'
+if (!existsSync(workspaceEnvPath)) {
+  console.warn(`[env] Critical: .env file not found at ${workspaceEnvPath}`)
+}
 
 loadDotenv({ path: workspaceEnvPath })
 
