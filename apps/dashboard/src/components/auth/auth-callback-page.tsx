@@ -39,7 +39,7 @@ export function AuthCallbackPage() {
         <p className="text-sm text-sky-300/80">
           OAuth Callback
         </p>
-        <h1 className="mt-4 text-3xl font-semibold">Finalizing the Salla login</h1>
+        <h1 className="mt-4 text-xl font-semibold">Finalizing the Salla login</h1>
         <p className="mt-3 text-sm leading-7 text-slate-300">
           The backend is exchanging the callback handoff for a local dashboard session.
         </p>

@@ -50,6 +50,15 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8),
 })
 
+const updateProfileSchema = z.object({
+  full_name: z.string().min(1).max(100),
+})
+
+const changePasswordSchema = z.object({
+  current_password: z.string().min(1),
+  new_password: z.string().min(8),
+})
+
 const verifyRequestSchema = z.object({
   handoff: z.string().min(1, 'handoff is required'),
 })
@@ -62,7 +71,7 @@ const callbackQuerySchema = z.object({
 export const authRouter = Router()
 
 async function buildDashboardIdentity(session: DashboardSessionPayload) {
-  const profile = await getDashboardMerchantProfile(session.merchant_uuid)
+  const profile = await getDashboardMerchantProfile(session.merchant_uuid, session.local_user_id)
 
   let sallaProfile: Awaited<ReturnType<typeof fetchMerchantUserInfoForMerchant>> | null = null
 
@@ -77,6 +86,11 @@ async function buildDashboardIdentity(session: DashboardSessionPayload) {
 
   return {
     ...session,
+    user: {
+      id: session.local_user_id,
+      email: profile.user?.email,
+      full_name: profile.user?.full_name,
+    },
     merchant: profile.merchant,
     credits: profile.credits,
     salla_profile: sallaProfile,
@@ -255,3 +269,53 @@ authRouter.post('/reset-password', authLimiter, async (request, response, next) 
     next(error)
   }
 })
+
+/**
+ * Update Profile
+ */
+authRouter.patch(
+  '/profile',
+  authLimiter,
+  requireDashboardSession,
+  async (request: DashboardAuthenticatedRequest, response, next) => {
+    try {
+      const { full_name } = updateProfileSchema.parse(request.body)
+      const user = await authService.updateProfile(request.dashboardSession!.local_user_id!, {
+        full_name,
+      })
+
+      response.status(200).json({
+        ok: true,
+        data: user,
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+/**
+ * Change Password
+ */
+authRouter.post(
+  '/change-password',
+  authLimiter,
+  requireDashboardSession,
+  async (request: DashboardAuthenticatedRequest, response, next) => {
+    try {
+      const { current_password, new_password } = changePasswordSchema.parse(request.body)
+      await authService.changePassword(
+        request.dashboardSession!.local_user_id!,
+        current_password,
+        new_password,
+      )
+
+      response.status(200).json({
+        ok: true,
+        message: 'Password updated successfully.',
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+)

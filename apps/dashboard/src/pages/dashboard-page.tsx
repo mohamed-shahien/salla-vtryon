@@ -128,7 +128,7 @@ export function DashboardPage() {
                   أهـلاً بك في مستقبل التجارة الإلكترونية
                 </Badge>
                 <div className="space-y-1">
-                  <h1 className="text-2xl md:text-3xl font-black  leading-tight">
+                  <h1 className="text-2xl md:text-xl font-black  leading-tight">
                     طـورت مبيعاتك، {merchantName}
                   </h1>
                   <p className="text-indigo-100/70 text-sm md:text-base font-medium max-w-2xl leading-relaxed">

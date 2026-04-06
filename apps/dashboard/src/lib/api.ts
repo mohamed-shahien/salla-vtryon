@@ -42,6 +42,11 @@ export interface DashboardMerchantIdentity {
       avatar?: string
     }
   } | null
+  user?: {
+    id: string
+    email: string
+    full_name: string | null
+  }
 }
 
 export interface CreditTransaction {
@@ -454,4 +459,30 @@ export async function resetPassword(token: string, password: string) {
   })
 
   return parseApiResponse<DashboardMerchantIdentity>(response, 'Failed to reset password.')
+}
+
+export async function updateProfile(fullName: string) {
+  const response = await fetch('/api/auth/profile', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ full_name: fullName }),
+  })
+
+  return parseApiResponse<{ ok: boolean }>(response, 'Failed to update profile.')
+}
+
+export async function changePassword(current: string, next: string) {
+  const response = await fetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ current_password: current, new_password: next }),
+  })
+
+  return parseApiResponse<{ ok: boolean }>(response, 'Failed to change password.')
 }

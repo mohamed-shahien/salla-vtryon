@@ -52,8 +52,7 @@ export class AuthService {
         .from('users')
         .insert({
           email: email.toLowerCase(),
-          name,
-          role: 'merchant',
+          full_name: name,
         })
         .select()
         .single()
@@ -248,9 +247,64 @@ export class AuthService {
     await supabase.from('audit_events').insert({
       user_id: userId,
       merchant_id: merchantId,
-      action,
+      event_type: action,
       metadata,
     })
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(userId: string, data: { full_name?: string }) {
+    if (!supabase) throw new AppError('Database client not initialized', 500)
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(data)
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (error) throw error
+    await this.logEvent(userId, null, 'profile_updated', data)
+    return user
+  }
+
+  /**
+   * Change password
+   */
+  async changePassword(userId: string, newPassword: string, currentPassword?: string) {
+    if (!supabase) throw new AppError('Database client not initialized', 500)
+
+    // 1. Get user
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !user) {
+      throw new AppError('User not found', 404)
+    }
+
+    // 2. Verify current password if provided
+    if (currentPassword && user.password_hash) {
+      const isValid = await this.comparePassword(currentPassword, user.password_hash)
+      if (!isValid) {
+        throw new AppError('Current password is incorrect', 400)
+      }
+    }
+
+    // 3. Update to new password
+    const passwordHash = await this.hashPassword(newPassword)
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ password_hash: passwordHash })
+      .eq('id', userId)
+
+    if (updateError) throw updateError
+    await this.logEvent(userId, null, 'password_changed_success')
+    await emailService.sendPasswordChangedNotification(user.email)
   }
 }
 

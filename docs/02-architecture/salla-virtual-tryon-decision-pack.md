@@ -295,4 +295,31 @@ Any older references to:
 - merchant try-on inside the dashboard as the main workflow
 - `user_id` as the tenant root
 
-should be treated as superseded.
+---
+
+## 14. Hybrid Authentication & Merchant Profiles
+
+**Decision**: Implement a two-path login system (Salla OAuth + Email/Password) and a Merchant Profile management system.
+
+**Context**:
+- Merchants installing from Salla need a way to return directly to our dashboard.
+- Merchants want to customize their "System Name" (Full Name) independent of their Salla Store name.
+
+**Design**:
+- **First-time install**: Salla OAuth creates/links the account and sets a temporary password and initial `full_name`.
+- **Profile Page**: Allows updating `full_name` and changing passwords.
+- **Audit Logging**: All security-sensitive actions (profile updates, password changes) are logged to the `audit_logs` table.
+
+**Status**: [APPROVED/IMPLEMENTED]
+
+---
+
+## 15. Strict Product Visibility Override
+
+**Decision**: Disabling a product in the dashboard forces it into "hidden" mode even if global settings are different.
+
+**Context**: Merchants need granular control to prevent try-ons on specific items (e.g., accessories, hats) even if they enable Virtual Try-On for the whole store.
+
+**Design**: If a product's visibility is toggled "OFF" in our dashboard, the backend widget config API always returns that product as if it were not enabled, overriding any automated selection logic.
+
+**Status**: [APPROVED/IMPLEMENTED]

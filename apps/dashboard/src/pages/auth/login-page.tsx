@@ -38,7 +38,7 @@ export const LoginPage: React.FC = () => {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 shadow-inner">
             <LogIn className="h-8 w-8 text-primary" />
           </div>
-          <h2 className="mt-6 text-3xl font-bold tracking-tight">تسجيل الدخول</h2>
+          <h2 className="mt-6 text-xl font-bold tracking-tight">تسجيل الدخول</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             أهلاً بك مجدداً في منصة القياس الافتراضي
           </p>
@@ -46,7 +46,7 @@ export const LoginPage: React.FC = () => {
 
         <Card className="border border-border bg-card p-8 shadow-2xl relative overflow-hidden rounded-2xl">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
-          
+
           <form onSubmit={handleSubmit} className="space-y-6 relative">
             {error && (
               <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5 text-destructive">

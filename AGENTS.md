@@ -164,6 +164,8 @@ Use these routes as the canonical baseline unless the user explicitly changes th
 - `GET /api/auth/salla/callback`
 - `POST /api/auth/verify`
 - `GET /api/auth/me`
+- `PATCH /api/auth/profile`
+- `POST /api/auth/change-password`
 - `POST /webhooks/salla`
 - `GET /api/credits`
 - `POST /api/jobs`

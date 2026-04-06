@@ -13,7 +13,7 @@ export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { setAuthenticated } = useAuthStore()
-  
+
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -91,14 +91,14 @@ export default function ResetPasswordPage() {
             <RefreshCw className="w-8 h-8 text-white" />
           </div>
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-black tracking-tight text-foreground">إعادة تعيين كلمة المرور</h1>
+            <h1 className="text-xl font-black tracking-tight text-foreground">إعادة تعيين كلمة المرور</h1>
             <p className="text-muted-foreground">أدخل كلمة المرور الجديدة لحسابك</p>
           </div>
         </div>
 
         <Card className="p-8 border-border/50 shadow-2xl rounded-3xl bg-card/50 backdrop-blur-xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-primary/10 transition-colors" />
-          
+
           <form onSubmit={handleSubmit} className="space-y-6 relative">
             {error && (
               <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5">

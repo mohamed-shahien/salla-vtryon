@@ -5,6 +5,7 @@ import {
   Wallet,
   Settings,
   LayoutDashboard,
+  User,
   ExternalLink,
   LifeBuoy
 } from "lucide-react"
@@ -36,6 +37,7 @@ const ICON_MAP = {
   "/products": Package,
   "/jobs": History,
   "/credits": Wallet,
+  "/profile": User,
   "/settings": Settings,
 }
 

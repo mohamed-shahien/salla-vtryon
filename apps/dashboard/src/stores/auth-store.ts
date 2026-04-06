@@ -10,6 +10,7 @@ interface AuthState {
   error: string | null
   setLoading: () => void
   setAuthenticated: (identity: DashboardMerchantIdentity) => void
+  setIdentity: (identity: DashboardMerchantIdentity) => void
   setUnauthenticated: () => void
   setError: (message: string) => void
   checkAuth: () => Promise<void>
@@ -31,6 +32,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       status: 'authenticated',
       identity,
       error: null,
+    }),
+  setIdentity: (identity) =>
+    set({
+      identity,
     }),
   setUnauthenticated: () =>
     set({

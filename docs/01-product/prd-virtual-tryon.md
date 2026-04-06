@@ -103,6 +103,14 @@ The shopper can:
 4. Merchant reviews failed and completed jobs.
 5. Merchant updates enabled products or button text.
 
+### 2.2 Dashboard (Merchant Interface)
+- **External Login**: Merchants can log in via Salla OAuth (primary) or Email/Password (secondary for returning access).
+- **Merchant Profile**: Manage display name and security settings (password update).
+- **Product Management**:
+    - List all products from Salla.
+    - Toggle Virtual Try-On per product.
+    - **Visibility Logic**: Disabling a product manually forces the widget into `selected` mode for that product, ensuring it remains hidden regardless of global settings.
+
 ### 5.3 Shopper try-on flow
 
 1. Shopper lands on a product page.

@@ -8,13 +8,14 @@ import {
    Save,
    ShieldCheck,
    Globe,
-   Zap,
    Layout,
    MousePointer2,
-   AlertCircle,
    Loader2,
-   Sparkles,
    ArrowLeft,
+   User,
+   Lock,
+   Mail,
+   RefreshCw,
 } from "lucide-react"
 import { motion } from "framer-motion"
 
@@ -39,6 +40,8 @@ import {
    fetchEmbedScript,
    fetchWidgetSettings,
    updateWidgetSettings,
+   updateProfile,
+   changePassword,
    type EmbedScriptData,
    type MerchantWidgetSettings,
    type TryOnCategory,
@@ -82,6 +85,15 @@ export function SettingsPage() {
    const [embedScript, setEmbedScript] = useState<EmbedScriptData | null>(null)
    const [copied, setCopied] = useState(false)
    const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+   // Profile & Security states
+   const identity = useAuthStore((state) => state.identity)
+   const setIdentity = useAuthStore((state) => state.setIdentity)
+   const [fullName, setFullName] = useState(identity?.user?.full_name || "")
+   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+   const [newPassword, setNewPassword] = useState("")
+   const [confirmPassword, setConfirmPassword] = useState("")
+   const [isChangingPassword, setIsChangingPassword] = useState(false)
 
    useEffect(() => {
       let active = true
@@ -145,6 +157,48 @@ export function SettingsPage() {
       }
    }
 
+   async function handleUpdateProfile(e: React.FormEvent) {
+      e.preventDefault()
+      setIsUpdatingProfile(true)
+      try {
+         const response = await updateProfile(fullName)
+         if (response.ok) {
+            toast.success("تم تحديث معلومات الحساب")
+            if (identity) {
+               setIdentity({
+                  ...identity,
+                  user: identity.user ? { ...identity.user, full_name: fullName } : { id: '', email: '', full_name: fullName }
+               })
+            }
+         }
+      } catch (err: any) {
+         toast.error(err.message || 'فشل التحديث')
+      } finally {
+         setIsUpdatingProfile(false)
+      }
+   }
+
+   async function handleChangePassword(e: React.FormEvent) {
+      e.preventDefault()
+      if (!newPassword || newPassword !== confirmPassword) {
+         toast.error("كلمات المرور غير متطابقة")
+         return
+      }
+      setIsChangingPassword(true)
+      try {
+         const response = await changePassword(undefined as any, newPassword)
+         if (response.ok) {
+            toast.success("تم تغيير كلمة المرور")
+            setNewPassword("")
+            setConfirmPassword("")
+         }
+      } catch (err: any) {
+         toast.error(err.message || 'فشل تغيير كلمة المرور')
+      } finally {
+         setIsChangingPassword(false)
+      }
+   }
+
    if (status === 'loading') {
       return (
          <div className="flex h-96 flex-col items-center justify-center gap-3 text-center">
@@ -165,9 +219,9 @@ export function SettingsPage() {
                   <Badge variant="outline" className="text-[9px] font-black   px-2 py-0.5 bg-primary/5 text-primary border-primary/20 rounded-xl">
                      النظام الأساسي
                   </Badge>
-                  <h1 className="text-2xl font-black  leading-tight">تخصيص واجهة المتجر</h1>
-                  <p className="text-muted-foreground font-bold text-[10px] max-w-xl opacity-70">
-                     تحكم في كيفية ظهور زر القياس الافتراضي وتخصيص النصوص والربط التقني.
+                  <h1 className="text-xl font-black leading-tight">الإعدادات والحساب</h1>
+                  <p className="text-muted-foreground font-bold text-[9px] max-w-xl opacity-70">
+                     تحكم في خصائص العرض، معلوماتك الشخصية، وإعدادات الأمان في مكان واحد.
                   </p>
                </div>
 
@@ -331,43 +385,83 @@ export function SettingsPage() {
                   )}
                </div>
 
-               {/* Right Sidebar */}
+               {/* Right Sidebar - Account & Security */}
                <div className="space-y-3">
+                  {/* Personal Info */}
                   <motion.div variants={item} initial="hidden" animate="show">
-                     <Card className="border-primary/10 bg-primary/2 p-3 rounded-xl relative overflow-hidden text-right border-dashed">
-                        <Sparkles className="absolute -top-3 -right-3 size-12 text-primary opacity-5 rotate-12" />
-                        <CardTitle className="text-[10px] font-black flex items-center gap-2 mb-3 justify-end   text-primary/60">
-                           إحصائيات الإضافة
-                           <Zap className="size-3 text-primary animate-pulse" />
-                        </CardTitle>
-                        <div className="space-y-2">
-                           <div className="flex justify-between items-center text-[10px] font-black p-2 bg-card rounded-xl border border-border/40">
-                              <span className="text-muted-foreground font-bold">المنتجات النشطة</span>
-                              <span className="text-primary tabular-nums">{draft?.widget_products.length || 0}</span>
+                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-xl text-right">
+                        <CardHeader className="p-3 border-b border-border/10">
+                           <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
+                              المعلومات الشخصية
+                              <User className="size-4 text-primary" />
+                           </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 space-y-3">
+                           <div className="space-y-1.5 text-right">
+                              <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">الاسم الكامل</Label>
+                              <Input
+                                 value={fullName}
+                                 onChange={(e) => setFullName(e.target.value)}
+                                 className="h-9 rounded-xl bg-background border-border/60 font-bold text-[10px] text-right"
+                              />
                            </div>
-                           <div className="flex justify-between items-center text-[10px] font-black p-2 bg-card rounded-xl border border-border/40">
-                              <span className="text-muted-foreground font-bold">زمن الاستجابة</span>
-                              <span className="text-emerald-600 font-black ">40ms</span>
+                           <div className="space-y-1.5 text-right opacity-60">
+                              <Label className="text-[9px] font-black text-muted-foreground px-1">البريد الإلكتروني</Label>
+                              <div className="h-9 rounded-xl border border-border/40 flex items-center px-3 justify-end gap-2 bg-muted/20">
+                                 <span className="text-[10px] font-bold truncate">{identity?.user?.email}</span>
+                                 <Mail className="size-3 text-muted-foreground" />
+                              </div>
                            </div>
-                        </div>
+                           <Button
+                              onClick={(e) => void handleUpdateProfile(e)}
+                              disabled={isUpdatingProfile || fullName === identity?.user?.full_name}
+                              className="w-full h-8 rounded-xl font-black text-[9px] gap-2"
+                           >
+                              {isUpdatingProfile ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
+                              تحديث المعلومات
+                           </Button>
+                        </CardContent>
                      </Card>
                   </motion.div>
 
+                  {/* Security */}
                   <motion.div variants={item} initial="hidden" animate="show">
-                     <Card className="bg-slate-900 border-0 text-white rounded-xl shadow-xl p-0.5 overflow-hidden group">
-                        <div className="absolute inset-0 bg-linear-to-br from-indigo-500/10 to-transparent opacity-50" />
-                        <CardContent className="p-3 space-y-4 text-right relative z-10">
-                           <div className="size-9 rounded-xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                              <AlertCircle className="size-4 text-indigo-300" />
+                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-xl text-right">
+                        <CardHeader className="p-3 border-b border-border/10">
+                           <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
+                              تغيير كلمة المرور
+                              <Lock className="size-4 text-primary" />
+                           </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 space-y-3">
+                           <div className="space-y-1.5 text-right">
+                              <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">كلمة المرور الجديدة</Label>
+                              <Input
+                                 type="password"
+                                 value={newPassword}
+                                 onChange={(e) => setNewPassword(e.target.value)}
+                                 className="h-9 rounded-xl bg-background border-border/60 font-bold text-[10px] text-right"
+                                 placeholder="••••••••"
+                              />
                            </div>
-                           <div className="space-y-1">
-                              <h4 className="text-xs font-black">الدعم التقني</h4>
-                              <p className="text-white/40 text-[9px] font-bold leading-relaxed">
-                                 تواجه صعوبة في تثبيت الكود؟ فريقنا جاهز لمساعدتك في أي وقت عبر الدردشة المباشرة.
-                              </p>
+                           <div className="space-y-1.5 text-right">
+                              <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">تأكيد كلمة المرور</Label>
+                              <Input
+                                 type="password"
+                                 value={confirmPassword}
+                                 onChange={(e) => setConfirmPassword(e.target.value)}
+                                 className="h-9 rounded-xl bg-background border-border/60 font-bold text-[10px] text-right"
+                                 placeholder="••••••••"
+                              />
                            </div>
-                           <Button className="w-full h-8 bg-white text-slate-900 font-black text-[10px] rounded-xl hover:bg-white/90 active:scale-95 transition-all">
-                              افتح تذكرة دعم
+                           <Button
+                              onClick={(e) => void handleChangePassword(e)}
+                              disabled={isChangingPassword || !newPassword || newPassword !== confirmPassword}
+                              variant="secondary"
+                              className="w-full h-8 rounded-xl font-black text-[9px] gap-2"
+                           >
+                              {isChangingPassword ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                              تحديث الأمان
                            </Button>
                         </CardContent>
                      </Card>
@@ -387,3 +481,4 @@ export function SettingsPage() {
       </TooltipProvider>
    )
 }
+

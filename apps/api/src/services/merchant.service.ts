@@ -70,6 +70,11 @@ export interface CreditsRecord {
 }
 
 export interface DashboardMerchantProfile {
+  user: {
+    id: string
+    email: string
+    full_name: string | null
+  } | null
   merchant: Pick<
     MerchantRecord,
     | 'id'
@@ -667,7 +672,8 @@ export async function updateMerchantRefreshedTokens(options: {
   })
 }
 
-export async function getDashboardMerchantProfile(merchantId: string) {
+export async function getDashboardMerchantProfile(merchantId: string, userId: string | null = null) {
+  const db = getSupabaseClient()
   const merchant = await findMerchantById(merchantId)
 
   if (!merchant) {
@@ -676,7 +682,22 @@ export async function getDashboardMerchantProfile(merchantId: string) {
 
   const credits = await ensureMerchantCreditsBaseline(merchant)
 
+  let userProfile: DashboardMerchantProfile['user'] = null
+
+  if (userId) {
+    const { data: user, error: userError } = await db
+      .from('users')
+      .select('id, email, full_name')
+      .eq('id', userId)
+      .single()
+
+    if (!userError && user) {
+      userProfile = user
+    }
+  }
+
   return {
+    user: userProfile,
     merchant: {
       id: merchant.id,
       salla_merchant_id: merchant.salla_merchant_id,
