@@ -9,6 +9,5 @@ export const navigationItems: NavigationItem[] = [
   { to: '/products', label: 'إدارة المنتجات' },
   { to: '/jobs', label: 'سجل العمليات' },
   { to: '/credits', label: 'الرصيد والاشتراك' },
-  { to: '/profile', label: 'الملف الشخصي' },
   { to: '/settings', label: 'الإعدادات' },
 ]

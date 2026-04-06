@@ -15,7 +15,6 @@ import { LoginPage } from '@/pages/auth/login-page'
 import ForgotPasswordPage from '@/pages/auth/forgot-password-page'
 import SetPasswordPage from '@/pages/auth/set-password-page'
 import ResetPasswordPage from '@/pages/auth/reset-password-page'
-import { ProfilePage } from '@/pages/profile-page'
 
 function App() {
   return (
@@ -43,7 +42,6 @@ function App() {
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/jobs" element={<JobsPage />} />
               <Route path="/credits" element={<CreditsPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Routes>

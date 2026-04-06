@@ -133,9 +133,9 @@ export function DashboardHeader() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-border/20 mx-1" />
             <DropdownMenuItem asChild>
-              <Link to="/profile" className="rounded-xl py-2 px-3 text-xs font-black   group cursor-pointer">
+              <Link to="/settings" className="rounded-xl py-2 px-3 text-xs font-black   group cursor-pointer">
                 <User className="me-3 size-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span>الملف الشخصي</span>
+                <span>الملف الشخصي والإعدادات</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
