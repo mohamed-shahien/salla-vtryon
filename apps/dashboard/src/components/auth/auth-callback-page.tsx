@@ -36,7 +36,7 @@ export function AuthCallbackPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-3 text-slate-100">
       <div className="max-w-lg rounded-xl border border-white/10 bg-white/5 p-3 text-center">
-        <p className="text-sm uppercase tracking-[0.28em] text-sky-300/80">
+        <p className="text-sm text-sky-300/80">
           OAuth Callback
         </p>
         <h1 className="mt-4 text-3xl font-semibold">Finalizing the Salla login</h1>

@@ -23,6 +23,10 @@ import {
   SidebarRail,
   SidebarSeparator
 } from "@/components/ui/sidebar"
+import {
+  Avatar,
+  AvatarFallback,
+} from "@/components/ui/avatar"
 import { navigationItems } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { useDirection } from "@/components/ui/direction"
@@ -44,60 +48,64 @@ export function DashboardSidebar() {
       {/* Sidebar Header / Logo */}
       <SidebarHeader className="h-14 p-3 border-b border-border/40">
         <div className="flex items-center gap-3 py-1">
-          <div className="h-9 w-9 rounded-lg bg-linear-to-br from-primary to-primary-foreground flex items-center justify-center shadow-lg shadow-primary/20 scale-110">
-            <span className="text-white font-black text-sm tracking-tighter">VT</span>
-          </div>
+          <Avatar className="h-8 w-8 ring-2 ring-primary/20 shadow-lg shadow-primary/20 transition-transform hover:scale-105">
+            <AvatarFallback className="bg-linear-to-br from-primary to-primary-foreground text-white font-black text-xs er rounded-xl">
+              VT
+            </AvatarFallback>
+          </Avatar>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <h2 className="text-sm font-black text-foreground leading-tight tracking-tight">القياس الافتراضي</h2>
-            <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-0.5">تطبيق سلة المعتمد</p>
+            <h2 className="text-xs font-black text-foreground leading-tight ">القياس الافتراضي</h2>
+            <p className="text-[8px] text-muted-foreground font-bold  mt-0.5">تطبيق سلة المعتمد</p>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent className="p-3 scrollbar-hide overflow-x-hidden justify-between">
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground font-black group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel className="px-3 text-[9px]  text-muted-foreground font-black group-data-[collapsible=icon]:hidden mb-1">
             القائمة الرئيسية
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-1.5">
+            <SidebarMenu className="gap-1">
               {navigationItems.map((item) => {
                 const Icon = ICON_MAP[item.to as keyof typeof ICON_MAP] || LayoutDashboard
                 return (
                   <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton asChild tooltip={item.label} className="h-10 hover:bg-transparent">
+                    <SidebarMenuButton asChild tooltip={item.label} className="h-9 hover:bg-transparent">
                       <NavLink
                         to={item.to}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-black relative overflow-hidden group",
+                            "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 text-[11px] font-black relative overflow-hidden group",
                             isActive
                               ? "bg-primary/10 text-primary"
-                              : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                           )
                         }
                       >
-                        <Icon className={cn("size-4.5 transition-colors group-hover:scale-105")} />
-                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                        
-                        {/* Active Indicator */}
-                        <NavLink
-                          to={item.to}
-                          className={({ isActive }) =>
-                            cn(
-                              "absolute top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity",
-                              isRTL ? "right-0" : "left-0",
-                              isActive ? "opacity-100" : "opacity-0"
-                            )
-                          }
-                        />
+                        {({ isActive }) => (
+                          <>
+                            <Icon className={cn("size-4 transition-colors group-hover:scale-105")} />
+                            <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
 
-                        {item.badge && (
-                          <span className="ms-auto group-data-[collapsible=icon]:hidden">
-                            <div className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-full text-[9px] font-black group-data-[active=true]:bg-white/20 group-data-[active=true]:text-white">
-                              {item.badge}
-                            </div>
-                          </span>
+                            {/* Active Indicator */}
+                            {isActive && (
+                              <div
+                                className={cn(
+                                  "absolute top-0 bottom-0 w-1 bg-primary rounded-full",
+                                  isRTL ? "right-0" : "left-0"
+                                )}
+                              />
+                            )}
+
+                            {item.badge && (
+                              <span className="ms-auto group-data-[collapsible=icon]:hidden">
+                                <div className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-full text-[8px] font-black">
+                                  {item.badge}
+                                </div>
+                              </span>
+                            )}
+                          </>
                         )}
                       </NavLink>
                     </SidebarMenuButton>
@@ -108,28 +116,28 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator className="my-6 opacity-30" />
+        <SidebarSeparator className="my-4 opacity-30" />
 
         {/* Secondary Links Group */}
         <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-          <SidebarGroupLabel className="px-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground font-black mb-3 mt-2">
-            خيارات إضافية
+          <SidebarGroupLabel className="px-3 text-[9px]  text-muted-foreground font-black mb-2 opacity-50">
+            الدعم والمساعدة
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-1.5">
+            <SidebarMenu className="gap-1">
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className="h-9 hover:bg-transparent">
-                  <a href="https://salla.sa" target="_blank" rel="noreferrer" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all">
-                    <ExternalLink className="size-4" />
-                    <span className="text-sm font-bold">مركز مساعدة سلة</span>
+                <SidebarMenuButton asChild className="h-8 hover:bg-transparent">
+                  <a href="https://salla.sa" target="_blank" rel="noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all">
+                    <ExternalLink className="size-3.5 opacity-60" />
+                    <span className="text-[10px] font-bold">مركز مساعدة سلة</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className="h-9 hover:bg-transparent">
-                  <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all">
-                    <LifeBuoy className="size-4" />
-                    <span className="text-sm font-bold">الدعم الفني للتطبيق</span>
+                <SidebarMenuButton asChild className="h-8 hover:bg-transparent">
+                  <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all">
+                    <LifeBuoy className="size-3.5 opacity-60" />
+                    <span className="text-[10px] font-bold">الدعم الفني للتطبيق</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -139,21 +147,14 @@ export function DashboardSidebar() {
       </SidebarContent>
 
       {/* Sidebar Footer - System Status */}
-      <SidebarFooter className="p-3 mt-auto border-t border-border/40 bg-muted/10 group-data-[collapsible=icon]:hidden">
-        <div className="rounded-lg bg-linear-to-br from-card to-muted/20 p-3 border border-border/40 relative overflow-hidden group shadow-sm transition-all hover:border-primary/20">
-          <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center transition-transform group-hover:rotate-6 duration-500 mb-3">
-            <LayoutDashboard className="size-5 text-primary" />
+      <SidebarFooter className="p-3 mt-auto border-t border-border/40 bg-muted/5 group-data-[collapsible=icon]:hidden">
+        <div className="rounded-xl bg-card p-3 border border-border/40 relative overflow-hidden group shadow-xs hover:border-primary/20 transition-all">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[8px] font-black text-emerald-600  ">متصل</span>
           </div>
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">متزامن ومستقر</span>
-          </div>
-          <div className="mt-2 space-y-1 relative z-10">
-            <p className="text-[11px] font-bold text-foreground leading-tight">الربط مع سلة فعال</p>
-            <p className="text-[9px] text-muted-foreground leading-relaxed mt-1 opacity-70">
-              يتم تحديث البيانات لحظياً لضمان تجربة مستخدم مثالية.
-            </p>
-          </div>
+          <p className="text-[10px] font-black text-foreground leading-tight">حالة النظام فعالة</p>
+          <p className="text-[8px] font-bold text-muted-foreground leading-relaxed mt-1 opacity-60">تحديث البيانات مستمر</p>
         </div>
       </SidebarFooter>
 

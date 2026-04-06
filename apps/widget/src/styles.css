@@ -121,7 +121,6 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.28em;
-  text-transform: uppercase;
 }
 
 .vtryon-widget__title {
@@ -330,7 +329,6 @@
   color: var(--vtryon-muted);
   font-size: 12px;
   letter-spacing: 0.18em;
-  text-transform: uppercase;
 }
 
 .vtryon-widget__result-actions {

@@ -120,7 +120,7 @@ export function OnboardingWizard() {
               </div>
 
               <div className="space-y-3">
-                <h2 className="text-2xl font-black text-foreground tracking-tight">{steps[step - 1].title}</h2>
+                <h2 className="text-2xl font-black text-foreground ">{steps[step - 1].title}</h2>
                 <p className="text-muted-foreground text-sm font-medium leading-relaxed max-w-[340px] mx-auto">
                   {steps[step - 1].description}
                 </p>

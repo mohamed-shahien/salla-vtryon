@@ -33,18 +33,7 @@ export function AppShell() {
             </div>
           </main>
 
-          <footer className="h-14 border-t border-border/40 px-3 flex items-center justify-between text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] bg-card/30 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <div className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-              <span>نظام القياس الافتراضي المتكامل - الإصدار 1.0</span>
-            </div>
-            <div className="hidden md:flex items-center gap-3">
-              <a href="#" className="hover:text-primary transition-colors">سياسة الخصوصية</a>
-              <a href="#" className="hover:text-primary transition-colors">اتفاقية الاستخدام</a>
-              <span className="text-border">|</span>
-              <span>&copy; {new Date().getFullYear()} سلة - جميع الحقوق محفوظة</span>
-            </div>
-          </footer>
+
         </SidebarInset>
 
         {/* Global Notifications */}

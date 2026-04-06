@@ -30,6 +30,11 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar"
 import { useAuthStore } from "@/stores/auth-store"
 import { navigationItems } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -47,6 +52,7 @@ export function DashboardHeader() {
   }, [])
 
   const merchantName = identity?.salla_profile?.merchant?.name || "التاجر"
+  const merchantAvatar = identity?.salla_profile?.merchant?.avatar
   const credits = identity?.credits?.remaining_credits ?? 0
 
   const currentPath = location.pathname
@@ -55,12 +61,12 @@ export function DashboardHeader() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex h-14 md:h-16 w-full items-center justify-between border-b border-border bg-card/90 px-3 backdrop-blur-xl transition-all duration-300",
-        scrolled && "h-12 md:h-14 shadow-sm"
+        "sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b border-border bg-card/90 px-3 backdrop-blur-xl transition-all duration-300",
+        scrolled && "shadow-sm"
       )}
     >
       {/* Right Side (Breadcrumbs & Trigger) */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1">
         <SidebarTrigger className="-ms-1 md:ms-0" />
         <Separator orientation="vertical" className="mx-2 h-4 hidden md:block" />
 
@@ -92,7 +98,7 @@ export function DashboardHeader() {
             <RefreshCw className="size-3 transition-transform group-hover:rotate-180 duration-500" />
             {credits}
           </Badge>
-          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none">رصيد القياس</span>
+          <span className="text-[10px] font-black text-muted-foreground   leading-none">رصيد القياس</span>
         </div>
 
         {/* Notifications */}
@@ -105,12 +111,15 @@ export function DashboardHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-11 gap-3 px-2 hover:bg-muted transition-all rounded-xl group">
-              <div className="h-8 w-8 rounded-xl bg-linear-to-br from-primary to-primary-foreground flex items-center justify-center text-white font-black text-xs shadow-lg transition-transform group-hover:scale-105">
-                {merchantName.substring(0, 1).toUpperCase()}
-              </div>
+              <Avatar className="size-8 ring-2 ring-border/40 group-hover:ring-primary/20 transition-all border border-background">
+                <AvatarImage src={merchantAvatar} alt={merchantName} />
+                <AvatarFallback className="bg-primary/10 text-primary font-black text-xs rounded-xl">
+                  {merchantName.substring(0, 1).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div className="hidden lg:flex flex-col items-start gap-0.5">
                 <span className="text-xs font-black text-foreground leading-none">{merchantName}</span>
-                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">إدارة المتجر</span>
+                <span className="text-[9px] text-muted-foreground font-bold  ">إدارة المتجر</span>
               </div>
               <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </Button>
@@ -118,19 +127,19 @@ export function DashboardHeader() {
           <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 border-border/40 shadow-2xl backdrop-blur-xl">
             <DropdownMenuLabel className="px-3 py-2">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">صاحب المتجر</span>
+                <span className="text-[10px] font-black text-muted-foreground">صاحب المتجر</span>
                 <span className="text-xs font-bold truncate">{identity?.salla_profile?.email || "merchant@salla.sa"}</span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-border/20 mx-1" />
             <DropdownMenuItem asChild>
-              <Link to="/settings" className="rounded-xl py-2 px-3 text-xs font-black uppercase tracking-widest group cursor-pointer">
+              <Link to="/settings" className="rounded-xl py-2 px-3 text-xs font-black   group cursor-pointer">
                 <User className="me-3 size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span>الملف الشخصي</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/credits" className="rounded-xl py-2 px-3 text-xs font-black uppercase tracking-widest group cursor-pointer">
+              <Link to="/credits" className="rounded-xl py-2 px-3 text-xs font-black group cursor-pointer">
                 <Wallet className="me-3 size-4 text-muted-foreground group-hover:text-amber-500 transition-colors" />
                 <span>الرصيد والاشتراك</span>
               </Link>
@@ -138,7 +147,7 @@ export function DashboardHeader() {
             <DropdownMenuSeparator className="bg-border/20 mx-1" />
             <DropdownMenuItem
               onClick={() => setUnauthenticated()}
-              className="rounded-xl py-2 px-3 text-xs font-black uppercase tracking-widest text-destructive hover:bg-destructive/10 group cursor-pointer transition-all"
+              className="rounded-xl py-2 px-3 text-xs font-black text-destructive hover:bg-destructive/10 group cursor-pointer transition-all"
             >
               <LogOut className="me-3 size-4 group-hover:translate-x-0.5 transition-transform" />
               <span>تسجيل الخروج</span>

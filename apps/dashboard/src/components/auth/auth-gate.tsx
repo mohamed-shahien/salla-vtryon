@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { 
-  RefreshCw, 
-  UserCheck, 
+import {
+  RefreshCw,
+  UserCheck,
   LayoutDashboard
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
@@ -41,7 +41,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
             <div className="size-16 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-8">
               <RefreshCw className="size-8 text-primary animate-spin" />
             </div>
-            <p className="text-xs uppercase tracking-widest text-primary font-black mb-4">
+            <p className="text-xs   text-primary font-black mb-4">
               لوحة التحكم الخارجية
             </p>
             <p className="text-muted-foreground text-sm font-medium leading-relaxed">
@@ -63,23 +63,23 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
             </div>
             <div className="flex items-center gap-3 relative z-10 pt-4">
               <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">حالة النظام</span>
+              <span className="text-[10px] font-black text-muted-foreground  ">حالة النظام</span>
             </div>
             <div className="mt-2 relative z-10 pb-4">
               <p className="text-xs font-black text-foreground">جميع الأنظمة تعمل بكفاءة</p>
             </div>
           </div>
-          
+
           <div className="relative">
             <div className="size-16 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-8 shadow-inner">
               <UserCheck className="size-8 text-primary" />
             </div>
-            <h2 className="text-2xl font-black mb-2 tracking-tight">مرحباً بك مجدداً</h2>
+            <h2 className="text-2xl font-black mb-2 ">مرحباً بك مجدداً</h2>
             <p className="text-muted-foreground text-sm font-medium mb-8">
               للوصول إلى لوحة التحكم، يرجى تسجيل الدخول عبر متجر سلة الخاص بك.
             </p>
-            <a 
-              href="/api/auth/salla/start" 
+            <a
+              href="/api/auth/salla/start"
               className="inline-flex w-full items-center justify-center rounded-lg bg-primary px-3 h-12 text-sm font-black text-white shadow-xl shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98]"
             >
               تسجيل الدخول عبر سلة

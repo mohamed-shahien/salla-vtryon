@@ -77,3 +77,6 @@ API health check after starting the backend:
 ```bash
 curl http://localhost:3001/health
 ```
+
+# add shadcn component
+npx.cmd shadcn@latest add [component] -c apps/dashboard
