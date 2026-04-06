@@ -6,6 +6,8 @@ import {
   requireDashboardSession,
   type DashboardAuthenticatedRequest,
 } from '../middleware/require-dashboard-session.js'
+import { authService } from '../services/auth.service.js'
+import * as emailService from '../services/email.service.js'
 import {
   clearDashboardSessionCookie,
   consumeDashboardAuthHandoff,
@@ -28,6 +30,25 @@ import {
   fetchMerchantUserInfoForMerchant,
 } from '../services/salla-api.service.js'
 import { AppError } from '../utils/app-error.js'
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string(),
+})
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+})
+
+const setPasswordSchema = z.object({
+  token: z.string(),
+  password: z.string().min(8),
+})
+
+const resetPasswordSchema = z.object({
+  token: z.string(),
+  password: z.string().min(8),
+})
 
 const verifyRequestSchema = z.object({
   handoff: z.string().min(1, 'handoff is required'),
@@ -92,11 +113,19 @@ authRouter.get('/salla/callback', authLimiter, async (request, response, next) =
       storeName: userInfo.merchant.name,
     })
 
+    // Ensure local user exists and is linked
+    const user = await authService.ensureMerchantUserLink({
+      merchantId: merchant.id,
+      email: userInfo.email ?? '', // Salla user email
+      name: userInfo.name ?? merchant.store_name ?? 'Merchant',
+    })
+
     const session = createDashboardSession({
       merchantUuid: merchant.id,
       merchantId: userInfo.merchant.id,
       userId: userInfo.id ?? null,
-      storeName: userInfo.merchant.name,
+      localUserId: user.id,
+      storeName: merchant.store_name ?? 'Store',
     })
 
     const handoff = createDashboardAuthHandoff(session)
@@ -146,4 +175,83 @@ authRouter.post('/logout', authLimiter, (_request, response) => {
   response.status(200).json({
     ok: true,
   })
+})
+
+/**
+ * Local Login
+ */
+authRouter.post('/login', authLimiter, async (request, response, next) => {
+  try {
+    const { email, password } = loginSchema.parse(request.body)
+    const { user, merchant } = await authService.login(email, password)
+
+    const session = createDashboardSession({
+      merchantUuid: merchant.id,
+      merchantId: merchant.salla_merchant_id,
+      userId: null, // This is a local login, so we don't have a Salla user ID in context
+      localUserId: user.id,
+      storeName: merchant.store_name,
+    })
+
+    setDashboardSessionCookie(response, session)
+
+    response.status(200).json({
+      ok: true,
+      data: await buildDashboardIdentity(session),
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+/**
+ * Forgot Password
+ */
+authRouter.post('/forgot-password', authLimiter, async (request, response, next) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(request.body)
+    await authService.forgotPassword(email)
+
+    response.status(200).json({
+      ok: true,
+      message: 'If an account exists with that email, a password reset link has been sent.',
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+/**
+ * Set Initial Password (from welcome email)
+ */
+authRouter.post('/set-password', authLimiter, async (request, response, next) => {
+  try {
+    const { token, password } = setPasswordSchema.parse(request.body)
+    const user = await authService.setPassword(token, password)
+    await emailService.sendPasswordChangedNotification(user.email)
+
+    response.status(200).json({
+      ok: true,
+      message: 'Password set successfully. You can now log in.',
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+/**
+ * Reset Password
+ */
+authRouter.post('/reset-password', authLimiter, async (request, response, next) => {
+  try {
+    const { token, password } = resetPasswordSchema.parse(request.body)
+    await authService.resetPassword(token, password)
+
+    response.status(200).json({
+      ok: true,
+      message: 'Password reset successfully. You can now log in.',
+    })
+  } catch (error) {
+    next(error)
+  }
 })

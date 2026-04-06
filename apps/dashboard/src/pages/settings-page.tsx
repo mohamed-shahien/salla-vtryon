@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
    Monitor,
    Code2,
@@ -72,6 +73,7 @@ const item = {
 }
 
 export function SettingsPage() {
+   const navigate = useNavigate()
    const setAuthenticated = useAuthStore((state) => state.setAuthenticated)
    const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle')
    const [settings, setSettings] = useState<MerchantWidgetSettings | null>(null)
@@ -169,14 +171,24 @@ export function SettingsPage() {
                   </p>
                </div>
 
-               <Button
-                  onClick={() => void handleSave()}
-                  disabled={!draftChanged || saveStatus === 'saving'}
-                  className="rounded-xl font-black text-[10px] h-9 px-5 shadow-lg shadow-primary/20 bg-primary transition-all active:scale-95"
-               >
-                  {saveStatus === 'saving' ? <Loader2 className="me-2 size-3.5 animate-spin" /> : <Save className="me-2 size-3.5" />}
-                  حفظ كافة التغييرات
-               </Button>
+                <div className="flex items-center gap-2">
+                   <Button
+                      variant="outline"
+                      onClick={() => navigate('/products')}
+                      className="rounded-xl font-black text-[10px] h-9 px-4 shadow-xs bg-card/50 backdrop-blur-sm border-border/60"
+                   >
+                      <ArrowLeft className="me-2 size-3.5" />
+                      العودة للمنتجات
+                   </Button>
+                   <Button
+                      onClick={() => void handleSave()}
+                      disabled={!draftChanged || saveStatus === 'saving'}
+                      className="rounded-xl font-black text-[10px] h-9 px-5 shadow-lg shadow-primary/20 bg-primary transition-all active:scale-95"
+                   >
+                      {saveStatus === 'saving' ? <Loader2 className="me-2 size-3.5 animate-spin" /> : <Save className="me-2 size-3.5" />}
+                      حفظ التغييرات
+                   </Button>
+                </div>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-3">
@@ -361,10 +373,14 @@ export function SettingsPage() {
                      </Card>
                   </motion.div>
 
-                  <Button variant="ghost" className="w-full text-muted-foreground hover:text-primary font-bold text-[9px]   h-8 justify-end gap-2 group">
-                     العودة للمتجر
-                     <ArrowLeft className="size-3 transition-transform group-hover:translate-x-1" />
-                  </Button>
+                   <Button 
+                     variant="ghost" 
+                     onClick={() => navigate('/products')}
+                     className="w-full text-muted-foreground hover:text-primary font-bold text-[9px] h-8 justify-end gap-2 group"
+                   >
+                      العودة لقائمة المنتجات
+                      <ArrowLeft className="size-3 transition-transform group-hover:translate-x-1" />
+                   </Button>
                </div>
             </div>
          </div>

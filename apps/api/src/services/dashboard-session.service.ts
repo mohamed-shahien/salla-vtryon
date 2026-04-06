@@ -14,6 +14,7 @@ export interface DashboardSessionPayload {
   merchant_uuid: string
   merchant_id: number
   user_id: number | null
+  local_user_id: string | null
   store_name: string | null
   issued_at: string
   exp: string
@@ -63,6 +64,7 @@ function createSessionPayload(input: {
   merchantUuid: string
   merchantId: number
   userId: number | null
+  localUserId: string | null
   storeName: string | null
 }) {
   const issuedAt = new Date()
@@ -71,6 +73,7 @@ function createSessionPayload(input: {
     merchant_uuid: input.merchantUuid,
     merchant_id: input.merchantId,
     user_id: input.userId,
+    local_user_id: input.localUserId,
     store_name: input.storeName,
     issued_at: issuedAt.toISOString(),
     exp: new Date(issuedAt.getTime() + SESSION_TTL_MS).toISOString(),
@@ -166,6 +169,7 @@ export function createDashboardSession(input: {
   merchantUuid: string
   merchantId: number
   userId: number | null
+  localUserId: string | null
   storeName: string | null
 }) {
   return createSessionPayload(input)

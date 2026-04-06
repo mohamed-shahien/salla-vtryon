@@ -398,3 +398,60 @@ export async function fetchEmbedScript() {
     `Embed script lookup failed with status ${response.status}`,
   )
 }
+
+export async function loginMerchant(email: string, password: string) {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ email, password }),
+  })
+
+  return parseApiResponse<DashboardMerchantIdentity>(response, 'Failed to login.')
+}
+
+export async function forgotPassword(email: string) {
+  const response = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ email }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(getApiErrorMessage(text, 'Failed to process forgot password request.'))
+  }
+
+  return response.json()
+}
+
+export async function setPassword(token: string, password: string) {
+  const response = await fetch('/api/auth/set-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ token, password }),
+  })
+
+  return parseApiResponse<DashboardMerchantIdentity>(response, 'Failed to set password.')
+}
+
+export async function resetPassword(token: string, password: string) {
+  const response = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ token, password }),
+  })
+
+  return parseApiResponse<DashboardMerchantIdentity>(response, 'Failed to reset password.')
+}

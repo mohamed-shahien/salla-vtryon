@@ -11,6 +11,10 @@ import { DirectionProvider } from '@/components/ui/direction'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { SettingsPage } from '@/pages/settings-page'
+import { LoginPage } from '@/pages/auth/login-page'
+import ForgotPasswordPage from '@/pages/auth/forgot-password-page'
+import SetPasswordPage from '@/pages/auth/set-password-page'
+import ResetPasswordPage from '@/pages/auth/reset-password-page'
 
 function App() {
   return (
@@ -19,6 +23,10 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/auth/set-password" element={<SetPasswordPage />} />
+            <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
             <Route
               element={
                 <AuthGate>

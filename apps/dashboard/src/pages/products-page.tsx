@@ -1,4 +1,5 @@
 import { useState, useMemo, useDeferredValue } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   Package,
   Search,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,8 +73,9 @@ const item = {
 }
 
 export function ProductsPage() {
+  const navigate = useNavigate()
   const { products, isLoading, mutate: refreshProducts, error: productsError } = useSallaProducts()
-  const { settings, mutate: refreshSettings } = useWidgetSettings()
+  const { mutate: refreshSettings } = useWidgetSettings()
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all")
@@ -90,13 +92,13 @@ export function ProductsPage() {
     if (!products) return []
     return products.filter((p: SallaProduct) => {
       const matchesSearch = p.name.toLowerCase().includes(deferredSearch.toLowerCase())
-      const isEnabled = settings?.widget_products?.includes(p.id) || false
+      const isEnabled = p.widget_enabled
       const matchesStatus = statusFilter === "all" ||
         (statusFilter === "enabled" && isEnabled) ||
         (statusFilter === "disabled" && !isEnabled)
       return matchesSearch && matchesStatus
     })
-  }, [products, deferredSearch, statusFilter, settings])
+  }, [products, deferredSearch, statusFilter])
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
   const paginatedProducts = useMemo(() => {
@@ -121,7 +123,7 @@ export function ProductsPage() {
     try {
       if (enabled) await enableMerchantProducts([productId])
       else await disableMerchantProducts([productId])
-      await refreshSettings()
+      await Promise.all([refreshSettings(), refreshProducts()])
     } catch (error) {
       console.error("Failed to toggle product:", error)
     } finally {
@@ -135,7 +137,7 @@ export function ProductsPage() {
     try {
       if (enabled) await enableMerchantProducts(ids)
       else await disableMerchantProducts(ids)
-      await refreshSettings()
+      await Promise.all([refreshSettings(), refreshProducts()])
       setSelectedIds(new Set())
     } catch (error) {
       console.error("Bulk action failed:", error)
@@ -179,7 +181,10 @@ export function ProductsPage() {
               <RefreshCcw className={cn("me-2 size-3.5", isUpdating === "sync" && "animate-spin")} />
               مزامنة سلة
             </Button>
-            <Button className="rounded-xl font-black text-[10px] h-9 px-5 shadow-lg shadow-primary/20 bg-primary">
+            <Button
+              onClick={() => navigate("/settings")}
+              className="rounded-xl font-black text-[10px] h-9 px-5 shadow-lg shadow-primary/20 bg-primary transition-all active:scale-95"
+            >
               <Settings2 className="me-2 size-3.5" />
               إعدادات الظهور
             </Button>
@@ -287,7 +292,7 @@ export function ProductsPage() {
                 viewMode === "grid" ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
               )}>
               {paginatedProducts.map((product) => {
-                const isEnabled = settings?.widget_products?.includes(product.id) || false
+                const isEnabled = product.widget_enabled
                 const isSelected = selectedIds.has(product.id)
                 const isCurrentlyUpdating = isUpdating === product.id
 

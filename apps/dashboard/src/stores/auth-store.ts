@@ -13,6 +13,8 @@ interface AuthState {
   setUnauthenticated: () => void
   setError: (message: string) => void
   checkAuth: () => Promise<void>
+  login: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -62,6 +64,38 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({
         status: 'unauthenticated',
         identity: null,
+      })
+    }
+  },
+  login: async (email, password) => {
+    const { loginMerchant } = await import('@/lib/api')
+    set({ status: 'loading', error: null })
+    try {
+      const response = await loginMerchant(email, password)
+      if (response?.data) {
+        set({
+          status: 'authenticated',
+          identity: response.data,
+          error: null,
+        })
+      }
+    } catch (err: any) {
+      set({
+        status: 'unauthenticated',
+        error: err.message || 'فشل تسجيل الدخول',
+      })
+      throw err
+    }
+  },
+  logout: async () => {
+    const { logoutCurrentMerchant } = await import('@/lib/api')
+    try {
+      await logoutCurrentMerchant()
+    } finally {
+      set({
+        status: 'unauthenticated',
+        identity: null,
+        error: null,
       })
     }
   },

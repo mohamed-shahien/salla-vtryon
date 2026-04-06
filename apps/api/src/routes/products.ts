@@ -159,7 +159,10 @@ productsRouter.post(
 
       await updateMerchantProductRules(merchantUuid, body.product_ids, false)
 
-      const settings = await getMerchantWidgetSettings(merchantUuid)
+      // Ensure widget is in selected mode so the disable takes effect for these products
+      const settings = await updateMerchantWidgetSettings(merchantUuid, {
+        widget_mode: 'selected',
+      })
 
       response.status(200).json({ ok: true, data: settings })
     } catch (error) {

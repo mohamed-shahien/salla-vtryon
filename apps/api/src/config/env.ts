@@ -50,6 +50,11 @@ const envSchema = z.object({
   JOB_PROCESSOR_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
   JOB_PROCESSOR_BATCH_SIZE: z.coerce.number().int().min(1).max(20).default(5),
   ENCRYPTION_KEY: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('Virtual Try-On <no-reply@vtryon.dev>'),
 })
 
 export const env = envSchema.parse(process.env)
