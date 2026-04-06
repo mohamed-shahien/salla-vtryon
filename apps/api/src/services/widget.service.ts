@@ -9,6 +9,8 @@ import {
   ensureMerchantRecord,
   findMerchantById,
   findMerchantBySallaMerchantId,
+  getMerchantProductRule,
+  getMerchantProductRules,
   getMerchantWidgetSettings,
   isWidgetEnabledForProduct,
   normalizeWidgetSettings,
@@ -21,6 +23,11 @@ interface WidgetConfigPayload {
   current_product_id: string | null
   overall_enabled: boolean
   current_product_enabled: boolean
+  // Legacy aliases for backward compatibility
+  mode: 'all' | 'selected'
+  products: number[]
+  enabled: boolean
+  
   widget_mode: 'all' | 'selected'
   widget_products: number[]
   button_text: string
@@ -68,24 +75,7 @@ function extractProductName(product: unknown) {
   return typeof candidate.name === 'string' ? candidate.name : null
 }
 
-function buildDisabledConfig(
-  merchantId: number,
-  productId: string | null,
-  reason: string,
-): WidgetConfigPayload {
-  return {
-    merchant_id: merchantId,
-    current_product_id: productId,
-    overall_enabled: false,
-    current_product_enabled: false,
-    widget_mode: 'all',
-    widget_products: [],
-    button_text: '',
-    default_category: 'upper_body',
-    widget_token: null,
-    reason,
-  }
-}
+
 
 export async function getWidgetConfig(
   sallaMerchantId: number,
@@ -101,34 +91,66 @@ export async function getWidgetConfig(
 
   const settings = normalizeWidgetSettings(merchant.settings)
   const overallEnabled =
-    merchant.is_active === true &&
-    merchant.plan_status === 'active' &&
-    settings.widget_enabled
+    merchant.is_active === true && merchant.plan_status === 'active' && settings.widget_enabled
 
+  // Step 1: Fetch Rule for current product (if applicable)
+  let currentProductRule: { enabled: boolean } | null = null
+  if (currentProductId) {
+    currentProductRule = await getMerchantProductRule(merchant.id, currentProductId)
+  }
+
+  // Step 2: Determine if widget is enabled for this specific page
   const currentProductEnabled =
     overallEnabled && currentProductId
-      ? isWidgetEnabledForProduct(settings, currentProductId)
+      ? isWidgetEnabledForProduct(settings, currentProductId, currentProductRule)
       : overallEnabled && settings.widget_mode === 'all'
+
+  // Step 3: Fetch all enabled products for 'selected' mode (backward compatibility + fallback)
+  let widgetProducts = settings.widget_products
+  if (settings.widget_mode === 'selected') {
+    const rules = await getMerchantProductRules(merchant.id)
+    const enabledFromRules = rules.filter((r) => r.enabled).map((r) => r.product_id)
+    const disabledFromRules = new Set(rules.filter((r) => !r.enabled).map((r) => r.product_id))
+
+    // Merge: legacy fallback minus explicit disables
+    widgetProducts = Array.from(
+      new Set([
+        ...enabledFromRules,
+        ...settings.widget_products.filter((id) => !disabledFromRules.has(id)),
+      ]),
+    )
+  }
+
+  // Edge Case: selected mode + no products enabled -> widget NOT rendered
+  const finalProductEnabled =
+    currentProductEnabled &&
+    (settings.widget_mode === 'all' || widgetProducts.length > 0)
 
   const reason = !overallEnabled
     ? 'Widget is disabled for this merchant.'
     : !currentProductId
       ? 'Product context is missing for this storefront page.'
-    : currentProductId && !currentProductEnabled
-      ? 'Widget is not enabled for this product.'
-      : null
+      : currentProductId && !finalProductEnabled
+        ? 'Widget is not enabled for this product or no products are selected.'
+        : null
 
-  return {
+  const config = {
     merchant_id: sallaMerchantId,
     current_product_id: currentProductId ?? null,
     overall_enabled: overallEnabled,
-    current_product_enabled: currentProductEnabled,
+    current_product_enabled: finalProductEnabled,
     widget_mode: settings.widget_mode,
-    widget_products: settings.widget_products,
+    widget_products: widgetProducts,
+    
+    // LOCKED Legacy Aliases
+    mode: settings.widget_mode,
+    products: widgetProducts,
+    enabled: finalProductEnabled,
+
     button_text: settings.widget_button_text,
     default_category: settings.default_category,
     widget_token:
-      currentProductId && currentProductEnabled
+      currentProductId && finalProductEnabled
         ? createWidgetToken({
             merchantUuid: merchant.id,
             merchantId: merchant.salla_merchant_id,
@@ -137,6 +159,8 @@ export async function getWidgetConfig(
         : null,
     reason,
   } satisfies WidgetConfigPayload
+
+  return config
 }
 
 export async function createWidgetTryOnJob(options: {
@@ -153,8 +177,9 @@ export async function createWidgetTryOnJob(options: {
   }
 
   const settings = await getMerchantWidgetSettings(widgetContext.merchant_uuid)
+  const rule = await getMerchantProductRule(widgetContext.merchant_uuid, widgetContext.product_id)
 
-  if (!isWidgetEnabledForProduct(settings, widgetContext.product_id)) {
+  if (!isWidgetEnabledForProduct(settings, widgetContext.product_id, rule)) {
     throw new AppError('This product is not enabled for widget try-on.', 403, 'PRODUCT_NOT_ENABLED')
   }
 

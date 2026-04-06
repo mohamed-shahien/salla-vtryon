@@ -21,27 +21,28 @@ export function Panel({
   return (
     <section
       className={cn(
-        'rounded-3xl border border-white/10 bg-white/5 p-5 shadow-lg shadow-slate-950/20',
+        'rounded-[8px] border border-border bg-card p-6 shadow-sm',
         className,
       )}
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-2">
+        <div className="space-y-1">
           {eyebrow ? (
-            <p className="text-xs uppercase tracking-[0.24em] text-sky-300/80">
+            <p className="text-[10px] uppercase font-bold tracking-widest text-primary">
               {eyebrow}
             </p>
           ) : null}
           <div>
-            <h3 className="text-xl font-semibold text-white">{title}</h3>
+            <h3 className="text-xl font-bold text-foreground">{title}</h3>
             {description ? (
-              <p className="mt-1 text-sm leading-6 text-slate-300">{description}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
             ) : null}
           </div>
         </div>
         {action}
       </div>
-      <div className="mt-5">{children}</div>
+      {children && <div className="mt-6">{children}</div>}
     </section>
   )
 }
+

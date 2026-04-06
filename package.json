@@ -31,6 +31,7 @@
     "vite": "^8.0.1"
   },
   "dependencies": {
-    "replicate": "^1.4.0"
+    "replicate": "^1.4.0",
+    "zod": "^3.25.76"
   }
 }

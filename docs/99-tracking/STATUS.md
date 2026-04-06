@@ -14,15 +14,15 @@ Realign the source-of-truth docs and finish the real shopper widget experience s
 
 ## Overall Status
 
-The project direction is now explicitly aligned around the correct product behavior:
+The project has achieved a major milestone: **Merchant Onboarding & Granular Product Control**.
+Merchants now have a guided first-run experience and can toggle the storefront widget on a per-product basis without breaking existing global settings.
 
-- merchant uses an external dashboard
-- shopper uses a storefront widget on the product page
-- backend handles credits, jobs, AI, and storage asynchronously
+The backend now supports a hybrid visibility model:
+1. `all` mode: Widget shows on all products (legacy behavior)
+2. `selected` mode: Widget shows ONLY on products with active rules in `merchant_product_rules`
 
-The backend foundation is strong and the merchant admin side is largely in place.
+The dashboard UI is now premium and supports batch operations and optimistic updates.
 
-The main open product task is not architecture anymore. It is storefront reliability and UX polish on real Salla product pages.
 
 ## Done
 
@@ -45,6 +45,10 @@ The main open product task is not architecture anymore. It is storefront reliabi
   - widget job creation
   - widget job polling
 - updated source docs so they no longer describe embedded dashboard auth or dashboard-first shopper try-on as canonical
+- completed merchant onboarding wizard with marketing and activation flow
+- completed granular product-based widget visibility rules with legacy fallback
+- completed premium products dashboard with search, filters, and batch enablement
+- completed widget safety contract and verification script
 
 ## Verified
 

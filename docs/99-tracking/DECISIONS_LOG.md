@@ -168,21 +168,18 @@ This is the current commercial and technical operating model of the product.
 **Impact:**
 Any job creation flow that skips these rules is invalid.
 
-## 2026-04-03 - Out-of-scope features locked
+## 2026-04-06 - Hybrid Product Visibility with Legacy Fallback
 **Status:** accepted
 
-Not in MVP:
-- video try-on
-- accessories support
-- multi-person support
-- native mobile apps
-- custom AI training
-- non-Salla platforms
-- advanced analytics suite
-- 3D body fitting
+The system now supports a hybrid model for determining widget visibility on storefront product pages:
+1. **Rule-Based Visibility**: A new `merchant_product_rules` table stores explicit per-product overrides.
+2. **Global Setting**: Validated against `settings.widget_mode` (`all` vs `selected`).
+3. **Legacy Fallback**: If no specific rule exists for a product, the system falls back to checking the legacy `settings.widget_products` array to ensure no disruption for existing merchants.
 
 **Reason:**
-Keeps the MVP focused and executable.
+To provide granular product-level control (Bulk Enable/Disable) without breaking the existing storefront configuration or requiring a complex data migration for active users.
 
 **Impact:**
-Do not introduce these features unless the user expands scope.
+- `GET /api/widget/config` now calculates `is_product_eligible` dynamically based on rules + mode + fallback.
+- The dashboard provides a premium management interface for these rules.
+- Widget job creation validates against these rules to prevent unauthorized AI consumption.

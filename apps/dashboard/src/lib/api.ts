@@ -75,6 +75,7 @@ export interface MerchantWidgetSettings {
   widget_products: number[]
   widget_button_text: string
   default_category: TryOnCategory
+  onboarding_completed: boolean
 }
 
 export interface TryOnJob {
@@ -114,17 +115,14 @@ export interface SallaProductImage {
 export interface SallaProduct {
   id: number
   name: string
-  status?: string
-  is_available?: boolean
-  main_image?: string
-  thumbnail?: string
-  quantity?: number
-  description?: string
-  images?: SallaProductImage[]
+  status: string
+  is_available: boolean
+  main_image: string | null
+  thumbnail: string | null
+  images?: { id: number; url: string; main: boolean }[]
   urls?: {
     customer?: string
     admin?: string
-    product_card?: string
   }
   price?: {
     amount: number
@@ -133,7 +131,8 @@ export interface SallaProduct {
   sale_price?: {
     amount: number
     currency: string
-  } | null
+  }
+  widget_enabled?: boolean
 }
 
 export interface MerchantUploadResult {
@@ -183,6 +182,32 @@ async function parseApiResponse<TData>(response: Response, fallbackMessage: stri
   }
 
   return (await response.json()) as ApiResponse<TData>
+}
+
+export async function enableMerchantProducts(productIds: number[]) {
+  const response = await fetch('/api/products/enable', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ product_ids: productIds }),
+  })
+
+  return parseApiResponse<MerchantWidgetSettings>(response, 'Failed to enable products.')
+}
+
+export async function disableMerchantProducts(productIds: number[]) {
+  const response = await fetch('/api/products/disable', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ product_ids: productIds }),
+  })
+
+  return parseApiResponse<MerchantWidgetSettings>(response, 'Failed to disable products.')
 }
 
 export async function verifyAuthHandoff(handoff: string) {

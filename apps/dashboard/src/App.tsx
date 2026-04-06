@@ -7,30 +7,36 @@ import { CreditsPage } from '@/pages/credits-page'
 import { DashboardPage } from '@/pages/dashboard-page'
 import { JobsPage } from '@/pages/jobs-page'
 import { ProductsPage } from '@/pages/products-page'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { SidebarProvider } from '@/components/ui/sidebar'
 import { SettingsPage } from '@/pages/settings-page'
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route
-          element={
-            <AuthGate>
-              <AppShell />
-            </AuthGate>
-          }
-        >
-          <Route index element={<Navigate replace to="/dashboard" />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/try-on" element={<Navigate replace to="/products" />} />
-          <Route path="/products" element={<ProductsPage />} />
-          <Route path="/jobs" element={<JobsPage />} />
-          <Route path="/credits" element={<CreditsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <TooltipProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route
+            element={
+              <AuthGate>
+                <SidebarProvider>
+                  <AppShell />
+                </SidebarProvider>
+              </AuthGate>
+            }
+          >
+            <Route index element={<Navigate replace to="/dashboard" />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/try-on" element={<Navigate replace to="/products" />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/jobs" element={<JobsPage />} />
+            <Route path="/credits" element={<CreditsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   )
 }
 

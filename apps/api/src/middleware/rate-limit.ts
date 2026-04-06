@@ -24,3 +24,14 @@ export const widgetLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 })
+
+export const productsLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 30, // 30 operations per minute per merchant
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'RATE_LIMITED',
+    message: 'Too many product management actions. Please wait a minute.',
+  },
+})

@@ -9,11 +9,15 @@ import {
   getMerchantProductDetail,
   getMerchantProductsPage,
 } from '../services/products.service.js'
+import { SallaProduct } from '../services/salla-api.service.js'
 import {
+  getMerchantProductRules,
   getMerchantWidgetSettings,
+  updateMerchantProductRules,
   updateMerchantWidgetSettings,
 } from '../services/merchant.service.js'
 import { AppError } from '../utils/app-error.js'
+import { productsLimiter } from '../middleware/rate-limit.js'
 
 const productsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -39,11 +43,44 @@ productsRouter.get(
       }
 
       const query = productsQuerySchema.parse(request.query)
-      const payload = await getMerchantProductsPage(request.dashboardSession.merchant_id, query.page)
+      const merchantId = request.dashboardSession.merchant_id
+      const merchantUuid = request.dashboardSession.merchant_uuid
+
+      const [payload, rules, settings] = await Promise.all([
+        getMerchantProductsPage(merchantId, query.page),
+        getMerchantProductRules(merchantUuid),
+        getMerchantWidgetSettings(merchantUuid),
+      ])
+
+      const rulesMap = new Map(rules.map((r) => [r.product_id, r.enabled]))
+      const legacyEnabled = new Set(settings.widget_products)
+
+      const productsWithStatus = payload.data.map((product: SallaProduct) => {
+        const productId = product.id
+        let enabled = false
+
+        if (settings.widget_mode === 'all') {
+          enabled = true
+        } else {
+          // Mode is 'selected'
+          const rule = rulesMap.get(productId)
+          if (rule !== undefined) {
+            enabled = rule
+          } else {
+            // Fallback to legacy
+            enabled = legacyEnabled.has(productId)
+          }
+        }
+
+        return {
+          ...product,
+          widget_enabled: enabled,
+        }
+      })
 
       response.status(200).json({
         ok: true,
-        data: payload.data,
+        data: productsWithStatus,
         pagination: payload.pagination ?? null,
       })
     } catch (error) {
@@ -77,9 +114,10 @@ productsRouter.get(
   },
 )
 
-// POST /api/products/enable — add product IDs to the selected list and switch to selected mode
+// POST /api/products/enable — batch enable products
 productsRouter.post(
   '/enable',
+  productsLimiter,
   requireDashboardSession,
   async (request: DashboardAuthenticatedRequest, response, next) => {
     try {
@@ -88,14 +126,14 @@ productsRouter.post(
       }
 
       const body = productIdsBodySchema.parse(request.body)
-      const merchantId = request.dashboardSession.merchant_uuid
-      const current = await getMerchantWidgetSettings(merchantId)
+      const merchantUuid = request.dashboardSession.merchant_uuid
 
-      const merged = Array.from(new Set([...current.widget_products, ...body.product_ids]))
+      await updateMerchantProductRules(merchantUuid, body.product_ids, true)
 
-      const settings = await updateMerchantWidgetSettings(merchantId, {
-        widget_products: merged,
+      // Automatically ensure widget is enabled and in selected mode if merchant is activating products
+      const settings = await updateMerchantWidgetSettings(merchantUuid, {
         widget_mode: 'selected',
+        widget_enabled: true,
       })
 
       response.status(200).json({ ok: true, data: settings })
@@ -105,9 +143,10 @@ productsRouter.post(
   },
 )
 
-// POST /api/products/disable — remove product IDs from the selected list
+// POST /api/products/disable — batch disable products
 productsRouter.post(
   '/disable',
+  productsLimiter,
   requireDashboardSession,
   async (request: DashboardAuthenticatedRequest, response, next) => {
     try {
@@ -116,15 +155,11 @@ productsRouter.post(
       }
 
       const body = productIdsBodySchema.parse(request.body)
-      const merchantId = request.dashboardSession.merchant_uuid
-      const current = await getMerchantWidgetSettings(merchantId)
+      const merchantUuid = request.dashboardSession.merchant_uuid
 
-      const disableSet = new Set(body.product_ids)
-      const remaining = current.widget_products.filter((id) => !disableSet.has(id))
+      await updateMerchantProductRules(merchantUuid, body.product_ids, false)
 
-      const settings = await updateMerchantWidgetSettings(merchantId, {
-        widget_products: remaining,
-      })
+      const settings = await getMerchantWidgetSettings(merchantUuid)
 
       response.status(200).json({ ok: true, data: settings })
     } catch (error) {
