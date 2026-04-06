@@ -23,7 +23,7 @@
   --input: #e5e5ea;
   --ring: #34a853;
   --radius: 8px; /* Standardized to 8px */
-  
+
   --font-sans: 'Tajawal', sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
@@ -107,8 +107,17 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Hide scrollbar utility */
+@utility scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+}
+
 * {
-  @apply border-border;
+  @apply border-border scrollbar-hide;
 }
 
 body {

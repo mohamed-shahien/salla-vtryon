@@ -12,6 +12,7 @@ interface AuthState {
   setAuthenticated: (identity: DashboardMerchantIdentity) => void
   setUnauthenticated: () => void
   setError: (message: string) => void
+  checkAuth: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -41,4 +42,27 @@ export const useAuthStore = create<AuthState>((set) => ({
       identity: null,
       error: message,
     }),
+  checkAuth: async () => {
+    const { fetchCurrentMerchant } = await import('@/lib/api')
+    set({ status: 'loading' })
+    try {
+      const response = await fetchCurrentMerchant()
+      if (response?.data) {
+        set({
+          status: 'authenticated',
+          identity: response.data,
+        })
+      } else {
+        set({
+          status: 'unauthenticated',
+          identity: null,
+        })
+      }
+    } catch {
+      set({
+        status: 'unauthenticated',
+        identity: null,
+      })
+    }
+  },
 }))

@@ -1,47 +1,54 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet } from "react-router-dom"
 
-import { DashboardSidebar } from '@/components/layout/dashboard-sidebar'
-import { DashboardHeader } from '@/components/layout/dashboard-header'
-import { OnboardingWizard } from '@/components/onboarding-wizard'
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
-import { useAuthStore } from '@/stores/auth-store'
+import { DashboardSidebar } from "@/components/layout/dashboard-sidebar"
+import { DashboardHeader } from "@/components/layout/dashboard-header"
+import { OnboardingWizard } from "@/components/onboarding-wizard"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { useAuthStore } from "@/stores/auth-store"
+import { Toaster } from "@/components/ui/sonner"
 
 export function AppShell() {
   const identity = useAuthStore((state) => state.identity)
   const showOnboarding = identity?.merchant?.settings?.onboarding_completed === false
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background text-foreground" dir="rtl">
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex min-h-screen w-full bg-background text-foreground selection:bg-primary/10 selection:text-primary" dir="rtl">
         {showOnboarding && <OnboardingWizard />}
-        
+
         <DashboardSidebar />
 
-        <SidebarInset className="flex flex-col flex-1 min-w-0">
+        <SidebarInset className="flex flex-col flex-1 min-w-0 bg-background/50">
           <DashboardHeader />
-          
-          <main className="flex-1 p-6 overflow-y-auto">
-            {/* Background Decoration */}
-            <div className="fixed inset-0 pointer-events-none opacity-50 z-[-1]">
-              <div className="absolute top-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px]" />
-              <div className="absolute bottom-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-secondary/10 blur-[120px]" />
+
+          <main className="flex-1 overflow-y-auto">
+            {/* Ambient Background Decoration - Subtle & Premium */}
+            <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
+              <div className="absolute top-[-10%] right-[-5%] h-[600px] w-[600px] rounded-full bg-primary/5 blur-[120px] animate-pulse" />
+              <div className="absolute bottom-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full bg-indigo-500/5 blur-[120px]" />
             </div>
 
-            <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-3 duration-500">
-               <Outlet />
+            <div className="container mx-auto px-3 md:p-3 max-w-7xl">
+              <Outlet />
             </div>
           </main>
-          
-          <footer className="h-12 border-t border-border px-6 flex items-center justify-between text-[11px] text-muted-foreground uppercase tracking-widest font-semibold bg-muted/50">
-            <span>Virtual Try-On for Salla</span>
-            <div className="flex items-center gap-4">
-              <span>Privacy Policy</span>
-              <span>Terms of Service</span>
+
+          <footer className="h-14 border-t border-border/40 px-3 flex items-center justify-between text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] bg-card/30 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+              <span>نظام القياس الافتراضي المتكامل - الإصدار 1.0</span>
+            </div>
+            <div className="hidden md:flex items-center gap-3">
+              <a href="#" className="hover:text-primary transition-colors">سياسة الخصوصية</a>
+              <a href="#" className="hover:text-primary transition-colors">اتفاقية الاستخدام</a>
+              <span className="text-border">|</span>
+              <span>&copy; {new Date().getFullYear()} سلة - جميع الحقوق محفوظة</span>
             </div>
           </footer>
         </SidebarInset>
-        
-        <div id="notifications-portal" />
+
+        {/* Global Notifications */}
+        <Toaster position="bottom-left" closeButton richColors dir="rtl" />
       </div>
     </SidebarProvider>
   )
