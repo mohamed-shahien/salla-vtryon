@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/avatar"
 import { navigationItems } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
-import { useDirection } from "@/components/ui/direction"
+import { motion } from "framer-motion"
 
 const ICON_MAP = {
   "/dashboard": LayoutDashboard,
@@ -44,16 +44,13 @@ const ICON_MAP = {
 }
 
 export function DashboardSidebar() {
-  const dir = useDirection()
-  const isRTL = dir === "rtl"
-
   return (
     <Sidebar variant="sidebar" collapsible="icon" side="right" className="border-border">
-      {/* Sidebar Header / Logo */}
+
       <SidebarHeader className="h-14 p-3 border-b border-border/40">
         <div className="flex items-center gap-3 py-1">
           <Avatar className="h-8 w-8 ring-2 ring-primary/20 shadow-lg shadow-primary/20 transition-transform hover:scale-105">
-            <AvatarFallback className="bg-linear-to-br from-primary to-primary-foreground text-white font-black text-xs er rounded-xl">
+            <AvatarFallback className="bg-linear-to-br from-primary to-primary-foreground text-white font-black text-xs er rounded-lg">
               VT
             </AvatarFallback>
           </Avatar>
@@ -80,31 +77,33 @@ export function DashboardSidebar() {
                         to={item.to}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 text-[11px] font-black relative overflow-hidden group",
-                            isActive
-                              ? "bg-primary/10 text-primary"
-                              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                            "group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300 text-[11px] font-black overflow-hidden isolate hover:bg-primary/20",
+                            isActive ? "text-primary bg-primary/20" : "text-muted-foreground hover:text-foreground"
                           )
                         }
                       >
                         {({ isActive }) => (
                           <>
-                            <Icon className={cn("size-4 transition-colors group-hover:scale-105")} />
-                            <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-
-                            {/* Active Indicator */}
+                            {/* Premium Background Layer */}
                             {isActive && (
-                              <div
-                                className={cn(
-                                  "absolute top-0 bottom-0 w-1 bg-primary rounded-full",
-                                  isRTL ? "right-0" : "left-0"
-                                )}
+                              <motion.div
+                                layoutId="sidebar-active"
+                                className="absolute inset-0 bg-primary/20 -z-10"
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                               />
                             )}
 
+                            <Icon className={cn(
+                              "size-4 z-10 transition-all duration-300 group-hover:scale-110",
+                              isActive ? "text-primary" : "opacity-70 group-hover:opacity-100"
+                            )} />
+
+                            <span className="z-10 group-data-[collapsible=icon]:hidden whitespace-nowrap">
+                              {item.label}
+                            </span>
                             {item.badge && (
-                              <span className="ms-auto group-data-[collapsible=icon]:hidden">
-                                <div className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-full text-[8px] font-black">
+                              <span className="ms-auto z-10 group-data-[collapsible=icon]:hidden">
+                                <div className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-full text-[8px] font-black border border-primary/20">
                                   {item.badge}
                                 </div>
                               </span>
@@ -122,7 +121,7 @@ export function DashboardSidebar() {
 
         <SidebarSeparator className="my-4 opacity-30" />
 
-        {/* Secondary Links Group */}
+
         <SidebarGroup className="group-data-[collapsible=icon]:hidden">
           <SidebarGroupLabel className="px-3 text-[9px]  text-muted-foreground font-black mb-2 opacity-50">
             الدعم والمساعدة
@@ -131,7 +130,7 @@ export function DashboardSidebar() {
             <SidebarMenu className="gap-1">
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className="h-8 hover:bg-transparent">
-                  <a href="https://salla.sa" target="_blank" rel="noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all">
+                  <a href="https://salla.sa" target="_blank" rel="noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all">
                     <ExternalLink className="size-3.5 opacity-60" />
                     <span className="text-[10px] font-bold">مركز مساعدة سلة</span>
                   </a>
@@ -139,7 +138,7 @@ export function DashboardSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className="h-8 hover:bg-transparent">
-                  <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all">
+                  <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all">
                     <LifeBuoy className="size-3.5 opacity-60" />
                     <span className="text-[10px] font-bold">الدعم الفني للتطبيق</span>
                   </a>
@@ -150,9 +149,9 @@ export function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Sidebar Footer - System Status */}
+
       <SidebarFooter className="p-3 mt-auto border-t border-border/40 bg-muted/5 group-data-[collapsible=icon]:hidden">
-        <div className="rounded-xl bg-card p-3 border border-border/40 relative overflow-hidden group shadow-xs hover:border-primary/20 transition-all">
+        <div className="rounded-lg bg-card p-3 border border-border/40 relative overflow-hidden group shadow-xs hover:border-primary/20 transition-all">
           <div className="flex items-center gap-2 mb-2">
             <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[8px] font-black text-emerald-600  ">متصل</span>

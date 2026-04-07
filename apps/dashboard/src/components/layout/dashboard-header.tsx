@@ -93,7 +93,7 @@ export function DashboardHeader() {
       {/* Left Side (Credits, Notifications, User) */}
       <div className="flex items-center gap-3 md:gap-3">
         {/* Credits Badge */}
-        <div className="hidden sm:flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-xl border border-border transition-colors hover:bg-muted/50 group">
+        <div className="hidden sm:flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted/50 group">
           <Badge variant="outline" className="h-6 gap-3 bg-background/50 border-primary/20 text-primary font-black py-0 px-2 rounded-full">
             <RefreshCw className="size-3 transition-transform group-hover:rotate-180 duration-500" />
             {credits}
@@ -102,7 +102,7 @@ export function DashboardHeader() {
         </div>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative h-10 w-10 text-muted-foreground hover:bg-muted hover:text-foreground transition-all rounded-xl">
+        <Button variant="ghost" size="icon" className="relative h-10 w-10 text-muted-foreground hover:bg-muted hover:text-foreground transition-all rounded-lg">
           <Bell className="size-5" />
           <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-card" />
         </Button>
@@ -110,10 +110,10 @@ export function DashboardHeader() {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-11 gap-3 px-2 hover:bg-muted transition-all rounded-xl group">
+            <Button variant="ghost" className="h-11 gap-3 px-2 hover:bg-muted transition-all rounded-lg group">
               <Avatar className="size-8 ring-2 ring-border/40 group-hover:ring-primary/20 transition-all border border-background">
                 <AvatarImage src={merchantAvatar} alt={merchantName} />
-                <AvatarFallback className="bg-primary/10 text-primary font-black text-xs rounded-xl">
+                <AvatarFallback className="bg-primary/20 text-primary font-black text-xs rounded-lg">
                   {merchantName.substring(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -124,7 +124,7 @@ export function DashboardHeader() {
               <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 border-border/40 shadow-2xl backdrop-blur-xl">
+          <DropdownMenuContent align="end" className="w-56 rounded-lg p-2 border-border/40 shadow-2xl backdrop-blur-xl">
             <DropdownMenuLabel className="px-3 py-2">
               <div className="flex flex-col gap-0.5">
                 <span className="text-[10px] font-black text-muted-foreground">صاحب المتجر</span>
@@ -133,13 +133,13 @@ export function DashboardHeader() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-border/20 mx-1" />
             <DropdownMenuItem asChild>
-              <Link to="/settings" className="rounded-xl py-2 px-3 text-xs font-black   group cursor-pointer">
+              <Link to="/settings" className="rounded-lg py-2 px-3 text-xs font-black   group cursor-pointer">
                 <User className="me-3 size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span>الملف الشخصي والإعدادات</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/credits" className="rounded-xl py-2 px-3 text-xs font-black group cursor-pointer">
+              <Link to="/credits" className="rounded-lg py-2 px-3 text-xs font-black group cursor-pointer">
                 <Wallet className="me-3 size-4 text-muted-foreground group-hover:text-amber-500 transition-colors" />
                 <span>الرصيد والاشتراك</span>
               </Link>
@@ -147,7 +147,7 @@ export function DashboardHeader() {
             <DropdownMenuSeparator className="bg-border/20 mx-1" />
             <DropdownMenuItem
               onClick={() => setUnauthenticated()}
-              className="rounded-xl py-2 px-3 text-xs font-black text-destructive hover:bg-destructive/10 group cursor-pointer transition-all"
+              className="rounded-lg py-2 px-3 text-xs font-black text-destructive hover:bg-destructive/10 group cursor-pointer transition-all"
             >
               <LogOut className="me-3 size-4 group-hover:translate-x-0.5 transition-transform" />
               <span>تسجيل الخروج</span>

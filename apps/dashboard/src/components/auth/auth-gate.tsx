@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   RefreshCw,
-  UserCheck,
-  LayoutDashboard
+  UserCheck
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { Card } from "@/components/ui/card"
@@ -38,7 +37,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
         <Card className="max-w-lg w-full rounded-lg border border-border bg-card p-12 text-center shadow-2xl shadow-primary/5 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
           <div className="relative animate-pulse">
-            <div className="size-16 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-8">
+            <div className="size-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto mb-8">
               <RefreshCw className="size-8 text-primary animate-spin" />
             </div>
             <p className="text-xs   text-primary font-black mb-4">
@@ -60,14 +59,14 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
     // with BOTH "Login with Password" and "Login via Salla" options.
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground font-sans" dir="rtl">
-        <Card className="max-w-md w-full rounded-xl border border-border bg-card p-8 text-center shadow-2xl relative overflow-hidden">
+        <Card className="max-w-md w-full rounded-lg border border-border bg-card p-8 text-center shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
-          
+
           <div className="relative">
-            <div className="size-16 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-6">
+            <div className="size-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto mb-6">
               <UserCheck className="size-8 text-primary" />
             </div>
-            
+
             <h2 className="text-2xl font-bold mb-2 tracking-tight">مرحباً بك مجدداً</h2>
             <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
               للوصول إلى لوحة التحكم الخاصة بك، اختر طريقة الدخول المناسبة لك.
@@ -76,11 +75,11 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
             <div className="space-y-3">
               <button
                 onClick={() => navigate('/auth/login')}
-                className="flex w-full items-center justify-center rounded-xl bg-primary px-4 h-12 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98]"
+                className="flex w-full items-center justify-center rounded-lg bg-primary px-4 h-12 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98]"
               >
                 الدخول ببريدك الإلكتروني
               </button>
-              
+
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-border" />
@@ -92,7 +91,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
 
               <a
                 href="/api/auth/salla/start"
-                className="flex w-full items-center justify-center rounded-xl border border-border bg-background px-4 h-12 text-sm font-bold text-foreground transition-all hover:bg-muted/50 hover:scale-[1.02] active:scale-[0.98]"
+                className="flex w-full items-center justify-center rounded-lg border border-border bg-background px-4 h-12 text-sm font-bold text-foreground transition-all hover:bg-muted/50 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <img src="https://cdn.salla.sa/images/logo/logo-square.png" alt="Salla" className="size-5 ml-2" />
                 تسجيل الدخول عبر سلة

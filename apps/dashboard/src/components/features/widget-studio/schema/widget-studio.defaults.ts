@@ -195,15 +195,3 @@ export const DIALOG_TEMPLATES: DialogTemplate[] = [
   },
 ]
 
-// ── Accent Color Presets ─────────────────────────────────────────────────────
-
-export const ACCENT_COLOR_PRESETS = [
-  { label: 'أخضر سلة', value: '#34a853' },
-  { label: 'أزرق داكن', value: '#1a56db' },
-  { label: 'بنفسجي', value: '#7c3aed' },
-  { label: 'وردي', value: '#ec4899' },
-  { label: 'برتقالي', value: '#ea580c' },
-  { label: 'داكن', value: '#1a1a2e' },
-  { label: 'ذهبي', value: '#d97706' },
-  { label: 'تركوازي', value: '#0d9488' },
-] as const

@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
+import { ToggleGroup, Toggle } from '@/components/animate-ui/components/base/toggle-group'
 
 import type { WidgetStudioConfig, LaunchMode, ButtonSize } from '../schema/widget-studio.schema'
 
@@ -30,11 +31,11 @@ const LAUNCH_MODE_OPTIONS: Array<{
   description: string
   icon: React.ElementType
 }> = [
-  { value: 'button', label: 'زر تفاعلي', description: 'يظهر كزر بجانب صور المنتج', icon: MousePointer2 },
-  { value: 'floating', label: 'زر عائم', description: 'زر ثابت على جانب الشاشة', icon: Sparkles },
-  { value: 'auto_open', label: 'فتح تلقائي', description: 'يفتح النافذة تلقائياً عند تحميل الصفحة', icon: Eye },
-  { value: 'disabled', label: 'معطّل', description: 'إيقاف الويدجت تماماً', icon: Ban },
-]
+    { value: 'button', label: 'زر تفاعلي', description: 'يظهر كزر بجانب صور المنتج', icon: MousePointer2 },
+    { value: 'floating', label: 'زر عائم', description: 'زر ثابت على جانب الشاشة', icon: Sparkles },
+    { value: 'auto_open', label: 'فتح تلقائي', description: 'يفتح النافذة تلقائياً عند تحميل الصفحة', icon: Eye },
+    { value: 'disabled', label: 'معطّل', description: 'إيقاف الويدجت تماماً', icon: Ban },
+  ]
 
 const BUTTON_SIZE_OPTIONS: Array<{ value: ButtonSize; label: string }> = [
   { value: 'sm', label: 'صغير' },
@@ -55,7 +56,7 @@ export const WidgetLaunchSection = React.memo(function WidgetLaunchSection({
     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg text-right">
       <CardHeader className="p-3 border-b border-border/10">
         <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 text-right">
             <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
               تفعيل ووضع الإطلاق
               <Power className="size-4 text-primary" />
@@ -64,7 +65,7 @@ export const WidgetLaunchSection = React.memo(function WidgetLaunchSection({
               كيف يظهر ويبدأ الويدجت للعملاء
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-lg border border-border/40">
+          <div className="flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border/10">
             <span className={cn("text-[9px] font-black", isEnabled ? "text-emerald-600" : "text-muted-foreground opacity-60")}>
               {isEnabled ? "نشط" : "معطل"}
             </span>
@@ -77,7 +78,7 @@ export const WidgetLaunchSection = React.memo(function WidgetLaunchSection({
         </div>
       </CardHeader>
 
-      <CardContent className="p-3 space-y-3">
+      <CardContent className="p-3 space-y-4">
         {/* -- Launch Mode Cards -- */}
         <div className="grid grid-cols-2 gap-2">
           {LAUNCH_MODE_OPTIONS.map((option) => {
@@ -88,21 +89,21 @@ export const WidgetLaunchSection = React.memo(function WidgetLaunchSection({
                 key={option.value}
                 onClick={() => onUpdate({ mode: option.value })}
                 className={cn(
-                  "relative flex items-center gap-2.5 p-2.5 rounded-lg border transition-all duration-200 text-right group",
+                  "relative flex items-center gap-2.5 p-3 rounded-lg border transition-all duration-300 text-right group isolate",
                   isActive
                     ? "border-primary bg-primary/5 ring-1 ring-primary/10 shadow-sm"
                     : "border-border/40 hover:bg-muted/30 opacity-70"
                 )}
               >
                 <div className={cn(
-                  "size-7 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                  isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                  "size-8 rounded-lg flex items-center justify-center shrink-0 transition-all",
+                  isActive ? "bg-primary text-white scale-110 shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground"
                 )}>
-                  <Icon className="size-3.5" />
+                  <Icon className="size-4" />
                 </div>
                 <div className="space-y-0.5 min-w-0">
                   <p className="font-black text-[10px] truncate">{option.label}</p>
-                  <p className="text-[8px] font-bold text-muted-foreground leading-tight">{option.description}</p>
+                  <p className="text-[8px] font-bold text-muted-foreground leading-tight opacity-70">{option.description}</p>
                 </div>
               </button>
             )
@@ -111,8 +112,8 @@ export const WidgetLaunchSection = React.memo(function WidgetLaunchSection({
 
         {/* -- Auto Open Controls -- */}
         {showAutoOpenControls && (
-          <div className="space-y-2.5 p-2.5 rounded-lg bg-muted/20 border border-border/30">
-            <div className="space-y-1.5">
+          <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/10">
+            <div className="space-y-2">
               <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
                 تأخير الفتح (ثانية)
                 <Timer className="size-3" />
@@ -125,12 +126,17 @@ export const WidgetLaunchSection = React.memo(function WidgetLaunchSection({
                 step={0.5}
                 className="w-full"
               />
-              <span className="text-[8px] text-muted-foreground font-bold">
-                {launch.auto_open_delay === 0 ? 'فوري' : `${launch.auto_open_delay / 1000} ثانية`}
-              </span>
+              <div className="flex justify-between items-center px-1">
+                <span className="text-[10px] font-black text-primary">
+                  {launch.auto_open_delay / 1000} ثانية
+                </span>
+                <span className="text-[8px] text-muted-foreground font-bold">
+                  {launch.auto_open_delay === 0 ? 'فوري' : 'تأخير مخصص'}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-1">
               <Switch
                 checked={launch.auto_open_once_per_session}
                 onCheckedChange={(val) => onUpdate({ auto_open_once_per_session: val })}
@@ -143,16 +149,16 @@ export const WidgetLaunchSection = React.memo(function WidgetLaunchSection({
 
         {/* -- Button Controls -- */}
         {showButtonControls && (
-          <div className="space-y-2.5 p-2.5 rounded-lg bg-muted/20 border border-border/30">
-            <div className="space-y-1.5">
-              <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
+          <div className="space-y-4 p-3 rounded-lg bg-muted/30 border border-border/10">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
                 نص الزر
                 <Type className="size-3" />
               </Label>
               <Input
                 value={launch.button_label}
                 onChange={(e) => onUpdate({ button_label: e.target.value })}
-                className="h-8 rounded-lg bg-background border-border/60 font-bold text-[10px] text-right"
+                className="h-8 rounded-lg bg-background border-border/60 font-bold text-[10px] text-right focus-visible:ring-primary/20"
                 placeholder="مثال: جرّب الآن"
                 maxLength={40}
               />
@@ -164,30 +170,32 @@ export const WidgetLaunchSection = React.memo(function WidgetLaunchSection({
                 onCheckedChange={(val) => onUpdate({ button_icon: val })}
                 className="scale-85"
               />
-              <Label className="text-[9px] font-bold text-muted-foreground">إظهار أيقونة بجانب النص</Label>
+              <Label className="text-[10px] font-bold text-muted-foreground">إظهار أيقونة بجانب النص</Label>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
                 حجم الزر
                 <Maximize2 className="size-3" />
               </Label>
-              <div className="flex gap-1.5">
+              <ToggleGroup
+                multiple={false}
+                value={[launch.button_size]}
+                onValueChange={(v: string[]) => v[0] && onUpdate({ button_size: v[0] as any })}
+                className="w-full bg-background/50 p-1 rounded-lg gap-1 border border-border/5"
+                variant="default"
+                size="sm"
+              >
                 {BUTTON_SIZE_OPTIONS.map((opt) => (
-                  <button
+                  <Toggle
                     key={opt.value}
-                    onClick={() => onUpdate({ button_size: opt.value })}
-                    className={cn(
-                      "flex-1 py-1.5 rounded-lg border text-[9px] font-black transition-all",
-                      launch.button_size === opt.value
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border/40 text-muted-foreground hover:bg-muted/30"
-                    )}
+                    value={opt.value}
+                    className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg"
                   >
                     {opt.label}
-                  </button>
+                  </Toggle>
                 ))}
-              </div>
+              </ToggleGroup>
             </div>
           </div>
         )}

@@ -42,7 +42,7 @@ export function mapServerToStudioConfig(
 ): { legacyEnabled: boolean; config: WidgetStudioConfig } {
   const defaults = createDefaultWidgetStudioConfig()
 
-  const serverConfig = (settings as Record<string, unknown>).widget_config as
+  const serverConfig = (settings as unknown as Record<string, unknown>).widget_config as
     | Partial<WidgetStudioConfig>
     | null
     | undefined

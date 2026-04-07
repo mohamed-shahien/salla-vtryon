@@ -52,7 +52,7 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
   const shadow = getShadow(appearance.shadow_intensity)
   const padding = getPadding(appearance.spacing_density)
   const btnSize = getButtonSize(launch.button_size)
-  
+
   const isMobile = device === 'mobile'
   const isTablet = device === 'tablet'
 
@@ -130,12 +130,12 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
       {/* Store Frame */}
       <div
         className={cn(
-          "bg-white rounded-xl border border-border/40 overflow-hidden relative transition-all duration-500 shadow-xl",
+          "bg-white rounded-lg border border-border/40 overflow-hidden relative transition-all duration-500 shadow-xl",
           isMobile || isTablet ? "mx-auto" : "w-full"
         )}
-        style={{ 
+        style={{
           width: frameWidth,
-          minHeight: isMobile ? 420 : 360 
+          minHeight: isMobile ? 420 : 360
         }}
       >
         {/* -- Store Header -- */}
@@ -145,7 +145,7 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
             <div className="size-1.5 rounded-full bg-yellow-400" />
             <div className="size-1.5 rounded-full bg-emerald-400" />
           </div>
-          <div className="h-4 w-32 bg-muted/50 rounded-md" />
+          <div className="h-4 w-32 bg-muted/50 rounded-lg" />
           <ShoppingCart className="size-3.5 text-muted-foreground" />
         </div>
 
@@ -214,7 +214,7 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
 
             {/* Access rule hint */}
             {access.require_login && (
-              <div className="p-2.5 rounded-xl bg-amber-50/50 border border-amber-200/50 text-[9px] font-black text-amber-700 text-center animate-in fade-in zoom-in duration-300">
+              <div className="p-2.5 rounded-lg bg-amber-50/50 border border-amber-200/50 text-[9px] font-black text-amber-700 text-center animate-in fade-in zoom-in duration-300">
                 🔒 {access.login_helper_text}
               </div>
             )}
@@ -237,7 +237,7 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
       {/* -- Dialog Preview Overlay -- */}
       {showDialog && (
         <div
-          className="absolute inset-0 z-30 flex items-center justify-center bg-black/30 backdrop-blur-xs rounded-xl overflow-hidden animate-in fade-in duration-300"
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/30 backdrop-blur-xs rounded-lg overflow-hidden animate-in fade-in duration-300"
           onClick={() => setShowDialog(false)}
         >
           <div
@@ -264,7 +264,7 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
                 <h4 className="font-black text-sm text-slate-800">القياس الافتراضي</h4>
               </div>
 
-              <div className="aspect-3/4 max-h-56 rounded-xl bg-linear-to-br from-slate-100 to-slate-50 border border-border/20 flex items-center justify-center shadow-inner">
+              <div className="aspect-3/4 max-h-56 rounded-lg bg-linear-to-br from-slate-100 to-slate-50 border border-border/20 flex items-center justify-center shadow-inner">
                 <div className="text-center space-y-2 opacity-40">
                   <Camera className="size-10 mx-auto text-muted-foreground" />
                   <p className="text-[9px] font-black text-muted-foreground">قم برفع صورتك لبدء التجربة</p>

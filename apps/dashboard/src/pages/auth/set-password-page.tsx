@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Lock, Key, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Lock, Key, Loader2, ShieldCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,8 +64,8 @@ export default function SetPasswordPage() {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background p-4 sm:p-6" dir="rtl">
         <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
-          <Card className="p-8 border-border/50 shadow-2xl rounded-3xl bg-card/50 backdrop-blur-xl text-center space-y-6">
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+          <Card className="p-8 border-border/50 shadow-2xl rounded-lg bg-card/50 backdrop-blur-xl text-center space-y-6">
+            <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
               <ShieldCheck className="w-8 h-8 text-primary" />
             </div>
             <div className="space-y-2">
@@ -87,7 +87,7 @@ export default function SetPasswordPage() {
     <div className="min-h-screen w-full flex items-center justify-center bg-background p-4 sm:p-6" dir="rtl">
       <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl shadow-primary/20 -rotate-3 transition-transform hover:rotate-0">
+          <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center shadow-xl shadow-primary/20 -rotate-3 transition-transform hover:rotate-0">
             <Key className="w-8 h-8 text-white" />
           </div>
           <div className="text-center space-y-2">
@@ -96,12 +96,12 @@ export default function SetPasswordPage() {
           </div>
         </div>
 
-        <Card className="p-8 border-border/50 shadow-2xl rounded-3xl bg-card/50 backdrop-blur-xl relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-primary/5 rounded-full -ml-16 -mt-16 blur-2xl group-hover:bg-primary/10 transition-colors" />
+        <Card className="p-8 border-border/50 shadow-2xl rounded-lg bg-card/50 backdrop-blur-xl relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-primary/5 rounded-full -ml-16 -mt-16 blur-2xl group-hover:bg-primary/20 transition-colors" />
 
           <form onSubmit={handleSubmit} className="space-y-6 relative">
             {error && (
-              <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5">
+              <Alert variant="destructive" className="rounded-lg border-destructive/20 bg-destructive/5">
                 <AlertDescription className="text-xs font-bold">{error}</AlertDescription>
               </Alert>
             )}
@@ -115,7 +115,7 @@ export default function SetPasswordPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pr-10 h-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary transition-all text-left"
+                  className="pr-10 h-12 rounded-lg bg-muted/30 border-border/50 focus:border-primary transition-all text-left"
                   dir="ltr"
                 />
               </div>
@@ -130,13 +130,13 @@ export default function SetPasswordPage() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pr-10 h-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary transition-all text-left"
+                  className="pr-10 h-12 rounded-lg bg-muted/30 border-border/50 focus:border-primary transition-all text-left"
                   dir="ltr"
                 />
               </div>
             </div>
 
-            <Button type="submit" disabled={isLoading || !token} className="w-full h-12 rounded-xl bg-primary text-sm font-bold text-white shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all">
+            <Button type="submit" disabled={isLoading || !token} className="w-full h-12 rounded-lg bg-primary text-sm font-bold text-white shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all">
               {isLoading ? (
                 <><Loader2 className="ml-2 h-4 w-4 animate-spin" />جاري الحفظ...</>
               ) : (

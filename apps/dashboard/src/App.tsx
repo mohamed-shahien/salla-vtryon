@@ -1,5 +1,8 @@
 import { AuthGate } from '@/components/auth/auth-gate'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { PerformanceMonitor } from '@/components/performance-monitor'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { startRouteMeasure, recordShellRender, recordDataReady } from '@/lib/performance'
 
 import { AuthCallbackPage } from '@/components/auth/auth-callback-page'
 import { AppShell } from '@/components/layout/app-shell'
@@ -17,11 +20,42 @@ import ForgotPasswordPage from '@/pages/auth/forgot-password-page'
 import SetPasswordPage from '@/pages/auth/set-password-page'
 import ResetPasswordPage from '@/pages/auth/reset-password-page'
 
+// Track route changes for performance monitoring
+function RouteTracker() {
+  const location = useLocation()
+
+  useEffect(() => {
+    const routeName = location.pathname
+    startRouteMeasure(routeName)
+
+    // Record shell render after a small delay to allow React to render
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        recordShellRender()
+      })
+    })
+
+    // Dispatch custom event for performance monitor
+    window.dispatchEvent(new CustomEvent('routechange', { detail: { routeName } }))
+  }, [location.pathname])
+
+  // Record when data is ready (this should be called by data fetching hooks)
+  useEffect(() => {
+    const handleDataReady = () => recordDataReady()
+    window.addEventListener('data-ready', handleDataReady)
+    return () => window.removeEventListener('data-ready', handleDataReady)
+  }, [])
+
+  return null
+}
+
 function App() {
   return (
     <DirectionProvider dir="rtl">
       <TooltipProvider>
         <BrowserRouter>
+          <RouteTracker />
+          <PerformanceMonitor />
           <Routes>
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/auth/login" element={<LoginPage />} />

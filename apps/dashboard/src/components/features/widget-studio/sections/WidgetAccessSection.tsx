@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+import { ToggleGroup, Toggle } from '@/components/animate-ui/components/base/toggle-group'
 
 import type { WidgetStudioConfig, DeviceVisibility } from '../schema/widget-studio.schema'
 
@@ -38,9 +38,9 @@ export const WidgetAccessSection = React.memo(function WidgetAccessSection({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="p-3 space-y-3">
+      <CardContent className="p-3 space-y-4">
         {/* -- Require Login -- */}
-        <div className="p-2.5 rounded-lg bg-muted/20 border border-border/30 space-y-2.5">
+        <div className="p-3 rounded-lg bg-muted/30 border border-border/10 space-y-3">
           <div className="flex items-center justify-between">
             <Switch
               checked={access.require_login}
@@ -49,17 +49,17 @@ export const WidgetAccessSection = React.memo(function WidgetAccessSection({
             />
             <Label className="text-[10px] font-black">تسجيل الدخول مطلوب</Label>
           </div>
-          <p className="text-[8px] font-bold text-muted-foreground leading-relaxed">
+          <p className="text-[8px] font-bold text-muted-foreground leading-relaxed opacity-70">
             عند التفعيل، سيُطلب من الزائر تسجيل الدخول قبل فتح تجربة القياس
           </p>
 
           {access.require_login && (
-            <div className="space-y-1.5 pt-1">
-              <Label className="text-[9px] font-black text-muted-foreground opacity-70">رسالة تسجيل الدخول</Label>
+            <div className="space-y-2 pt-1">
+              <Label className="text-[10px] font-black text-muted-foreground/70 justify-end">رسالة تسجيل الدخول</Label>
               <Input
                 value={access.login_helper_text}
                 onChange={(e) => onUpdate({ login_helper_text: e.target.value })}
-                className="h-8 rounded-lg bg-background border-border/60 font-bold text-[10px] text-right"
+                className="h-8 rounded-lg bg-background border-border/60 font-bold text-[10px] text-right focus-visible:ring-primary/20"
                 placeholder="يرجى تسجيل الدخول أولاً"
                 maxLength={120}
               />
@@ -68,28 +68,30 @@ export const WidgetAccessSection = React.memo(function WidgetAccessSection({
         </div>
 
         {/* -- Device Visibility -- */}
-        <div className="space-y-1.5">
-          <Label className="text-[9px] font-black text-muted-foreground opacity-70">الأجهزة المدعومة</Label>
-          <div className="flex gap-1.5">
+        <div className="space-y-2">
+          <Label className="text-[10px] font-black text-muted-foreground/70">الأجهزة المدعومة</Label>
+          <ToggleGroup
+            multiple={false}
+            value={[access.device_visibility]}
+            onValueChange={(v: string[]) => v[0] && onUpdate({ device_visibility: v[0] as any })}
+            className="w-full bg-muted/40 p-1 rounded-lg gap-1 border border-border/10 shadow-inner"
+            variant="default"
+            size="sm"
+          >
             {DEVICE_OPTIONS.map((opt) => {
               const Icon = opt.icon
               return (
-                <button
+                <Toggle
                   key={opt.value}
-                  onClick={() => onUpdate({ device_visibility: opt.value })}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-[9px] font-black transition-all",
-                    access.device_visibility === opt.value
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border/40 text-muted-foreground hover:bg-muted/30"
-                  )}
+                  value={opt.value}
+                  className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg"
                 >
-                  <Icon className="size-3" />
+                  <Icon className="size-3.5" />
                   {opt.label}
-                </button>
+                </Toggle>
               )
             })}
-          </div>
+          </ToggleGroup>
         </div>
       </CardContent>
     </Card>

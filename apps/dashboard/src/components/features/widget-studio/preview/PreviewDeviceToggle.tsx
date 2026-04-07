@@ -18,7 +18,7 @@ export const PreviewDeviceToggle = React.memo(function PreviewDeviceToggle({
       <button
         onClick={() => onChange('desktop')}
         className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black transition-all",
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black transition-all",
           device === 'desktop'
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
@@ -30,7 +30,7 @@ export const PreviewDeviceToggle = React.memo(function PreviewDeviceToggle({
       <button
         onClick={() => onChange('tablet')}
         className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black transition-all",
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black transition-all",
           device === 'tablet'
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
@@ -42,7 +42,7 @@ export const PreviewDeviceToggle = React.memo(function PreviewDeviceToggle({
       <button
         onClick={() => onChange('mobile')}
         className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black transition-all",
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black transition-all",
           device === 'mobile'
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"

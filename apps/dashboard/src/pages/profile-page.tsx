@@ -4,11 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { User, Lock, Save, AlertCircle, RefreshCw, Mail, ArrowRight, Shield } from "lucide-react"
 import { toast } from "sonner"
 import { updateProfile, changePassword } from "@/lib/api"
-import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 
 export function ProfilePage() {
@@ -77,10 +75,10 @@ export function ProfilePage() {
       <div className="grid gap-6">
         {/* Profile Info Card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-2xl overflow-hidden">
+          <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg overflow-hidden">
             <div className="p-6 md:p-8 grid md:grid-cols-3 gap-8">
               <div className="space-y-4">
-                <div className="size-24 rounded-3xl bg-primary/10 flex items-center justify-center border-4 border-background shadow-inner mx-auto md:mx-0">
+                <div className="size-24 rounded-lg bg-primary/20 flex items-center justify-center border-4 border-background shadow-inner mx-auto md:mx-0">
                   <User className="size-12 text-primary" />
                 </div>
                 <div className="text-center md:text-right space-y-1">
@@ -94,38 +92,38 @@ export function ProfilePage() {
                   <div className="space-y-2 text-right">
                     <Label className="text-xs font-black text-foreground/70 mr-1">الاسم الكامل</Label>
                     <div className="relative group/input text-left" dir="ltr">
-                       <User className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
-                       <Input
-                         value={fullName}
-                         onChange={(e) => setFullName(e.target.value)}
-                         className="pr-10 h-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary transition-all text-right font-bold"
-                         placeholder="أدخل اسمك الكامل"
-                         dir="rtl"
-                       />
+                      <User className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
+                      <Input
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="pr-10 h-12 rounded-lg bg-muted/30 border-border/50 focus:border-primary transition-all text-right font-bold"
+                        placeholder="أدخل اسمك الكامل"
+                        dir="rtl"
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-2 text-right opacity-80">
                     <Label className="text-xs font-black text-foreground/70 mr-1">البريد الإلكتروني</Label>
                     <div className="relative group/input text-left" dir="ltr">
-                       <Mail className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                       <Input
-                         value={identity?.user?.email || ""}
-                         disabled
-                         className="pr-10 h-12 rounded-xl bg-muted/10 border-border/20 text-right opacity-60 cursor-not-allowed font-mono"
-                         dir="ltr"
-                       />
+                      <Mail className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <Input
+                        value={identity?.user?.email || ""}
+                        disabled
+                        className="pr-10 h-12 rounded-lg bg-muted/10 border-border/20 text-right opacity-60 cursor-not-allowed font-mono"
+                        dir="ltr"
+                      />
                     </div>
                     <p className="text-[9px] font-bold text-muted-foreground mt-1 mr-1 flex items-center gap-1">
-                       <AlertCircle className="size-3" /> لا يمكن تغيير البريد الإلكتروني للحسابات المرتبطة بسلة.
+                      <AlertCircle className="size-3" /> لا يمكن تغيير البريد الإلكتروني للحسابات المرتبطة بسلة.
                     </p>
                   </div>
 
                   <div className="pt-2 flex justify-end">
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       disabled={isUpdatingProfile || fullName === identity?.user?.full_name}
-                      className="rounded-xl h-11 px-8 font-black text-xs gap-2 shadow-lg shadow-primary/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      className="rounded-lg h-11 px-8 font-black text-xs gap-2 shadow-lg shadow-primary/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       {isUpdatingProfile ? <RefreshCw className="size-4 animate-spin" /> : <Save className="size-4" />}
                       {isUpdatingProfile ? "جاري الحفظ..." : "حفظ التغييرات"}
@@ -139,10 +137,10 @@ export function ProfilePage() {
 
         {/* Security Card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-2xl overflow-hidden">
+          <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg overflow-hidden">
             <div className="p-6 md:p-8 grid md:grid-cols-3 gap-8">
               <div className="space-y-4">
-                <div className="size-24 rounded-3xl bg-amber-500/10 flex items-center justify-center border-4 border-background shadow-inner mx-auto md:mx-0">
+                <div className="size-24 rounded-lg bg-amber-500/10 flex items-center justify-center border-4 border-background shadow-inner mx-auto md:mx-0">
                   <Shield className="size-12 text-amber-500" />
                 </div>
                 <div className="text-center md:text-right space-y-1">
@@ -156,14 +154,14 @@ export function ProfilePage() {
                   <div className="space-y-2 text-right">
                     <Label className="text-xs font-black text-foreground/70 mr-1">كلمة المرور الحالية</Label>
                     <div className="relative group/input" dir="ltr">
-                       <Lock className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
-                       <Input
-                         type="password"
-                         value={currentPassword}
-                         onChange={(e) => setCurrentPassword(e.target.value)}
-                         className="pr-10 h-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary transition-all"
-                         placeholder="••••••••"
-                       />
+                      <Lock className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
+                      <Input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="pr-10 h-12 rounded-lg bg-muted/30 border-border/50 focus:border-primary transition-all"
+                        placeholder="••••••••"
+                      />
                     </div>
                   </div>
 
@@ -171,37 +169,37 @@ export function ProfilePage() {
                     <div className="space-y-2 text-right">
                       <Label className="text-xs font-black text-foreground/70 mr-1">كلمة المرور الجديدة</Label>
                       <div className="relative group/input" dir="ltr">
-                         <Lock className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
-                         <Input
-                           type="password"
-                           value={newPassword}
-                           onChange={(e) => setNewPassword(e.target.value)}
-                           className="pr-10 h-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary transition-all"
-                           placeholder="••••••••"
-                         />
+                        <Lock className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
+                        <Input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="pr-10 h-12 rounded-lg bg-muted/30 border-border/50 focus:border-primary transition-all"
+                          placeholder="••••••••"
+                        />
                       </div>
                     </div>
                     <div className="space-y-2 text-right">
                       <Label className="text-xs font-black text-foreground/70 mr-1">تأكيد كلمة المرور</Label>
                       <div className="relative group/input" dir="ltr">
-                         <Lock className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
-                         <Input
-                           type="password"
-                           value={confirmPassword}
-                           onChange={(e) => setConfirmPassword(e.target.value)}
-                           className="pr-10 h-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary transition-all"
-                           placeholder="••••••••"
-                         />
+                        <Lock className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
+                        <Input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="pr-10 h-12 rounded-lg bg-muted/30 border-border/50 focus:border-primary transition-all"
+                          placeholder="••••••••"
+                        />
                       </div>
                     </div>
                   </div>
 
                   <div className="pt-2 flex justify-end">
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       disabled={isChangingPassword || !currentPassword || !newPassword || newPassword !== confirmPassword}
                       variant="secondary"
-                      className="rounded-xl h-11 px-8 font-black text-xs gap-2 border border-border/40 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      className="rounded-lg h-11 px-8 font-black text-xs gap-2 border border-border/40 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       {isChangingPassword ? <RefreshCw className="size-4 animate-spin" /> : <Lock className="size-4" />}
                       {isChangingPassword ? "جاري التغيير..." : "تحديث كلمة المرور"}
@@ -215,10 +213,10 @@ export function ProfilePage() {
       </div>
 
       <div className="flex justify-center pt-8">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           onClick={() => window.history.back()}
-          className="rounded-xl font-bold text-xs text-muted-foreground hover:text-primary group"
+          className="rounded-lg font-bold text-xs text-muted-foreground hover:text-primary group"
         >
           <ArrowRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform" />
           العودة للتصحيح

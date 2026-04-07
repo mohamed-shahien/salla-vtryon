@@ -117,7 +117,7 @@ export function DashboardPage() {
       <TooltipProvider>
         {/* Welcome Hero Section */}
         <motion.div variants={item}>
-          <div className="relative overflow-hidden rounded-xl bg-linear-to-br from-indigo-950 via-slate-900 to-primary p-6 text-white shadow-2xl">
+          <div className="relative overflow-hidden rounded-lg bg-linear-to-br from-indigo-950 via-slate-900 to-primary p-6 text-white shadow-2xl">
             <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-primary/20 blur-3xl animate-pulse" />
             <div className="absolute -left-20 -bottom-20 h-60 w-60 rounded-full bg-indigo-500/10 blur-3xl" />
 
@@ -138,13 +138,13 @@ export function DashboardPage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Button asChild className="h-10 px-5 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-black shadow-xl hover:scale-105 transition-all">
+                <Button asChild className="h-10 px-5 rounded-lg bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-black shadow-xl hover:scale-105 transition-all">
                   <Link to="/products">
                     ابدأ تفعيل المنتجات
                     <Zap className="ms-2 size-3.5 text-amber-500 fill-amber-500" />
                   </Link>
                 </Button>
-                <Button variant="outline" className="h-10 px-5 rounded-xl border-white/20 bg-white/5 backdrop-blur-md text-white hover:bg-white/10 text-xs font-black">
+                <Button variant="outline" className="h-10 px-5 rounded-lg border-white/20 bg-white/5 backdrop-blur-md text-white hover:bg-white/10 text-xs font-black">
                   دليل الاستخدام
                 </Button>
               </div>
@@ -156,12 +156,12 @@ export function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat, i) => (
             <motion.div key={i} variants={item}>
-              <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/20 border-border/40 group rounded-xl">
+              <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/20 border-border/40 group rounded-lg">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-3 text-right">
                   <CardTitle className="text-[10px] font-black text-muted-foreground   leading-none">
                     {stat.label}
                   </CardTitle>
-                  <div className={cn("p-2 rounded-xl transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm", stat.bg, stat.color)}>
+                  <div className={cn("p-2 rounded-lg transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm", stat.bg, stat.color)}>
                     <stat.icon className="size-4" />
                   </div>
                 </CardHeader>
@@ -185,7 +185,7 @@ export function DashboardPage() {
         <div className="grid gap-3 lg:grid-cols-3">
           {/* Recent Activity Section */}
           <motion.div variants={item} className="lg:col-span-2 space-y-3">
-            <Card className="border-border/40 shadow-sm overflow-hidden min-h-[400px] rounded-xl flex flex-col">
+            <Card className="border-border/40 shadow-sm overflow-hidden min-h-[400px] rounded-lg flex flex-col">
               <CardHeader className="border-b border-border/30 bg-muted/5 p-3 text-right">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1 text-right">
@@ -195,7 +195,7 @@ export function DashboardPage() {
                     </CardTitle>
                     <CardDescription className="text-[10px] font-bold opacity-60">أحدث 5 محاولات قياس افتراضي تمت مؤخراً</CardDescription>
                   </div>
-                  <Button asChild variant="outline" size="sm" className="rounded-xl h-8 font-black text-[9px]   gap-2 bg-background shadow-xs px-3">
+                  <Button asChild variant="outline" size="sm" className="rounded-lg h-8 font-black text-[9px]   gap-2 bg-background shadow-xs px-3">
                     <Link to="/jobs">
                       عرض سجل العمليات
                       <ArrowUpRight className="size-3.5" />
@@ -208,7 +208,7 @@ export function DashboardPage() {
                   <div className="p-3 space-y-2">
                     {[1, 2, 3, 4, 5].map((_, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <Skeleton className="size-10 rounded-xl" />
+                        <Skeleton className="size-10 rounded-lg" />
                         <div className="space-y-1 flex-1">
                           <Skeleton className="h-4 w-[40%]" />
                           <Skeleton className="h-3 w-[20%]" />
@@ -292,7 +292,7 @@ export function DashboardPage() {
                                 {job.status === 'completed' ? 'ناجحة' : job.status === 'failed' ? 'فشل' : 'معالجة'}
                               </span>
                             </div>
-                            <Button asChild variant="ghost" size="icon" className="size-8 rounded-xl text-muted-foreground hover:text-primary transition-colors">
+                            <Button asChild variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-primary transition-colors">
                               <Link to={`/jobs`}>
                                 <ExternalLink className="size-3.5" />
                               </Link>
@@ -310,7 +310,7 @@ export function DashboardPage() {
           {/* System & Credit Status Section */}
           <div className="space-y-3 text-right">
             <motion.div variants={item}>
-              <Card className="border-primary/20 bg-primary/5 shadow-inner-primary relative overflow-hidden rounded-xl">
+              <Card className="border-primary/20 bg-primary/5 shadow-inner-primary relative overflow-hidden rounded-lg">
                 <div className="absolute top-0 right-0 p-3 opacity-10 rotate-12">
                   <CreditCard className="size-16 text-primary" />
                 </div>
@@ -326,13 +326,13 @@ export function DashboardPage() {
                       <span>{usedCredits.toLocaleString()} <span className="opacity-40">تم استهلاكه</span></span>
                       <span>{credits.toLocaleString()} <span className="opacity-40">متبقي</span></span>
                     </div>
-                    <Progress value={creditUsagePercent} className="h-1.5 rounded-full bg-primary/10" />
+                    <Progress value={creditUsagePercent} className="h-1.5 rounded-full bg-primary/20" />
                     <p className="text-[8px] font-black text-muted-foreground text-center  ">
                       يتم التجديد تلقائياً مع الباقة
                     </p>
                   </div>
 
-                  <Button className="w-full h-10 bg-primary text-primary-foreground font-black text-xs rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+                  <Button className="w-full h-10 bg-primary text-primary-foreground font-black text-xs rounded-lg shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
                     شحن رصيد إضافي
                     <Plus className="ms-2 size-3" />
                   </Button>
@@ -341,7 +341,7 @@ export function DashboardPage() {
             </motion.div>
 
             <motion.div variants={item}>
-              <Card className="bg-linear-to-br from-indigo-700 to-indigo-950 border-none text-white overflow-hidden relative shadow-2xl rounded-xl">
+              <Card className="bg-linear-to-br from-indigo-700 to-indigo-950 border-none text-white overflow-hidden relative shadow-2xl rounded-lg">
                 <div className="absolute -right-6 -top-6 opacity-10 flex">
                   <Zap className="h-24 w-24 rotate-12 fill-white" />
                 </div>
@@ -352,7 +352,7 @@ export function DashboardPage() {
                       فريق الخبراء متاح لمساعدتك في ضبط إعدادات العرض وتحسين الأداء.
                     </p>
                   </div>
-                  <Button className="w-full h-10 bg-white text-indigo-950 font-black text-xs hover:bg-white/90 rounded-xl transition-all shadow-lg active:scale-95">
+                  <Button className="w-full h-10 bg-white text-indigo-950 font-black text-xs hover:bg-white/90 rounded-lg transition-all shadow-lg active:scale-95">
                     تواصل معنا الآن
                   </Button>
                 </CardContent>

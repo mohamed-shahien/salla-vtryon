@@ -23,7 +23,7 @@ function TemplateVisual({ template, isActive }: { template: WidgetTemplate; isAc
   const btnH = size === 'sm' ? 12 : size === 'lg' ? 18 : 14
 
   return (
-    <div className="w-full h-20 rounded-md bg-muted/40 border border-border/20 flex items-center justify-center relative overflow-hidden">
+    <div className="w-full h-20 rounded-lg bg-muted/40 border border-border/20 flex items-center justify-center relative overflow-hidden">
       {/* Mock product image placeholder */}
       <div className="absolute inset-1 rounded bg-linear-to-br from-muted/60 to-muted/30 flex items-end justify-end p-1.5">
         <div

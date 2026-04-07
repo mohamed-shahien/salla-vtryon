@@ -62,7 +62,7 @@ export function OnboardingWizard() {
       description: 'حول متجرك إلى تجربة تفاعلية تتيح لعملائك تجربة الملابس باستخدام الذكاء الاصطناعي بكل سهولة.',
       icon: Sparkles,
       color: 'text-primary',
-      bg: 'bg-primary/10',
+      bg: 'bg-primary/20',
     },
     {
       title: 'كيف يعمل النظام؟',
@@ -145,7 +145,7 @@ export function OnboardingWizard() {
             <Button
               variant="ghost"
               onClick={() => setStep(s => s - 1)}
-              className="rounded-xl font-black text-xs h-11 px-3 hover:bg-muted/50 transition-transform"
+              className="rounded-lg font-black text-xs h-11 px-3 hover:bg-muted/50 transition-transform"
             >
               <ChevronRight className="me-2 h-4 w-4" />
               السابق
@@ -155,7 +155,7 @@ export function OnboardingWizard() {
           {step < steps.length ? (
             <Button
               onClick={() => setStep(s => s + 1)}
-              className="rounded-xl font-black text-xs h-11 px-3 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+              className="rounded-lg font-black text-xs h-11 px-3 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
             >
               التالي
               <ChevronLeft className="ms-2 h-4 w-4" />
@@ -164,7 +164,7 @@ export function OnboardingWizard() {
             <Button
               onClick={handleFinish}
               disabled={isFinishing}
-              className="rounded-xl font-black text-xs h-11 px-3 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+              className="rounded-lg font-black text-xs h-11 px-3 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
             >
               {isFinishing ? 'جاري الحفظ...' : 'ابدأ الآن'}
               {!isFinishing && <Zap className="ms-2 h-4 w-4" />}

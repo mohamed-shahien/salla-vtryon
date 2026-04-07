@@ -13,7 +13,7 @@ export function AppShell() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full bg-background text-foreground selection:bg-primary/10 selection:text-primary" dir="rtl">
+      <div className="flex min-h-screen w-full bg-background text-foreground selection:bg-primary/20 selection:text-primary" dir="rtl">
         {showOnboarding && <OnboardingWizard />}
 
         <DashboardSidebar />

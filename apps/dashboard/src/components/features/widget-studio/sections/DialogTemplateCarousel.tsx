@@ -17,14 +17,14 @@ function DialogVisual({ template, isActive }: { template: DialogTemplate; isActi
   const shadow = template.overrides.appearance?.shadow_intensity ?? 'subtle'
   const boxShadow =
     shadow === 'none' ? 'none'
-    : shadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.08)'
-    : shadow === 'medium' ? '0 4px 16px rgba(0,0,0,0.12)'
-    : '0 8px 32px rgba(0,0,0,0.18)'
+      : shadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.08)'
+        : shadow === 'medium' ? '0 4px 16px rgba(0,0,0,0.12)'
+          : '0 8px 32px rgba(0,0,0,0.18)'
   const w = template.overrides.dialog?.width ?? 'md'
   const dialogW = w === 'sm' ? '60%' : w === 'lg' ? '88%' : w === 'full' ? '96%' : '75%'
 
   return (
-    <div className="w-full h-20 rounded-md bg-linear-to-b from-muted/30 to-muted/10 flex items-center justify-center relative overflow-hidden">
+    <div className="w-full h-20 rounded-lg bg-linear-to-b from-muted/30 to-muted/10 flex items-center justify-center relative overflow-hidden">
       {/* Dimmed overlay */}
       <div className="absolute inset-0 bg-foreground/5" />
       {/* Modal card */}

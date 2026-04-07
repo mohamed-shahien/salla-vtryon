@@ -9,7 +9,6 @@ import {
    Layout,
    MousePointer2,
    Loader2,
-   RefreshCw,
    Terminal,
    Settings2,
    AlertCircle,
@@ -153,23 +152,23 @@ export function SettingsPage() {
                   </p>
                </div>
 
-                <div className="flex items-center gap-3">
-                   <Button
-                      onClick={() => void handleSave()}
-                      disabled={!draftChanged || saveStatus === 'saving'}
-                      className="rounded-xl font-black text-xs h-11 px-6 shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] active:scale-[0.98] transition-all"
-                   >
-                      {saveStatus === 'saving' ? <Loader2 className="me-2 size-4 animate-spin" /> : <Save className="me-2 size-4" />}
-                      {saveStatus === 'saving' ? "جاري الحفظ..." : "حفظ الإعدادات"}
-                   </Button>
-                </div>
+               <div className="flex items-center gap-3">
+                  <Button
+                     onClick={() => void handleSave()}
+                     disabled={!draftChanged || saveStatus === 'saving'}
+                     className="rounded-lg font-black text-xs h-11 px-6 shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                     {saveStatus === 'saving' ? <Loader2 className="me-2 size-4 animate-spin" /> : <Save className="me-2 size-4" />}
+                     {saveStatus === 'saving' ? "جاري الحفظ..." : "حفظ الإعدادات"}
+                  </Button>
+               </div>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-3">
                <div className="lg:col-span-2 space-y-3">
                   {/* General Configuration */}
                   <motion.div variants={item} initial="hidden" animate="show">
-                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-xl text-right">
+                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg text-right">
                         <CardHeader className="p-3 border-b border-border/10">
                            <div className="flex items-center justify-between">
                               <div className="space-y-0.5">
@@ -179,7 +178,7 @@ export function SettingsPage() {
                                  </CardTitle>
                                  <CardDescription className="text-[9px] font-black opacity-60">تفعيل أو تعطيل الإضافة تماماً من المتجر</CardDescription>
                               </div>
-                              <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-xl border border-border/40">
+                              <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-lg border border-border/40">
                                  <span className={cn("text-[9px] font-black", draft?.widget_enabled ? "text-emerald-600" : "text-muted-foreground opacity-60")}>
                                     {draft?.widget_enabled ? "نشط" : "معطل"}
                                  </span>
@@ -198,7 +197,7 @@ export function SettingsPage() {
                                  <Input
                                     value={draft?.widget_button_text}
                                     onChange={(e) => setDraft(c => c ? { ...c, widget_button_text: e.target.value } : null)}
-                                    className="h-9 rounded-xl bg-background border-border/60 font-bold text-[10px] text-right"
+                                    className="h-9 rounded-lg bg-background border-border/60 font-bold text-[10px] text-right"
                                     placeholder="مثال: قياس افتراضي"
                                  />
                               </div>
@@ -208,10 +207,10 @@ export function SettingsPage() {
                                     value={draft?.default_category}
                                     onValueChange={(val) => setDraft(c => c ? { ...c, default_category: val as TryOnCategory } : null)}
                                  >
-                                    <SelectTrigger className="h-9 rounded-xl font-bold text-[10px] bg-background border-border/60">
+                                    <SelectTrigger className="h-9 rounded-lg font-bold text-[10px] bg-background border-border/60">
                                        <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border/40" dir="rtl">
+                                    <SelectContent className="rounded-lg border-border/40" dir="rtl">
                                        {CATEGORY_OPTIONS.map(opt => (
                                           <SelectItem key={opt.value} value={opt.value} className="text-[10px] font-black">
                                              {opt.label}
@@ -227,7 +226,7 @@ export function SettingsPage() {
 
                   {/* Mode & Target Section */}
                   <motion.div variants={item} initial="hidden" animate="show">
-                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-xl text-right">
+                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg text-right">
                         <CardHeader className="p-3 border-b border-border/10 pb-2">
                            <CardTitle className="text-base font-black flex items-center gap-2 justify-end">
                               نطاق تفعيل الميزة
@@ -240,14 +239,14 @@ export function SettingsPage() {
                                  key={option.value}
                                  onClick={() => setDraft(c => c ? { ...c, widget_mode: option.value } : null)}
                                  className={cn(
-                                    "relative flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 text-right group",
+                                    "relative flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 text-right group",
                                     draft?.widget_mode === option.value
                                        ? "border-primary bg-primary/5 ring-1 ring-primary/10 shadow-sm"
                                        : "border-border/40 hover:bg-muted/30 opacity-70"
                                  )}
                               >
                                  <div className={cn(
-                                    "size-8 rounded-xl flex items-center justify-center transition-colors",
+                                    "size-8 rounded-lg flex items-center justify-center transition-colors",
                                     draft?.widget_mode === option.value ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-muted/80"
                                  )}>
                                     {option.value === 'all' ? <Globe className="size-4" /> : <MousePointer2 className="size-4" />}
@@ -267,71 +266,71 @@ export function SettingsPage() {
                      </Card>
                   </motion.div>
 
-                   {/* Integration Snippet */}
-                   {embedScript && (
-                      <motion.div variants={item} initial="hidden" animate="show" className="space-y-3">
-                         <div className="flex items-center gap-2 px-1">
-                            <Terminal className="size-4 text-primary" />
-                            <h3 className="font-black text-sm">كود الربط التقني</h3>
-                         </div>
-                         <Card className="border-border/40 shadow-2xl bg-card/40 backdrop-blur-2xl rounded-2xl overflow-hidden text-left" dir="ltr">
-                            <Code code={embedScript.script_tag} className="border-none bg-transparent">
-                                <CodeHeader copyButton icon={Settings2} className="bg-muted/50 border-border/20 text-[10px] font-bold">
-                                    Integration Script (Salla Storefront)
-                                </CodeHeader>
-                                <CodeBlock lang="html" className="text-xs p-6" />
-                            </Code>
-                         </Card>
-                         
-                         <div className="flex items-center justify-between px-4 py-3 bg-primary/5 rounded-2xl border border-primary/10">
-                            <div className="flex items-center gap-2">
-                                <ShieldCheck className="size-4 text-emerald-500" />
-                                <span className="text-[10px] font-black text-foreground/70">معرف السحابة الآمنة:</span>
-                            </div>
-                            <span className="text-xs font-black text-primary font-mono select-all">
-                                {embedScript.merchant_id}
-                            </span>
-                         </div>
-                      </motion.div>
-                   )}
+                  {/* Integration Snippet */}
+                  {embedScript && (
+                     <motion.div variants={item} initial="hidden" animate="show" className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                           <Terminal className="size-4 text-primary" />
+                           <h3 className="font-black text-sm">كود الربط التقني</h3>
+                        </div>
+                        <Card className="border-border/40 shadow-2xl bg-card/40 backdrop-blur-2xl rounded-lg overflow-hidden text-left" dir="ltr">
+                           <Code code={embedScript.script_tag} className="border-none bg-transparent">
+                              <CodeHeader copyButton icon={Settings2} className="bg-muted/50 border-border/20 text-[10px] font-bold">
+                                 Integration Script (Salla Storefront)
+                              </CodeHeader>
+                              <CodeBlock lang="html" className="text-xs p-6" />
+                           </Code>
+                        </Card>
+
+                        <div className="flex items-center justify-between px-4 py-3 bg-primary/5 rounded-lg border border-primary/10">
+                           <div className="flex items-center gap-2">
+                              <ShieldCheck className="size-4 text-emerald-500" />
+                              <span className="text-[10px] font-black text-foreground/70">معرف السحابة الآمنة:</span>
+                           </div>
+                           <span className="text-xs font-black text-primary font-mono select-all">
+                              {embedScript.merchant_id}
+                           </span>
+                        </div>
+                     </motion.div>
+                  )}
                </div>
 
-                {/* Right Sidebar - General Info */}
-                <div className="space-y-4">
-                   <Card className="border-border/40 shadow-sm bg-card/60 rounded-2xl overflow-hidden">
-                      <div className="p-5 space-y-4">
-                         <div className="flex justify-center">
-                            <div className="size-20 rounded-3xl bg-primary/10 flex items-center justify-center border-4 border-background shadow-inner">
-                               <User className="size-10 text-primary" />
-                            </div>
-                         </div>
-                         <div className="text-center space-y-1">
-                            <h3 className="font-black text-sm">{identity?.user?.full_name}</h3>
-                            <p className="text-[10px] font-bold text-muted-foreground">{identity?.user?.email}</p>
-                         </div>
-                      </div>
-                      <div className="px-3 pb-3">
-                         <Button 
-                            variant="secondary" 
-                            onClick={() => navigate('/profile')} 
-                            className="w-full h-10 rounded-xl font-black text-[10px] gap-2 border border-border/40"
-                         >
-                            <Settings2 className="size-3.5" />
-                            إدارة الحساب الشخصي
-                         </Button>
-                      </div>
-                   </Card>
+               {/* Right Sidebar - General Info */}
+               <div className="space-y-4">
+                  <Card className="border-border/40 shadow-sm bg-card/60 rounded-lg overflow-hidden">
+                     <div className="p-5 space-y-4">
+                        <div className="flex justify-center">
+                           <div className="size-20 rounded-lg bg-primary/20 flex items-center justify-center border-4 border-background shadow-inner">
+                              <User className="size-10 text-primary" />
+                           </div>
+                        </div>
+                        <div className="text-center space-y-1">
+                           <h3 className="font-black text-sm">{identity?.user?.full_name}</h3>
+                           <p className="text-[10px] font-bold text-muted-foreground">{identity?.user?.email}</p>
+                        </div>
+                     </div>
+                     <div className="px-3 pb-3">
+                        <Button
+                           variant="secondary"
+                           onClick={() => navigate('/profile')}
+                           className="w-full h-10 rounded-lg font-black text-[10px] gap-2 border border-border/40"
+                        >
+                           <Settings2 className="size-3.5" />
+                           إدارة الحساب الشخصي
+                        </Button>
+                     </div>
+                  </Card>
 
-                   <Card className="border-border/40 shadow-sm bg-muted/20 rounded-2xl p-5 space-y-2">
-                       <div className="flex items-center gap-2 text-primary">
-                          <AlertCircle className="size-4" />
-                          <h4 className="text-[10px] font-black">تحتاج مساعدة؟</h4>
-                       </div>
-                       <p className="text-[10px] leading-relaxed font-bold text-muted-foreground">
-                          إذا كنت تواجه صعوبة في دمج الكود في متجرك، يمكنك دائماً التواصل مع فريق الدعم الفني الخاص بنا.
-                       </p>
-                   </Card>
-                </div>
+                  <Card className="border-border/40 shadow-sm bg-muted/20 rounded-lg p-5 space-y-2">
+                     <div className="flex items-center gap-2 text-primary">
+                        <AlertCircle className="size-4" />
+                        <h4 className="text-[10px] font-black">تحتاج مساعدة؟</h4>
+                     </div>
+                     <p className="text-[10px] leading-relaxed font-bold text-muted-foreground">
+                        إذا كنت تواجه صعوبة في دمج الكود في متجرك، يمكنك دائماً التواصل مع فريق الدعم الفني الخاص بنا.
+                     </p>
+                  </Card>
+               </div>
             </div>
          </div>
       </TooltipProvider>

@@ -1,10 +1,9 @@
 import React from 'react'
 import { Paintbrush } from 'lucide-react'
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+import Blossom from '@dayflow/blossom-color-picker-react'
+import { ToggleGroup, Toggle } from '@/components/animate-ui/components/base/toggle-group'
 
 import type {
   WidgetStudioConfig,
@@ -14,7 +13,6 @@ import type {
   ShadowIntensity,
   DialogWidth,
 } from '../schema/widget-studio.schema'
-import { ACCENT_COLOR_PRESETS } from '../schema/widget-studio.defaults'
 
 interface WidgetAppearanceSectionProps {
   config: WidgetStudioConfig
@@ -54,7 +52,7 @@ const WIDTH_OPTIONS: Array<{ value: DialogWidth; label: string }> = [
   { value: 'full', label: 'كامل' },
 ]
 
-function SegmentedRow<T extends string>({
+function SettingRow<T extends string>({
   label,
   value,
   options,
@@ -66,24 +64,26 @@ function SegmentedRow<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-[9px] font-black text-muted-foreground opacity-70">{label}</Label>
-      <div className="flex gap-1">
+    <div className="space-y-2">
+      <Label className="text-[10px] font-black text-muted-foreground/70">{label}</Label>
+      <ToggleGroup
+        multiple={false}
+        value={[value]}
+        onValueChange={(v: string[]) => v[0] && onChange(v[0] as T)}
+        className="w-full bg-muted/40 p-1 rounded-lg gap-1 border border-border/5 shadow-inner"
+        variant="default"
+        size="sm"
+      >
         {options.map((opt) => (
-          <button
+          <Toggle
             key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={cn(
-              "flex-1 py-1.5 rounded-lg border text-[8px] font-black transition-all",
-              value === opt.value
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border/40 text-muted-foreground hover:bg-muted/30"
-            )}
+            value={opt.value}
+            className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg transition-all"
           >
             {opt.label}
-          </button>
+          </Toggle>
         ))}
-      </div>
+      </ToggleGroup>
     </div>
   )
 }
@@ -107,43 +107,27 @@ export const WidgetAppearanceSection = React.memo(function WidgetAppearanceSecti
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="p-3 space-y-3">
-        {/* -- Accent Color -- */}
-        <div className="space-y-1.5">
-          <Label className="text-[9px] font-black text-muted-foreground opacity-70">لون العلامة التجارية</Label>
-          <div className="flex gap-1.5 items-center">
-            {ACCENT_COLOR_PRESETS.map((preset) => (
-              <button
-                key={preset.value}
-                onClick={() => onUpdateAppearance({ accent_color: preset.value })}
-                title={preset.label}
-                className={cn(
-                  "size-6 rounded-full border-2 transition-all hover:scale-110 shrink-0",
-                  appearance.accent_color === preset.value
-                    ? "border-foreground ring-2 ring-offset-2 ring-primary/30 scale-110"
-                    : "border-transparent"
-                )}
-                style={{ backgroundColor: preset.value }}
-              />
-            ))}
-            <div className="flex-1 min-w-0">
-              <Input
-                value={appearance.accent_color}
-                onChange={(e) => {
-                  const v = e.target.value
-                  if (/^#[0-9a-fA-F]{0,6}$/.test(v)) {
-                    onUpdateAppearance({ accent_color: v })
-                  }
-                }}
-                className="h-7 rounded-lg bg-background border-border/60 font-mono text-[9px] text-center w-full"
-                maxLength={7}
-              />
-            </div>
-          </div>
+      <CardContent className="p-3 space-y-4">
+
+
+        <div className="p-2 bg-muted/40 rounded-lg border border-border/5 flex items-center gap-2">
+          <Label className="text-[10px] font-black text-muted-foreground/70 w-full">لون العلامة التجارية</Label>
+          <Blossom
+            value={appearance.accent_color as any}
+            onChange={(color: any) => {
+              const hex = typeof color === 'string' ? color : color?.hex;
+              if (hex) onUpdateAppearance({ accent_color: hex });
+            }}
+            petalSize={32}
+            coreSize={32}
+            openOnHover
+            sliderPosition="right"
+            showAlphaSlider={false}
+            animationDuration={300}
+          />
         </div>
 
-        {/* -- Corner Style -- */}
-        <SegmentedRow
+        <SettingRow
           label="نمط الحواف"
           value={appearance.corner_style}
           options={CORNER_OPTIONS}
@@ -151,7 +135,7 @@ export const WidgetAppearanceSection = React.memo(function WidgetAppearanceSecti
         />
 
         {/* -- Spacing Density -- */}
-        <SegmentedRow
+        <SettingRow
           label="كثافة التباعد"
           value={appearance.spacing_density}
           options={SPACING_OPTIONS}
@@ -159,7 +143,7 @@ export const WidgetAppearanceSection = React.memo(function WidgetAppearanceSecti
         />
 
         {/* -- Button Style -- */}
-        <SegmentedRow
+        <SettingRow
           label="نمط الأزرار"
           value={appearance.button_style}
           options={BUTTON_STYLE_OPTIONS}
@@ -167,7 +151,7 @@ export const WidgetAppearanceSection = React.memo(function WidgetAppearanceSecti
         />
 
         {/* -- Shadow Intensity -- */}
-        <SegmentedRow
+        <SettingRow
           label="شدة الظل"
           value={appearance.shadow_intensity}
           options={SHADOW_OPTIONS}
@@ -175,7 +159,7 @@ export const WidgetAppearanceSection = React.memo(function WidgetAppearanceSecti
         />
 
         {/* -- Dialog Width -- */}
-        <SegmentedRow
+        <SettingRow
           label="عرض النافذة"
           value={config.dialog.width}
           options={WIDTH_OPTIONS}

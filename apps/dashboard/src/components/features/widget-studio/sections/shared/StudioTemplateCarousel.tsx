@@ -39,7 +39,7 @@ export function StudioTemplateCarousel<T>({
       <CardHeader className="p-3 border-b border-border/10">
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
-             {/* The Carousel context provides controls, but we'll use our own layout if needed or the built-in ones */}
+            {/* The Carousel context provides controls, but we'll use our own layout if needed or the built-in ones */}
           </div>
           <div className="space-y-0.5">
             <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
@@ -86,9 +86,9 @@ export function StudioTemplateCarousel<T>({
               )
             })}
           </CarouselContent>
-          <div className="absolute -top-11 left-0 flex gap-1">
-            <CarouselPrevious className="static translate-y-0 size-6 rounded-md border-border/40 hover:bg-primary/5 hover:text-primary transition-all" />
-            <CarouselNext className="static translate-y-0 size-6 rounded-md border-border/40 hover:bg-primary/5 hover:text-primary transition-all" />
+          <div className="absolute -top-9 left-0 flex gap-1">
+            <CarouselPrevious className="static translate-y-0 size-6 rounded-lg border-border/40 hover:bg-primary/5 hover:text-primary transition-all" />
+            <CarouselNext className="static translate-y-0 size-6 rounded-lg border-border/40 hover:bg-primary/5 hover:text-primary transition-all" />
           </div>
         </Carousel>
       </CardContent>

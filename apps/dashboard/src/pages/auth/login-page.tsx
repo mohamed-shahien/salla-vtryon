@@ -57,7 +57,7 @@ export const LoginPage: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 text-foreground font-sans" dir="rtl">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 shadow-inner">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-lg bg-primary/20 shadow-inner">
             <LogIn className="h-8 w-8 text-primary" />
           </div>
           <h2 className="mt-6 text-xl font-bold tracking-tight">تسجيل الدخول</h2>
@@ -66,12 +66,12 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        <Card className="border border-border bg-card p-8 shadow-2xl relative overflow-hidden rounded-2xl">
+        <Card className="border border-border bg-card p-8 shadow-2xl relative overflow-hidden rounded-lg">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
 
           <form onSubmit={handleSubmit} className="space-y-6 relative">
             {error && (
-              <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5 text-destructive animate-in fade-in zoom-in duration-300">
+              <Alert variant="destructive" className="rounded-lg border-destructive/20 bg-destructive/5 text-destructive animate-in fade-in zoom-in duration-300">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-xs font-medium mr-2">{error}</AlertDescription>
               </Alert>
@@ -92,7 +92,7 @@ export const LoginPage: React.FC = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pr-10 h-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary transition-all text-left"
+                      className="pr-10 h-12 rounded-lg bg-muted/30 border-border/50 focus:border-primary transition-all text-left"
                       dir="ltr"
                     />
                   </div>
@@ -119,7 +119,7 @@ export const LoginPage: React.FC = () => {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pr-10 h-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary transition-all text-left"
+                      className="pr-10 h-12 rounded-lg bg-muted/30 border-border/50 focus:border-primary transition-all text-left"
                       dir="ltr"
                     />
                   </div>
@@ -127,48 +127,48 @@ export const LoginPage: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500 text-center">
-                 <div className="space-y-2">
-                    <Label className="text-sm font-bold text-foreground/80">رمز التحقق (OTP)</Label>
-                    <p className="text-[10px] text-muted-foreground font-black">أدخل الرمز المكون من 6 أرقام المرسل إليك</p>
-                    <div className="flex justify-center pt-4" dir="ltr">
-                        <InputOTP 
-                            maxLength={6} 
-                            value={otp}
-                            onChange={(val) => setOtp(val)}
-                            className="gap-2"
-                        >
-                            <InputOTPGroup>
-                                <InputOTPSlot index={0} className="rounded-xl size-12 font-black text-lg border-border/60" />
-                                <InputOTPSlot index={1} className="rounded-xl size-12 font-black text-lg border-border/60" />
-                            </InputOTPGroup>
-                            <InputOTPSeparator />
-                            <InputOTPGroup>
-                                <InputOTPSlot index={2} className="rounded-xl size-12 font-black text-lg border-border/60" />
-                                <InputOTPSlot index={3} className="rounded-xl size-12 font-black text-lg border-border/60" />
-                            </InputOTPGroup>
-                            <InputOTPSeparator />
-                            <InputOTPGroup>
-                                <InputOTPSlot index={4} className="rounded-xl size-12 font-black text-lg border-border/60" />
-                                <InputOTPSlot index={5} className="rounded-xl size-12 font-black text-lg border-border/60" />
-                            </InputOTPGroup>
-                        </InputOTP>
-                    </div>
-                 </div>
-                 <Button 
-                    variant="link" 
-                    type="button" 
-                    onClick={() => { setShowOTP(false); setOtp(""); }}
-                    className="text-[10px] font-bold text-muted-foreground hover:text-primary"
-                 >
-                    العودة لتعديل البيانات
-                 </Button>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-foreground/80">رمز التحقق (OTP)</Label>
+                  <p className="text-[10px] text-muted-foreground font-black">أدخل الرمز المكون من 6 أرقام المرسل إليك</p>
+                  <div className="flex justify-center pt-4" dir="ltr">
+                    <InputOTP
+                      maxLength={6}
+                      value={otp}
+                      onChange={(val) => setOtp(val)}
+                      className="gap-2"
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} className="rounded-lg size-12 font-black text-lg border-border/60" />
+                        <InputOTPSlot index={1} className="rounded-lg size-12 font-black text-lg border-border/60" />
+                      </InputOTPGroup>
+                      <InputOTPSeparator />
+                      <InputOTPGroup>
+                        <InputOTPSlot index={2} className="rounded-lg size-12 font-black text-lg border-border/60" />
+                        <InputOTPSlot index={3} className="rounded-lg size-12 font-black text-lg border-border/60" />
+                      </InputOTPGroup>
+                      <InputOTPSeparator />
+                      <InputOTPGroup>
+                        <InputOTPSlot index={4} className="rounded-lg size-12 font-black text-lg border-border/60" />
+                        <InputOTPSlot index={5} className="rounded-lg size-12 font-black text-lg border-border/60" />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                </div>
+                <Button
+                  variant="link"
+                  type="button"
+                  onClick={() => { setShowOTP(false); setOtp(""); }}
+                  className="text-[10px] font-bold text-muted-foreground hover:text-primary"
+                >
+                  العودة لتعديل البيانات
+                </Button>
               </div>
             )}
 
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 rounded-xl bg-primary text-sm font-bold text-white shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70"
+              className="w-full h-12 rounded-lg bg-primary text-sm font-bold text-white shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70"
             >
               {isLoading ? (
                 <>
