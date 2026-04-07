@@ -23,7 +23,6 @@ interface WidgetConfigPayload {
   current_product_id: string | null
   overall_enabled: boolean
   current_product_enabled: boolean
-  // Legacy aliases for backward compatibility
   mode: 'all' | 'selected'
   products: number[]
   enabled: boolean
@@ -34,7 +33,6 @@ interface WidgetConfigPayload {
   default_category: TryOnCategory
   widget_token: string | null
   reason: string | null
-  // Widget Studio extended config (optional for storefront)
   widget_config: Record<string, unknown> | null
 }
 
@@ -78,13 +76,37 @@ function extractProductName(product: unknown) {
 }
 
 
+function detectCategory(name: string): TryOnCategory {
+  const n = name.toLowerCase()
+  if (
+    n.includes('pant') || 
+    n.includes('trouser') || 
+    n.includes('jean') || 
+    n.includes('short') || 
+    n.includes('skirt') || 
+    n.includes('legging') ||
+    n.includes('بنطلون') ||
+    n.includes('تنورة') ||
+    n.includes('شورت')
+  ) return 'lower_body'
+  
+  if (
+    n.includes('dress') || 
+    n.includes('gown') || 
+    n.includes('jumpsuit') || 
+    n.includes('abaya') ||
+    n.includes('فستان') ||
+    n.includes('عباية') ||
+    n.includes('جمبسوت')
+  ) return 'dresses'
+  
+  return 'upper_body'
+}
 
 export async function getWidgetConfig(
   sallaMerchantId: number,
   currentProductId?: string | null,
 ) {
-  // Auto-register the merchant on first widget contact — no manual install step required.
-  // The merchant starts on the free plan (10 credits) with the widget enabled by default.
   let merchant = await findMerchantBySallaMerchantId(sallaMerchantId)
 
   if (!merchant) {
@@ -95,26 +117,28 @@ export async function getWidgetConfig(
   const overallEnabled =
     merchant.is_active === true && merchant.plan_status === 'active' && settings.widget_enabled
 
-  // Step 1: Fetch Rule for current product (if applicable)
   let currentProductRule: { enabled: boolean } | null = null
+  let productName = ''
+
   if (currentProductId) {
     currentProductRule = await getMerchantProductRule(merchant.id, currentProductId)
+    try {
+      const productDetail = await getMerchantProductDetail(sallaMerchantId, currentProductId)
+      productName = extractProductName(productDetail?.data) || ''
+    } catch { }
   }
 
-  // Step 2: Determine if widget is enabled for this specific page
   const currentProductEnabled =
     overallEnabled && currentProductId
       ? isWidgetEnabledForProduct(settings, currentProductId, currentProductRule)
       : overallEnabled && settings.widget_mode === 'all'
 
-  // Step 3: Fetch all enabled products for 'selected' mode (backward compatibility + fallback)
   let widgetProducts = settings.widget_products
   if (settings.widget_mode === 'selected') {
     const rules = await getMerchantProductRules(merchant.id)
     const enabledFromRules = rules.filter((r) => r.enabled).map((r) => r.product_id)
     const disabledFromRules = new Set(rules.filter((r) => !r.enabled).map((r) => r.product_id))
 
-    // Merge: legacy fallback minus explicit disables
     widgetProducts = Array.from(
       new Set([
         ...enabledFromRules,
@@ -123,7 +147,6 @@ export async function getWidgetConfig(
     )
   }
 
-  // Edge Case: selected mode + no products enabled -> widget NOT rendered
   const finalProductEnabled =
     currentProductEnabled &&
     (settings.widget_mode === 'all' || widgetProducts.length > 0)
@@ -144,13 +167,12 @@ export async function getWidgetConfig(
     widget_mode: settings.widget_mode,
     widget_products: widgetProducts,
     
-    // LOCKED Legacy Aliases
     mode: settings.widget_mode,
     products: widgetProducts,
     enabled: finalProductEnabled,
 
     button_text: settings.widget_button_text,
-    default_category: settings.default_category,
+    default_category: productName ? detectCategory(productName) : settings.default_category,
     widget_token:
       currentProductId && finalProductEnabled
         ? createWidgetToken({
@@ -193,8 +215,6 @@ export async function createWidgetTryOnJob(options: {
 
   const clientProductImageUrl = options.productImageUrl?.trim() || null
 
-  // Fetch product details from Salla (best-effort).
-  // If OAuth tokens are absent but the widget already sent an image URL, we proceed without them.
   let productPayload: Awaited<ReturnType<typeof getMerchantProductDetail>> | null = null
   try {
     productPayload = await getMerchantProductDetail(
@@ -203,15 +223,12 @@ export async function createWidgetTryOnJob(options: {
     )
   } catch (fetchError) {
     if (!clientProductImageUrl) {
-      // No fallback — cannot proceed without at least one image source
       throw new AppError(
         'Product image could not be retrieved. Re-authorize the app in your Salla dashboard.',
         422,
         'PRODUCT_IMAGE_MISSING',
       )
     }
-    // Log and continue — we have a client-provided image URL
-    console.warn('[widget] Salla product fetch failed, using client-provided product image URL', fetchError instanceof Error ? fetchError.message : fetchError)
   }
 
   const productImageUrl = clientProductImageUrl ?? extractProductImage(productPayload?.data)

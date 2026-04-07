@@ -14,40 +14,45 @@ export interface CreateTryOnPredictionInput {
 
 const TERMINAL_STATUSES = new Set(['succeeded', 'failed', 'canceled', 'aborted'])
 
-/**
- * Global mutex to prevent concurrent Replicate calls.
- * This is critical because many Replicate accounts have a concurrency limit of 1.
- * By wrapping our calls in this lock, we ensure we never trigger a 429 internally.
- */
-let replicateMutex: Promise<void> = Promise.resolve()
+class ReplicatePool {
+  private inFlight = 0
+  private queue: (() => void)[] = []
 
-async function withReplicateLock<T>(fn: () => Promise<T>): Promise<T> {
-  const currentLock = replicateMutex
-  let resolveLock: () => void
+  async acquire(): Promise<void> {
+    if (this.inFlight < env.REPLICATE_MAX_CONCURRENCY) {
+      this.inFlight++
+      return
+    }
+    return new Promise((resolve) => this.queue.push(resolve))
+  }
 
-  replicateMutex = new Promise((resolve) => {
-    resolveLock = resolve
-  })
+  release(): void {
+    const next = this.queue.shift()
+    if (next) {
+      next()
+    } else {
+      this.inFlight--
+    }
+  }
 
-  try {
-    await currentLock
-    return await fn()
-  } finally {
-    // After the API call completes, add a 'settle' delay before releasing the lock
-    // Increased to 2s to be extremely safe with Nano-Banana alpha limits
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    resolveLock!()
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    await this.acquire()
+    try {
+      const result = await fn()
+      // Add a small cool-down to prevent aggressive burst triggers
+      await new Promise(r => setTimeout(r, 500))
+      return result
+    } finally {
+      this.release()
+    }
   }
 }
 
-// ─── Model identity ───────────────────────────────────────────────────────────
+const pool = new ReplicatePool()
 
 const DEFAULT_MODEL = 'google/nano-banana'
 const DEFAULT_VERSION = ''
 
-/**
- * Returns the prediction identifier to use with the Replicate API.
- */
 function getPredictionIdentifier() {
   const model = (env.REPLICATE_MODEL ?? DEFAULT_MODEL).trim()
   const version = (env.REPLICATE_MODEL_VERSION || (model === DEFAULT_MODEL ? DEFAULT_VERSION : '')).trim()
@@ -59,18 +64,14 @@ function getPredictionIdentifier() {
   return { model } as const
 }
 
-// ─── Model family detection ───────────────────────────────────────────────────
-
 function getModelFamily(): 'nano-banana' | 'idm-vton' | 'flux' {
   const model = (env.REPLICATE_MODEL ?? DEFAULT_MODEL).toLowerCase()
   const version = (env.REPLICATE_MODEL_VERSION ?? '').toLowerCase()
-  
+
   if (model.includes('nano-banana')) return 'nano-banana'
   if (model.includes('idm-vton') || model.includes('vton') || version.includes('vton')) return 'idm-vton'
   return 'flux'
 }
-
-// ─── Input builders ───────────────────────────────────────────────────────────
 
 const CATEGORY_FALLBACK: Record<TryOnCategory, string> = {
   upper_body: 'Short sleeve round neck t-shirt',
@@ -89,11 +90,14 @@ function buildSmartGarmentDescription(category: TryOnCategory, rawName?: string 
 function buildNanoBananaInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
   const garmentType = input.category.replace('_', ' ')
   const prompt = [
-    `The first image shows a person and the second image shows a ${garmentType}.`,
-    `Modify the person to be wearing the exact ${garmentType} shown in the second image.`,
-    'Maintain the person\'s pose, facial features, and background.',
-    'The output should be a professional high-quality fashion photograph.',
-  ].join(' ')
+    'Task: Professional virtual try-on and garment synthesis.',
+    `Target: Drape the exact ${garmentType} from the second image onto the person in the first image.`,
+    'Constraints:',
+    '- Preserve the exact texture, pattern, and color of the garment.',
+    '- Maintain the person\'s pose, facial features, hair, and original background.',
+    '- Align clothing naturally with body shape and perspective.',
+    '- Professional high-resolution fashion editorial quality.',
+  ].join('\n')
 
   return {
     prompt,
@@ -154,7 +158,7 @@ export async function createTryOnPrediction(input: CreateTryOnPredictionInput) {
   console.log(`[replicate] Creating prediction. family=${family}`)
 
   try {
-    return await withReplicateLock(() => 
+    return await pool.run(() =>
       client.predictions.create({
         ...identifier,
         input: tryOnInput,
@@ -168,7 +172,7 @@ export async function createTryOnPrediction(input: CreateTryOnPredictionInput) {
 
     if (status === 401) throw new AppError('Auth failed.', 401, 'REPLICATE_AUTH_FAILED')
     if (status === 429) throw new AppError('Replicate capacity reached.', 429, 'REPLICATE_RATE_LIMIT')
-    
+
     throw error
   }
 }
@@ -184,9 +188,9 @@ export async function cancelPrediction(predictionId: string) {
 export async function removeImageBackground(imageUrl: string): Promise<string> {
   const client = getReplicateClient()
   console.log(`[replicate] Cleaning garment image...`)
-  
+
   try {
-    const prediction = await withReplicateLock(() => 
+    const prediction = await pool.run(() =>
       client.predictions.create({
         model: 'lucataco/remove-bg',
         version: '95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1',

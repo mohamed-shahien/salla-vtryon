@@ -1,7 +1,5 @@
 import sharp from 'sharp'
 
-// ─── Quality Verdicts ─────────────────────────────────────────────────────────
-
 export type QualityVerdict = 'pass' | 'warn' | 'reject'
 
 export interface ImageQualityReport {
@@ -21,16 +19,12 @@ export interface ImageQualityReport {
   }
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const MIN_DIMENSION = 256
 const MAX_DIMENSION = 2048
 const MIN_BRIGHTNESS = 20  // too dark
 const MAX_BRIGHTNESS = 245 // too bright (washed out)
 const MAX_LANDSCAPE_RATIO = 1.5 // wider than 3:2 landscape = likely multi-item or flat lay
 const SUPPORTED_FORMATS = new Set(['jpeg', 'png', 'webp', 'tiff'])
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function downloadImageToBuffer(url: string): Promise<Buffer> {
   const response = await fetch(url)
@@ -52,11 +46,6 @@ function classifyOrientation(ratio: number) {
   return 'square' as const
 }
 
-/**
- * Calculates how much of the original image was background (trimmable whitespace).
- * A high trim percentage means the object is small relative to the frame.
- * A very low percentage means the image is tightly cropped already.
- */
 async function calculateTrimPercent(buffer: Buffer, width: number, height: number) {
   try {
     const trimmed = await sharp(buffer)
@@ -77,15 +66,10 @@ async function calculateTrimPercent(buffer: Buffer, width: number, height: numbe
   }
 }
 
-/**
- * Analyzes the edge density of an image to estimate visual complexity.
- * Higher edge density = more complex / cluttered image.
- */
 async function calculateEdgeDensity(buffer: Buffer) {
   try {
-    // Apply Laplacian-like edge detection via convolution
     const edgeBuffer = await sharp(buffer)
-      .resize(256, 256, { fit: 'fill' }) // normalize to fixed size for comparable stats
+      .resize(256, 256, { fit: 'fill' })
       .greyscale()
       .convolve({
         width: 3,
@@ -107,10 +91,6 @@ async function calculateEdgeDensity(buffer: Buffer) {
   }
 }
 
-/**
- * Analyzes the color diversity of an image.
- * High standard deviation across channels = diverse colors = possible multi-item.
- */
 async function analyzeColorDiversity(buffer: Buffer) {
   try {
     const stats = await sharp(buffer)
@@ -126,8 +106,6 @@ async function analyzeColorDiversity(buffer: Buffer) {
     return { avgStdDev: 0, avgMean: 128 }
   }
 }
-
-// ─── Garment Image Analysis ──────────────────────────────────────────────────
 
 export async function analyzeGarmentImage(imageUrl: string): Promise<ImageQualityReport> {
   const reasons: string[] = []
@@ -165,7 +143,6 @@ export async function analyzeGarmentImage(imageUrl: string): Promise<ImageQualit
   const ratio = computeAspectRatio(width, height)
   const orientation = classifyOrientation(ratio)
 
-  // Very wide landscape images are almost certainly flat-lays or multi-item shots
   if (ratio > MAX_LANDSCAPE_RATIO) {
     warnings.push(
       `Product image is wide landscape (${width}×${height}, ratio ${ratio.toFixed(2)}). ` +
@@ -173,7 +150,6 @@ export async function analyzeGarmentImage(imageUrl: string): Promise<ImageQualit
     )
   }
 
-  // Trim analysis — how much of the frame is background?
   const trimResult = await calculateTrimPercent(buffer, width, height)
 
   if (trimResult.removedPercent > 85) {
@@ -202,10 +178,8 @@ export async function analyzeGarmentImage(imageUrl: string): Promise<ImageQualit
     )
   }
 
-  // Color diversity
   const colorInfo = await analyzeColorDiversity(buffer)
 
-  // Brightness check
   if (colorInfo.avgMean < MIN_BRIGHTNESS) {
     warnings.push('Product image appears very dark. Results may be degraded.')
   }
@@ -240,8 +214,6 @@ export async function analyzeGarmentImage(imageUrl: string): Promise<ImageQualit
     },
   }
 }
-
-// ─── Human Image Analysis ────────────────────────────────────────────────────
 
 export async function analyzeHumanImage(imageUrl: string): Promise<ImageQualityReport> {
   const reasons: string[] = []
@@ -341,8 +313,6 @@ export async function analyzeHumanImage(imageUrl: string): Promise<ImageQualityR
     },
   }
 }
-
-// ─── Utility ─────────────────────────────────────────────────────────────────
 
 function buildRejectReport(reason: string, _error?: unknown): ImageQualityReport {
   return {

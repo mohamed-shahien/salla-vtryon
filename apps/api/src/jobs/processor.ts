@@ -51,12 +51,10 @@ async function failTimedOutJobs() {
 }
 
 let globalJobsInFlight = 0
-const MAX_GLOBAL_CONCURRENCY = 1 
 
 async function processClaimedJob(jobId: string) {
-  // Wait for available global slot
-  while (globalJobsInFlight >= MAX_GLOBAL_CONCURRENCY) {
-    await new Promise(resolve => setTimeout(resolve, 3000))
+  if (globalJobsInFlight >= env.JOB_PROCESSOR_BATCH_SIZE * 2) {
+    return
   }
 
   globalJobsInFlight++
@@ -69,7 +67,11 @@ async function processClaimedJob(jobId: string) {
     jobToCleanup = { merchant_id: claimedJob.merchant_id, id: claimedJob.id }
 
     console.log(`[jobs] starting job ${claimedJob.id}`)
-    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { current_step: 'ANALYZING_IMAGES' })
+    
+    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { 
+      current_step: 'ANALYZING_IMAGES',
+      progress: 10
+    })
 
     const [garmentReport, humanReport] = await Promise.all([
       analyzeGarmentImage(claimedJob.product_image_url),
@@ -96,9 +98,12 @@ async function processClaimedJob(jobId: string) {
     let garmentImageUrl = claimedJob.product_image_url
     let preprocessingMeta: Record<string, unknown> = {}
 
+    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { 
+      current_step: 'PREPARING_GARMENT',
+      progress: 30
+    })
+
     try {
-      await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { current_step: 'PREPARING_GARMENT' })
-      
       const cachedUrl = claimedJob.product_id ? await getLatestCleanedGarmentForProduct(claimedJob.merchant_id, claimedJob.product_id) : null
 
       if (cachedUrl) {
@@ -119,7 +124,11 @@ async function processClaimedJob(jobId: string) {
       preprocessingMeta = { preprocessing_failed: true }
     }
 
-    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { ...preprocessingMeta, current_step: 'GENERATING_RESULT' })
+    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { 
+      ...preprocessingMeta, 
+      current_step: 'GENERATING_RESULT',
+      progress: 60
+    })
 
     const prediction: any = await createTryOnPrediction({
       humanImageUrl: claimedJob.user_image_url,
@@ -141,7 +150,10 @@ async function processClaimedJob(jobId: string) {
       const outputUrl = extractPredictionOutputUrl(final)
       if (!outputUrl) throw new Error('AI output missing.')
 
-      await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { current_step: 'FINALIZING' })
+      await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { 
+        current_step: 'FINALIZING',
+        progress: 90
+      })
 
       const uploaded = await processAndUploadReplicateResultImage({
         merchantId: merchant.salla_merchant_id,
@@ -153,7 +165,11 @@ async function processClaimedJob(jobId: string) {
         jobId: claimedJob.id,
         resultImageUrl: uploaded.url,
         replicatePredictionId: final.id,
-        metadataPatch: { ...preprocessingMeta, current_step: 'COMPLETED' },
+        metadataPatch: { 
+          ...preprocessingMeta, 
+          current_step: 'COMPLETED',
+          progress: 100
+        },
       })
     }
   } catch (error) {
@@ -187,15 +203,17 @@ export function startJobProcessor() {
     try {
       await failTimedOutJobs()
       const pending = await listPendingJobsForProcessing(env.JOB_PROCESSOR_BATCH_SIZE)
-      for (const job of pending) {
-        if (stopped) break
-        await processClaimedJob(job.id)
-      }
-    } catch (err) { console.error('[jobs] cycle error', err) }
-    finally { cycleInFlight = false; schedule() }
+      
+      await Promise.all(pending.map(job => processClaimedJob(job.id)))
+    } catch (err) { 
+      console.error('[jobs] cycle error', err) 
+    } finally { 
+      cycleInFlight = false; 
+      schedule() 
+    }
   }
 
-  console.log(`[jobs] processor active.`)
+  console.log(`[jobs] processor active (parallel-mode). batch_size=${env.JOB_PROCESSOR_BATCH_SIZE}`)
   void runCycle()
   return { stop() { stopped = true; if (timer) clearTimeout(timer); } }
 }

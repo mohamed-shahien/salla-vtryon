@@ -8,8 +8,6 @@ import {
 
 declare const __WIDGET_CSS__: string
 
-// Capture document.currentScript synchronously at IIFE evaluation time.
-// By the time initWidget() runs inside setTimeout, currentScript is already null.
 const BOOTSTRAP_SCRIPT_ELEMENT: HTMLScriptElement | null =
   document.currentScript instanceof HTMLScriptElement ? document.currentScript : null
 
@@ -31,12 +29,6 @@ declare global {
 
 const DEFAULT_BUTTON_TEXT = 'جرّب الآن'
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
-
-const CATEGORY_OPTIONS: Array<{ value: WidgetCategory; label: string }> = [
-  { value: 'upper_body', label: 'ملابس علوية' },
-  { value: 'lower_body', label: 'ملابس سفلية' },
-  { value: 'dresses', label: 'فساتين' },
-]
 
 interface BootstrapConfig {
   apiBaseUrl: string
@@ -66,16 +58,13 @@ interface WidgetElements {
   resultImage: HTMLImageElement
   downloadLink: HTMLAnchorElement
   retryButton: HTMLButtonElement
-  categoryButtons: HTMLButtonElement[]
 }
 
 function getBootstrapScript(): HTMLScriptElement | null {
-  // Prefer the element captured at module evaluation time
   if (BOOTSTRAP_SCRIPT_ELEMENT) {
     return BOOTSTRAP_SCRIPT_ELEMENT
   }
 
-  // Fallback: locate by any of the known widget data attributes
   return (
     document.querySelector<HTMLScriptElement>('script[data-merchant-id]') ??
     document.querySelector<HTMLScriptElement>('script[data-api-url]') ??
@@ -107,7 +96,6 @@ function readDatasetValue(
 }
 
 function readSallaMerchantId(): string | null {
-  // Try every config key that Salla themes use across versions
   const configKeys = ['merchant.id', 'store.id', 'merchant_id', 'store_id']
 
   for (const key of configKeys) {
@@ -145,7 +133,6 @@ function readSallaMerchantId(): string | null {
 }
 
 function readSallaProductId(): string | null {
-  // Try every config key Salla themes use for the current product/page entity
   const configKeys = ['product.id', 'page.id', 'page.entity_id', 'product_id']
 
   for (const key of configKeys) {
@@ -411,14 +398,6 @@ function createWidgetElements() {
           </div>
         </div>
 
-        <div class="vtryon-widget__categories">
-          ${CATEGORY_OPTIONS.map(
-    (option, index) =>
-      `<button class="vtryon-widget__category${index === 0 ? ' is-active' : ''
-      }" type="button" data-category="${option.value}">${option.label}</button>`,
-  ).join('')}
-        </div>
-
         <button class="vtryon-widget__submit" type="button" disabled>توليد</button>
       </div>
 
@@ -476,7 +455,6 @@ function createWidgetElements() {
   const resultImage = shadowRoot.querySelector('.vtryon-widget__result-image')
   const downloadLink = shadowRoot.querySelector('.vtryon-widget__download')
   const retryButton = shadowRoot.querySelector('.vtryon-widget__retry')
-  const categoryButtons = Array.from(shadowRoot.querySelectorAll('.vtryon-widget__category'))
 
   if (
     !(launchButton instanceof HTMLButtonElement) ||
@@ -499,8 +477,7 @@ function createWidgetElements() {
     resultUserImages.some((image) => !(image instanceof HTMLImageElement)) ||
     !(resultImage instanceof HTMLImageElement) ||
     !(downloadLink instanceof HTMLAnchorElement) ||
-    !(retryButton instanceof HTMLButtonElement) ||
-    categoryButtons.some((button) => !(button instanceof HTMLButtonElement))
+    !(retryButton instanceof HTMLButtonElement)
   ) {
     throw new Error('Widget DOM failed to initialize.')
   }
@@ -527,7 +504,6 @@ function createWidgetElements() {
     resultImage,
     downloadLink,
     retryButton,
-    categoryButtons: categoryButtons as HTMLButtonElement[],
     processingText: shadowRoot.querySelector('.vtryon-widget__processing-text') as HTMLParagraphElement,
   } satisfies WidgetElements & { processingText: HTMLParagraphElement }
 }
@@ -560,12 +536,6 @@ function setStatus(
   elements.statusBox.textContent = message
 }
 
-function updateCategoryButtons(elements: WidgetElements, selectedCategory: WidgetCategory) {
-  for (const button of elements.categoryButtons) {
-    button.classList.toggle('is-active', button.dataset.category === selectedCategory)
-  }
-}
-
 function setPreviewProcessing(elements: WidgetElements, processing: boolean) {
   elements.previewFrame.classList.toggle('is-processing', processing)
 }
@@ -590,7 +560,7 @@ async function initWidget() {
 
   try {
     const elements = createWidgetElements()
-    elements.shell.hidden = true  // stay hidden until config confirms widget is enabled
+    elements.shell.hidden = true
     let widgetConfig: WidgetConfigResponse | null = null
     let configPromise: Promise<WidgetConfigResponse | null> | null = null
     let selectedCategory: WidgetCategory = 'upper_body'
@@ -609,7 +579,6 @@ async function initWidget() {
 
       elements.launchButton.textContent = config.button_text || DEFAULT_BUTTON_TEXT
       selectedCategory = config.default_category
-      updateCategoryButtons(elements, selectedCategory)
 
       if (!config.overall_enabled || !config.current_product_enabled || !config.widget_token) {
         elements.shell.hidden = true
@@ -744,9 +713,7 @@ async function initWidget() {
             jobId,
           )
         } catch (error) {
-          // If we hit a rate limit (likely ngrok free tier), wait 10s and retry silently
           if (error instanceof Error && error.message.includes('429')) {
-            console.warn('[widget] hit 429 rate limit, cooling down for 10s...')
             await delay(10000)
             continue
           }
@@ -755,7 +722,6 @@ async function initWidget() {
 
         const job = jobResponse.data
 
-        // Update progress text based on backend metadata
         if (job.status === 'processing' && elements.processingText) {
           const step = job.metadata?.current_step
           switch (step) {
@@ -856,19 +822,6 @@ async function initWidget() {
     elements.uploadInput.addEventListener('change', () => {
       handleFileSelection(elements.uploadInput.files)
     })
-
-    for (const button of elements.categoryButtons) {
-      button.addEventListener('click', () => {
-        const value = button.dataset.category as WidgetCategory | undefined
-
-        if (!value) {
-          return
-        }
-
-        selectedCategory = value
-        updateCategoryButtons(elements, selectedCategory)
-      })
-    }
 
     elements.submitButton.addEventListener('click', async () => {
       const fileError = validateShopperFile(selectedFile)

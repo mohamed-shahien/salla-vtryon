@@ -6,7 +6,6 @@ import { z } from 'zod'
 
 const currentFilePath = fileURLToPath(import.meta.url)
 const currentDirectory = dirname(currentFilePath)
-// apps/api/src/config/env.ts -> ../../../../.env is the root
 const workspaceEnvPath = resolve(currentDirectory, '../../../../.env')
 
 import { existsSync } from 'node:fs'
@@ -40,6 +39,7 @@ const envSchema = z.object({
   REPLICATE_MODEL_VERSION: z.string().optional(),
   REPLICATE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1500),
   REPLICATE_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
+  REPLICATE_MAX_CONCURRENCY: z.coerce.number().int().positive().default(1),
   BUNNY_STORAGE_ZONE: z.string().optional(),
   BUNNY_API_KEY: z.string().optional(),
   BUNNY_CDN_URL: z.string().optional(),
