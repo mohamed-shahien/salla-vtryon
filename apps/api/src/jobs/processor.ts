@@ -9,9 +9,11 @@ import {
 import {
   claimPendingJob,
   completeMerchantJob,
+  getLatestCleanedGarmentForProduct,
   listPendingJobsForProcessing,
   listTimedOutProcessingJobs,
   markMerchantJobFailed,
+  updateMerchantJobMetadata,
   updateMerchantJobPrediction,
 } from '../services/jobs.service.js'
 import { findMerchantById } from '../services/merchant.service.js'
@@ -30,21 +32,13 @@ function extractGarmentDescription(metadata: Record<string, unknown>) {
   return typeof productName === 'string' ? productName : null
 }
 
-/**
- * Formats a quality report into a human-readable failure message.
- */
-function formatQualityRejection(
-  label: string,
-  report: ImageQualityReport,
-): string {
+function formatQualityRejection(label: string, report: ImageQualityReport): string {
   const issues = [...report.reasons, ...report.warnings]
-  const detail = issues.length > 0 ? issues.join(' ') : 'Quality check failed.'
-  return `${label}: ${detail}`
+  return `${label}: ${issues.length > 0 ? issues.join(' ') : 'Quality check failed.'}`
 }
 
 async function failTimedOutJobs() {
   const timedOutJobs = await listTimedOutProcessingJobs(env.REPLICATE_TIMEOUT_MS)
-
   for (const job of timedOutJobs) {
     await markMerchantJobFailed({
       merchantId: job.merchant_id,
@@ -56,284 +50,152 @@ async function failTimedOutJobs() {
   }
 }
 
+let globalJobsInFlight = 0
+const MAX_GLOBAL_CONCURRENCY = 1 
+
 async function processClaimedJob(jobId: string) {
-  const claimedJob = await claimPendingJob(jobId)
-  if (!claimedJob) {
-    return
+  // Wait for available global slot
+  while (globalJobsInFlight >= MAX_GLOBAL_CONCURRENCY) {
+    await new Promise(resolve => setTimeout(resolve, 3000))
   }
 
+  globalJobsInFlight++
   let predictionId: string | null = null
+  let jobToCleanup: { merchant_id: string; id: string } | null = null
 
   try {
-    // ─── Phase 1: Input Quality Gating ─────────────────────────────────
-    // Analyze both images BEFORE sending to Replicate.
-    // A rejection here means the input is fundamentally unsuitable —
-    // we fail fast, refund the credit, and give a clear reason.
+    const claimedJob = await claimPendingJob(jobId)
+    if (!claimedJob) return
+    jobToCleanup = { merchant_id: claimedJob.merchant_id, id: claimedJob.id }
 
-    console.log(`[jobs] preprocessing job ${claimedJob.id}`)
+    console.log(`[jobs] starting job ${claimedJob.id}`)
+    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { current_step: 'ANALYZING_IMAGES' })
 
     const [garmentReport, humanReport] = await Promise.all([
       analyzeGarmentImage(claimedJob.product_image_url),
       analyzeHumanImage(claimedJob.user_image_url),
     ])
 
-    // Log quality reports for debugging
-    if (garmentReport.warnings.length > 0) {
-      console.warn(`[jobs] garment quality warnings for ${claimedJob.id}:`, garmentReport.warnings)
-    }
-    if (humanReport.warnings.length > 0) {
-      console.warn(`[jobs] human quality warnings for ${claimedJob.id}:`, humanReport.warnings)
-    }
-
-    // Hard reject: garment image is fundamentally broken
     if (garmentReport.verdict === 'reject') {
       const message = formatQualityRejection('Product image rejected', garmentReport)
-      console.error(`[jobs] garment REJECTED for ${claimedJob.id}: ${message}`)
-
-      await markMerchantJobFailed({
-        merchantId: claimedJob.merchant_id,
-        jobId: claimedJob.id,
-        errorMessage: message,
-      })
+      await markMerchantJobFailed({ merchantId: claimedJob.merchant_id, jobId: claimedJob.id, errorMessage: message })
       await refundMerchantCredit(claimedJob.merchant_id, claimedJob.id)
       return
     }
 
-    // Hard reject: human image is fundamentally broken
     if (humanReport.verdict === 'reject') {
       const message = formatQualityRejection('Customer image rejected', humanReport)
-      console.error(`[jobs] human REJECTED for ${claimedJob.id}: ${message}`)
-
-      await markMerchantJobFailed({
-        merchantId: claimedJob.merchant_id,
-        jobId: claimedJob.id,
-        errorMessage: message,
-      })
+      await markMerchantJobFailed({ merchantId: claimedJob.merchant_id, jobId: claimedJob.id, errorMessage: message })
       await refundMerchantCredit(claimedJob.merchant_id, claimedJob.id)
       return
     }
 
-    // ─── Phase 2: Garment Preprocessing ────────────────────────────────
-    // Clean the garment image: trim background, isolate primary garment,
-    // normalize to 3:4 ratio, flatten to white background.
-
     const merchant = await findMerchantById(claimedJob.merchant_id)
-    if (!merchant) {
-      throw new AppError('Merchant record was not found.', 404, 'MERCHANT_NOT_FOUND')
-    }
+    if (!merchant) throw new AppError('Merchant not found.', 404)
 
     let garmentImageUrl = claimedJob.product_image_url
     let preprocessingMeta: Record<string, unknown> = {}
 
     try {
-      // Step A: Advanced Garment Cleaning (AI-powered rembg)
-      // This is the CRITICAL fix for 'noisy' product images (shoes, belts, mannequins)
-      const cleanedGarmentUrl = await removeImageBackground(claimedJob.product_image_url)
+      await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { current_step: 'PREPARING_GARMENT' })
       
-      // Step B: Regional Cropping & Normalization
-      const preprocessed = await preprocessGarmentImage({
-        imageUrl: cleanedGarmentUrl, // Use the clean version
+      const cachedUrl = claimedJob.product_id ? await getLatestCleanedGarmentForProduct(claimedJob.merchant_id, claimedJob.product_id) : null
+
+      if (cachedUrl) {
+        console.log(`[jobs] Reusing cached garment for ${claimedJob.product_id}`)
+        garmentImageUrl = cachedUrl
+        preprocessingMeta = { preprocessing_reused: true, cleaned_garment_url: cachedUrl }
+      } else {
+        const cleanedUrl = await removeImageBackground(claimedJob.product_image_url)
+        const pre = await preprocessGarmentImage({
+          imageUrl: cleanedUrl,
+          merchantId: merchant.salla_merchant_id,
+          category: claimedJob.category,
+        })
+        garmentImageUrl = pre.cleanedUrl
+        preprocessingMeta = { preprocessing_applied: true, cleaned_garment_url: pre.cleanedUrl }
+      }
+    } catch {
+      preprocessingMeta = { preprocessing_failed: true }
+    }
+
+    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { ...preprocessingMeta, current_step: 'GENERATING_RESULT' })
+
+    const prediction: any = await createTryOnPrediction({
+      humanImageUrl: claimedJob.user_image_url,
+      garmentImageUrl,
+      category: claimedJob.category,
+      garmentDescription: extractGarmentDescription(claimedJob.metadata),
+    })
+
+    predictionId = prediction?.id
+    if (predictionId) {
+      await updateMerchantJobPrediction(claimedJob.merchant_id, claimedJob.id, predictionId)
+      const final: any = await waitForPredictionCompletion(predictionId)
+      
+      if (final.status !== 'succeeded') {
+        const err = final.error ? (typeof final.error === 'string' ? final.error : JSON.stringify(final.error)) : 'AI failed'
+        throw new Error(err)
+      }
+
+      const outputUrl = extractPredictionOutputUrl(final)
+      if (!outputUrl) throw new Error('AI output missing.')
+
+      await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { current_step: 'FINALIZING' })
+
+      const uploaded = await processAndUploadReplicateResultImage({
         merchantId: merchant.salla_merchant_id,
-        category: claimedJob.category,
+        sourceUrl: outputUrl,
       })
 
-      garmentImageUrl = preprocessed.cleanedUrl
-
-      preprocessingMeta = {
-        preprocessing_applied: true,
-        preprocessing_steps: preprocessed.steps,
-        original_garment_dimensions: `${preprocessed.originalWidth}×${preprocessed.originalHeight}`,
-        cleaned_garment_url: preprocessed.cleanedUrl,
-      }
-
-      console.log(
-        `[jobs] garment preprocessed for ${claimedJob.id}: ${preprocessed.steps.join(' → ')}`,
-      )
-    } catch (preprocessError) {
-      // Preprocessing failure is NOT fatal — we proceed with the original image
-      // but log the error for debugging
-      console.warn(
-        `[jobs] garment preprocessing failed for ${claimedJob.id}, using original:`,
-        preprocessError instanceof Error ? preprocessError.message : preprocessError,
-      )
-
-      preprocessingMeta = {
-        preprocessing_applied: false,
-        preprocessing_error: preprocessError instanceof Error ? preprocessError.message : 'Unknown preprocessing error',
-      }
+      await completeMerchantJob({
+        merchantId: claimedJob.merchant_id,
+        jobId: claimedJob.id,
+        resultImageUrl: uploaded.url,
+        replicatePredictionId: final.id,
+        metadataPatch: { ...preprocessingMeta, current_step: 'COMPLETED' },
+      })
     }
-
-    // ─── Phase 3: Create Replicate Prediction ──────────────────────────
-    let prediction
-    let attempts = 0
-    const MAX_ATTEMPTS = 5
-    
-    while (attempts < MAX_ATTEMPTS) {
-      try {
-        prediction = await createTryOnPrediction({
-          humanImageUrl: claimedJob.user_image_url,
-          garmentImageUrl,
-          category: claimedJob.category,
-          garmentDescription: extractGarmentDescription(claimedJob.metadata),
-        })
-        break
-      } catch (err) {
-        attempts++
-        const message = err instanceof Error ? err.message : ''
-        if (message.includes('429') && attempts < MAX_ATTEMPTS) {
-          console.warn(`[jobs] Replicate rate limit (429) hit, retrying in 10s... (Attempt ${attempts}/${MAX_ATTEMPTS})`)
-          await new Promise(resolve => setTimeout(resolve, 10000))
-          continue
-        }
-        throw err
-      }
-    }
-
-    if (!prediction) {
-      throw new Error('Failed to create Replicate prediction after multiple retries.')
-    }
-
-    predictionId = prediction.id
-    await updateMerchantJobPrediction(claimedJob.merchant_id, claimedJob.id, prediction.id)
-
-    const finalPrediction = await waitForPredictionCompletion(prediction.id)
-
-    if (finalPrediction.status !== 'succeeded') {
-      throw new AppError(
-        typeof finalPrediction.error === 'string'
-          ? finalPrediction.error
-          : `Replicate prediction ended with status ${finalPrediction.status}.`,
-        502,
-        'REPLICATE_PREDICTION_FAILED',
-      )
-    }
-
-    const outputUrl = extractPredictionOutputUrl(finalPrediction)
-    if (!outputUrl) {
-      throw new AppError(
-        'Replicate completed without returning a usable output URL.',
-        502,
-        'REPLICATE_OUTPUT_MISSING',
-      )
-    }
-
-    // ─── Phase 4: Upload Result ────────────────────────────────────────
-
-    const uploadedResult = await processAndUploadReplicateResultImage({
-      merchantId: merchant.salla_merchant_id,
-      sourceUrl: outputUrl,
-    })
-
-    await completeMerchantJob({
-      merchantId: claimedJob.merchant_id,
-      jobId: claimedJob.id,
-      resultImageUrl: uploadedResult.url,
-      replicatePredictionId: finalPrediction.id,
-      metadataPatch: {
-        ...(claimedJob.metadata ?? {}),
-        replicate_output_url: outputUrl,
-        result_storage_path: uploadedResult.storage_path,
-        replicate_metrics: finalPrediction.metrics ?? null,
-        // Quality reports for observability
-        garment_quality: {
-          verdict: garmentReport.verdict,
-          warnings: garmentReport.warnings,
-          dimensions: `${garmentReport.metadata.width}×${garmentReport.metadata.height}`,
-          brightness: garmentReport.metadata.meanBrightness,
-        },
-        human_quality: {
-          verdict: humanReport.verdict,
-          warnings: humanReport.warnings,
-          dimensions: `${humanReport.metadata.width}×${humanReport.metadata.height}`,
-          brightness: humanReport.metadata.meanBrightness,
-        },
-        ...preprocessingMeta,
-      },
-    })
   } catch (error) {
-    if (predictionId) {
-      try {
-        await cancelPrediction(predictionId)
-      } catch {
-        // best effort only; cancellation may fail if prediction already finished
-      }
+    console.error(`[jobs] job failed:`, error)
+    if (predictionId) await cancelPrediction(predictionId).catch(() => {})
+    if (jobToCleanup) {
+      await markMerchantJobFailed({
+        merchantId: jobToCleanup.merchant_id,
+        jobId: jobToCleanup.id,
+        errorMessage: error instanceof Error ? error.message : 'Failed',
+        replicatePredictionId: predictionId,
+      })
+      await refundMerchantCredit(jobToCleanup.merchant_id, jobToCleanup.id)
     }
-
-    await markMerchantJobFailed({
-      merchantId: claimedJob.merchant_id,
-      jobId: claimedJob.id,
-      errorMessage: error instanceof Error ? error.message : 'Unexpected job processing error.',
-      replicatePredictionId: predictionId,
-    })
-    await refundMerchantCredit(claimedJob.merchant_id, claimedJob.id)
+  } finally {
+    globalJobsInFlight--
   }
 }
 
 export function startJobProcessor() {
-  if (!env.JOB_PROCESSOR_ENABLED) {
-    console.log('[jobs] processor disabled by JOB_PROCESSOR_ENABLED=false')
-    return {
-      stop() {
-        return
-      },
-    }
-  }
-
+  if (!env.JOB_PROCESSOR_ENABLED) return { stop() {} }
   let stopped = false
   let timer: NodeJS.Timeout | null = null
   let cycleInFlight = false
 
-  const schedule = () => {
-    if (stopped) {
-      return
-    }
-
-    timer = setTimeout(() => {
-      void runCycle()
-    }, env.JOB_PROCESSOR_POLL_INTERVAL_MS)
-  }
+  const schedule = () => { if (!stopped) timer = setTimeout(() => void runCycle(), env.JOB_PROCESSOR_POLL_INTERVAL_MS) }
 
   const runCycle = async () => {
-    if (stopped || cycleInFlight) {
-      schedule()
-      return
-    }
-
+    if (stopped || cycleInFlight) { schedule(); return; }
     cycleInFlight = true
-
     try {
       await failTimedOutJobs()
-
-      const pendingJobs = await listPendingJobsForProcessing(env.JOB_PROCESSOR_BATCH_SIZE)
-
-      for (const job of pendingJobs) {
-        if (stopped) {
-          break
-        }
-
+      const pending = await listPendingJobsForProcessing(env.JOB_PROCESSOR_BATCH_SIZE)
+      for (const job of pending) {
+        if (stopped) break
         await processClaimedJob(job.id)
       }
-    } catch (error) {
-      console.error('[jobs] processor cycle failed', error)
-    } finally {
-      cycleInFlight = false
-      schedule()
-    }
+    } catch (err) { console.error('[jobs] cycle error', err) }
+    finally { cycleInFlight = false; schedule() }
   }
 
-  console.log(
-    `[jobs] processor enabled. poll=${env.JOB_PROCESSOR_POLL_INTERVAL_MS}ms batch=${env.JOB_PROCESSOR_BATCH_SIZE}`,
-  )
+  console.log(`[jobs] processor active.`)
   void runCycle()
-
-  return {
-    stop() {
-      stopped = true
-
-      if (timer) {
-        clearTimeout(timer)
-        timer = null
-      }
-    },
-  }
+  return { stop() { stopped = true; if (timer) clearTimeout(timer); } }
 }

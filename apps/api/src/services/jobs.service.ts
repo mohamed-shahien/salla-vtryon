@@ -207,6 +207,51 @@ export async function completeMerchantJob(options: JobCompletionPayload) {
   return getMerchantJobById(options.merchantId, options.jobId)
 }
 
+export async function updateMerchantJobMetadata(
+  merchantId: string,
+  jobId: string,
+  patch: Record<string, unknown>,
+) {
+  const db = getSupabaseClient()
+  const existingJob = await getMerchantJobById(merchantId, jobId)
+
+  const { error } = await db
+    .from('tryon_jobs')
+    .update({
+      metadata: {
+        ...(existingJob.metadata ?? {}),
+        ...patch,
+      },
+    })
+    .eq('merchant_id', merchantId)
+    .eq('id', jobId)
+
+  if (error) {
+    throw new AppError(error.message, 500, 'JOB_UPDATE_FAILED')
+  }
+}
+
+export async function getLatestCleanedGarmentForProduct(
+  merchantId: string,
+  productId: string,
+) {
+  const db = getSupabaseClient()
+  const { data, error } = await db
+    .from('tryon_jobs')
+    .select('metadata')
+    .eq('merchant_id', merchantId)
+    .eq('product_id', productId)
+    .eq('status', 'completed')
+    .not('metadata->cleaned_garment_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  return (data.metadata as Record<string, unknown>)?.cleaned_garment_url as string | undefined
+}
+
 export async function updateMerchantJobPrediction(
   merchantId: string,
   jobId: string,

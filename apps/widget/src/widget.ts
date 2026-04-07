@@ -413,11 +413,10 @@ function createWidgetElements() {
 
         <div class="vtryon-widget__categories">
           ${CATEGORY_OPTIONS.map(
-            (option, index) =>
-              `<button class="vtryon-widget__category${
-                index === 0 ? ' is-active' : ''
-              }" type="button" data-category="${option.value}">${option.label}</button>`,
-          ).join('')}
+    (option, index) =>
+      `<button class="vtryon-widget__category${index === 0 ? ' is-active' : ''
+      }" type="button" data-category="${option.value}">${option.label}</button>`,
+  ).join('')}
         </div>
 
         <button class="vtryon-widget__submit" type="button" disabled>توليد</button>
@@ -428,7 +427,7 @@ function createWidgetElements() {
           <img class="vtryon-widget__result-user" alt="صورتك المرفوعة" />
           <div class="vtryon-widget__preview-overlay">
             <div class="vtryon-widget__spinner"></div>
-            <p>نعالج الصورة الآن. النتيجة ستظهر هنا خلال لحظات.</p>
+            <p class="vtryon-widget__processing-text">نعالج الصورة الآن. النتيجة ستظهر هنا خلال لحظات.</p>
           </div>
         </div>
       </div>
@@ -529,7 +528,8 @@ function createWidgetElements() {
     downloadLink,
     retryButton,
     categoryButtons: categoryButtons as HTMLButtonElement[],
-  } satisfies WidgetElements
+    processingText: shadowRoot.querySelector('.vtryon-widget__processing-text') as HTMLParagraphElement,
+  } satisfies WidgetElements & { processingText: HTMLParagraphElement }
 }
 
 function setOpen(elements: WidgetElements, open: boolean) {
@@ -752,8 +752,26 @@ async function initWidget() {
           }
           throw error
         }
-        
+
         const job = jobResponse.data
+
+        // Update progress text based on backend metadata
+        if (job.status === 'processing' && elements.processingText) {
+          const step = job.metadata?.current_step
+          switch (step) {
+            case 'PREPARING_GARMENT':
+              elements.processingText.textContent = 'جاري تجهيز الملابس وفصل الخلفية...'
+              break
+            case 'GENERATING_RESULT':
+              elements.processingText.textContent = 'جاري تطبيق الذكاء الاصطناعي للقياس...'
+              break
+            case 'FINALIZING':
+              elements.processingText.textContent = 'جاري تحسين الجودة ورفع النتيجة...'
+              break
+            default:
+              elements.processingText.textContent = 'نعالج الصورة الآن. النتيجة ستظهر هنا خلال لحظات.'
+          }
+        }
 
         if (job.status === 'completed' && job.result_image_url) {
           elements.resultImage.src = job.result_image_url
@@ -771,7 +789,7 @@ async function initWidget() {
           return
         }
 
-        await delay(6000)
+        await delay(3000)
       }
     }
 
