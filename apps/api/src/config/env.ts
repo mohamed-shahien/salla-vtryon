@@ -8,6 +8,11 @@ const currentFilePath = fileURLToPath(import.meta.url)
 const currentDirectory = dirname(currentFilePath)
 const workspaceEnvPath = resolve(currentDirectory, '../../../../.env')
 
+import { existsSync } from 'node:fs'
+if (!existsSync(workspaceEnvPath)) {
+  console.warn(`[env] Critical: .env file not found at ${workspaceEnvPath}`)
+}
+
 loadDotenv({ path: workspaceEnvPath })
 
 const envSchema = z.object({
@@ -32,8 +37,10 @@ const envSchema = z.object({
   REPLICATE_API_TOKEN: z.string().optional(),
   REPLICATE_MODEL: z.string().default('cuuupid/idm-vton'),
   REPLICATE_MODEL_VERSION: z.string().optional(),
-  REPLICATE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
+  REPLICATE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1500),
   REPLICATE_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
+  REPLICATE_MAX_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  JOB_TIMEOUT_MS: z.coerce.number().int().positive().default(150000),
   BUNNY_STORAGE_ZONE: z.string().optional(),
   BUNNY_API_KEY: z.string().optional(),
   BUNNY_CDN_URL: z.string().optional(),
@@ -41,9 +48,14 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
-  JOB_PROCESSOR_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
-  JOB_PROCESSOR_BATCH_SIZE: z.coerce.number().int().min(1).max(20).default(5),
+  JOB_PROCESSOR_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(2000),
+  JOB_PROCESSOR_BATCH_SIZE: z.coerce.number().int().min(1).max(20).default(1),
   ENCRYPTION_KEY: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('Virtual Try-On <no-reply@vtryon.dev>'),
 })
 
 export const env = envSchema.parse(process.env)

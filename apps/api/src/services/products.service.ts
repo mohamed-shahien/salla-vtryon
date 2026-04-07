@@ -61,3 +61,14 @@ export async function getMerchantProductDetail(merchantId: number, productId: st
 
   return payload
 }
+
+export function invalidateMerchantProductCache(merchantId: number) {
+  const prefixList = `list:${merchantId}:`
+  const prefixDetail = `detail:${merchantId}:`
+
+  for (const key of productCache.keys()) {
+    if (key.startsWith(prefixList) || key.startsWith(prefixDetail)) {
+      productCache.delete(key)
+    }
+  }
+}

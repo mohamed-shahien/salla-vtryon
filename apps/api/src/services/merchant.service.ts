@@ -16,19 +16,21 @@ export type WidgetMode = 'all' | 'selected'
 export interface WidgetSettings {
   widget_enabled: boolean
   widget_mode: WidgetMode
-  widget_products: number[]
+  widget_products: number[] // FALLBACK: legacy list stored in JSONB
   widget_button_text: string
   default_category: WidgetCategory
   onboarding_completed: boolean
+  widget_config?: Record<string, unknown> | null
 }
 
 const DEFAULT_SETTINGS: WidgetSettings = {
   widget_enabled: true,
-  widget_mode: 'selected',   // widget invisible until merchant picks products
+  widget_mode: 'selected', // widget invisible until merchant picks products
   widget_products: [],
   widget_button_text: 'جرّب الآن',
   default_category: 'upper_body',
   onboarding_completed: false,
+  widget_config: null,
 }
 
 export const PLAN_CREDIT_ALLOCATIONS = {
@@ -70,6 +72,11 @@ export interface CreditsRecord {
 }
 
 export interface DashboardMerchantProfile {
+  user: {
+    id: string
+    email: string
+    full_name: string | null
+  } | null
   merchant: Pick<
     MerchantRecord,
     | 'id'
@@ -184,6 +191,8 @@ export function normalizeWidgetSettings(settings: Record<string, unknown> | null
 
   const rawOnboardingCompleted = source.onboarding_completed
 
+  const rawWidgetConfig = source.widget_config
+
   return {
     widget_enabled: normalizeBoolean(rawEnabled, DEFAULT_SETTINGS.widget_enabled),
     widget_mode: normalizeWidgetMode(rawMode),
@@ -191,10 +200,18 @@ export function normalizeWidgetSettings(settings: Record<string, unknown> | null
     widget_button_text: buttonText,
     default_category: normalizeWidgetCategory(rawDefaultCategory),
     onboarding_completed: normalizeBoolean(rawOnboardingCompleted, false),
+    // Preserve widget_config as-is — it's an opaque bag for Widget Studio
+    widget_config: rawWidgetConfig != null && typeof rawWidgetConfig === 'object'
+      ? rawWidgetConfig as Record<string, unknown>
+      : null,
   } satisfies WidgetSettings
 }
 
-export function isWidgetEnabledForProduct(settings: WidgetSettings, productId: string | number) {
+export function isWidgetEnabledForProduct(
+  settings: WidgetSettings,
+  productId: string | number,
+  rule?: { enabled: boolean } | null,
+) {
   if (!settings.widget_enabled) {
     return false
   }
@@ -203,6 +220,7 @@ export function isWidgetEnabledForProduct(settings: WidgetSettings, productId: s
     return true
   }
 
+  // mode is 'selected'
   const normalizedProductId =
     typeof productId === 'number' ? productId : Number.parseInt(productId, 10)
 
@@ -210,6 +228,12 @@ export function isWidgetEnabledForProduct(settings: WidgetSettings, productId: s
     return false
   }
 
+  // 1) check rules table override
+  if (rule != null) {
+    return rule.enabled
+  }
+
+  // 2) fallback to legacy settings.widget_products
   return settings.widget_products.includes(normalizedProductId)
 }
 
@@ -531,6 +555,70 @@ export async function updateMerchantWidgetSettings(
   return normalizeWidgetSettings(updatedMerchant.settings)
 }
 
+export async function getMerchantProductRules(merchantId: string) {
+  const db = getSupabaseClient()
+
+  const { data, error } = await db
+    .from('merchant_product_rules')
+    .select('product_id, enabled')
+    .eq('merchant_id', merchantId)
+
+  if (error) {
+    throw new AppError(error.message, 500, 'PRODUCT_RULES_LOOKUP_FAILED')
+  }
+
+  return data as { product_id: number; enabled: boolean }[]
+}
+
+export async function getMerchantProductRule(merchantId: string, productId: number | string) {
+  const db = getSupabaseClient()
+  const normalizedId = typeof productId === 'string' ? Number.parseInt(productId, 10) : productId
+
+  if (!Number.isInteger(normalizedId)) {
+    return null
+  }
+
+  const { data, error } = await db
+    .from('merchant_product_rules')
+    .select('enabled')
+    .eq('merchant_id', merchantId)
+    .eq('product_id', normalizedId)
+    .maybeSingle()
+
+  if (error) {
+    throw new AppError(error.message, 500, 'PRODUCT_RULE_LOOKUP_FAILED')
+  }
+
+  return data as { enabled: boolean } | null
+}
+
+export async function updateMerchantProductRules(
+  merchantId: string,
+  productIds: number[],
+  enabled: boolean,
+) {
+  if (productIds.length === 0) {
+    return
+  }
+
+  const db = getSupabaseClient()
+
+  const rows = productIds.map((id) => ({
+    merchant_id: merchantId,
+    product_id: id,
+    enabled,
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { error } = await db
+    .from('merchant_product_rules')
+    .upsert(rows, { onConflict: 'merchant_id, product_id' })
+
+  if (error) {
+    throw new AppError(error.message, 500, 'PRODUCT_RULES_UPDATE_FAILED')
+  }
+}
+
 export async function cancelPendingJobsForMerchant(sallaMerchantId: number) {
   const merchant = await findMerchantBySallaMerchantId(sallaMerchantId)
 
@@ -592,7 +680,8 @@ export async function updateMerchantRefreshedTokens(options: {
   })
 }
 
-export async function getDashboardMerchantProfile(merchantId: string) {
+export async function getDashboardMerchantProfile(merchantId: string, userId: string | null = null) {
+  const db = getSupabaseClient()
   const merchant = await findMerchantById(merchantId)
 
   if (!merchant) {
@@ -601,7 +690,22 @@ export async function getDashboardMerchantProfile(merchantId: string) {
 
   const credits = await ensureMerchantCreditsBaseline(merchant)
 
+  let userProfile: DashboardMerchantProfile['user'] = null
+
+  if (userId) {
+    const { data: user, error: userError } = await db
+      .from('users')
+      .select('id, email, full_name')
+      .eq('id', userId)
+      .single()
+
+    if (!userError && user) {
+      userProfile = user
+    }
+  }
+
   return {
+    user: userProfile,
     merchant: {
       id: merchant.id,
       salla_merchant_id: merchant.salla_merchant_id,

@@ -7,7 +7,9 @@ import {
   requireDashboardSession,
   type DashboardAuthenticatedRequest,
 } from '../middleware/require-dashboard-session.js'
-import { widgetLimiter } from '../middleware/rate-limit.js'
+import {
+  apiLimiter,
+} from '../middleware/rate-limit.js'
 import {
   getMerchantWidgetSettings,
   updateMerchantWidgetSettings,
@@ -43,11 +45,15 @@ const widgetSettingsSchema = z.object({
   widget_button_text: z.string().trim().min(1).max(40).optional(),
   default_category: z.enum(TRYON_CATEGORIES).optional(),
   onboarding_completed: z.boolean().optional(),
+  // Widget Studio extended config — stored as nested JSONB under settings
+  widget_config: z.record(z.unknown()).optional(),
 })
 
+type WidgetSettingsInput = z.infer<typeof widgetSettingsSchema>
+
 const widgetJobBodySchema = z.object({
-  category: z.enum(TRYON_CATEGORIES).optional(),
   product_image_url: z.string().url().optional(),
+  request_id: z.string().trim().min(1).max(100).optional(),
 })
 
 function getWidgetTokenFromRequest(request: DashboardAuthenticatedRequest) {
@@ -63,7 +69,7 @@ function getWidgetTokenFromRequest(request: DashboardAuthenticatedRequest) {
 
 export const widgetRouter = Router()
 
-widgetRouter.get('/config/:merchantId', widgetLimiter, async (request, response, next) => {
+widgetRouter.get('/config/:merchantId', async (request, response, next) => {
   try {
     const params = widgetConfigParamsSchema.parse(request.params)
     const query = widgetConfigQuerySchema.parse(request.query)
@@ -108,7 +114,7 @@ widgetRouter.put(
         throw new AppError('Dashboard session context is missing.', 401, 'DASHBOARD_AUTH_REQUIRED')
       }
 
-      const body = widgetSettingsSchema.parse(request.body)
+      const body = widgetSettingsSchema.parse(request.body) as WidgetSettingsInput
       const settings = await updateMerchantWidgetSettings(
         request.dashboardSession.merchant_uuid,
         body,
@@ -164,7 +170,6 @@ widgetRouter.get(
 
 widgetRouter.post(
   '/job',
-  widgetLimiter,
   upload.single('file'),
   async (request: DashboardAuthenticatedRequest, response, next) => {
     try {
@@ -181,8 +186,8 @@ widgetRouter.post(
       const result = await createWidgetTryOnJob({
         token,
         shopperImageBuffer: request.file.buffer,
-        category: body.category,
         productImageUrl: body.product_image_url,
+        requestId: body.request_id,
       })
 
       response.status(201).json({
@@ -195,7 +200,7 @@ widgetRouter.post(
   },
 )
 
-widgetRouter.get('/job/:id', widgetLimiter, async (request, response, next) => {
+widgetRouter.get('/job/:id', async (request, response, next) => {
   try {
     const params = widgetJobParamsSchema.parse(request.params)
     const token = getWidgetTokenFromRequest(request as DashboardAuthenticatedRequest)

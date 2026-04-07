@@ -6,8 +6,13 @@ import {
   type MerchantRecord,
 } from './merchant.service.js'
 
+/**
+ * Legacy category is kept only for DB compatibility and model fallback paths.
+ * It must not be exposed in widget/public contracts anymore.
+ */
 export const TRYON_CATEGORIES = ['upper_body', 'lower_body', 'dresses'] as const
 export type TryOnCategory = (typeof TRYON_CATEGORIES)[number]
+
 export const TRYON_JOB_STATUSES = [
   'pending',
   'processing',
@@ -17,6 +22,31 @@ export const TRYON_JOB_STATUSES = [
 ] as const
 export type TryOnJobStatus = (typeof TRYON_JOB_STATUSES)[number]
 
+export const TRYON_JOB_STAGES = [
+  'queued',
+  'validating_assets',
+  'preparing_assets',
+  'predicting',
+  'uploading_result',
+  'done',
+] as const
+export type TryOnJobStage = (typeof TRYON_JOB_STAGES)[number]
+
+export interface TryOnJobMetadata extends Record<string, unknown> {
+  request_id?: string
+  source?: 'widget' | 'dashboard' | 'api' | string
+  stage?: TryOnJobStage
+  attempt_count?: number
+  failure_code?: string | null
+  human_analysis?: Record<string, unknown>
+  garment_analysis?: Record<string, unknown>
+  prepared_garment_url?: string
+  prepared_garment_storage_path?: string
+  product_name?: string | null
+  product_thumbnail?: string | null
+  upload_storage_path?: string | null
+}
+
 export interface TryOnJobRecord {
   id: string
   merchant_id: string
@@ -24,11 +54,11 @@ export interface TryOnJobRecord {
   user_image_url: string
   product_image_url: string
   product_id: string | null
-  category: TryOnCategory
+  category: TryOnCategory | null
   result_image_url: string | null
   replicate_prediction_id: string | null
   error_message: string | null
-  metadata: Record<string, unknown>
+  metadata: TryOnJobMetadata
   processing_started_at: string | null
   completed_at: string | null
   created_at: string
@@ -77,6 +107,16 @@ function isMissingRpcFunction(message: string, functionName: string) {
   )
 }
 
+function mergeMetadata(
+  current: TryOnJobMetadata | null | undefined,
+  patch: Record<string, unknown>,
+): TryOnJobMetadata {
+  return {
+    ...(current ?? {}),
+    ...patch,
+  }
+}
+
 async function getMerchantOrThrow(merchantId: string) {
   const merchant = await findMerchantById(merchantId)
 
@@ -97,6 +137,38 @@ async function ensureMerchantCanCreateJobs(merchant: MerchantRecord) {
       'MERCHANT_PLAN_INACTIVE',
     )
   }
+}
+
+export function inferLegacyCategoryFromText(value?: string | null): TryOnCategory {
+  const text = value?.toLowerCase().trim() ?? ''
+
+  if (
+    text.includes('pant') ||
+    text.includes('trouser') ||
+    text.includes('jean') ||
+    text.includes('short') ||
+    text.includes('skirt') ||
+    text.includes('legging') ||
+    text.includes('بنطلون') ||
+    text.includes('تنورة') ||
+    text.includes('شورت')
+  ) {
+    return 'lower_body'
+  }
+
+  if (
+    text.includes('dress') ||
+    text.includes('gown') ||
+    text.includes('jumpsuit') ||
+    text.includes('abaya') ||
+    text.includes('فستان') ||
+    text.includes('عباية') ||
+    text.includes('جمبسوت')
+  ) {
+    return 'dresses'
+  }
+
+  return 'upper_body'
 }
 
 export async function listMerchantJobs(merchantId: string, options: ListJobsOptions) {
@@ -156,13 +228,37 @@ export async function getMerchantJobById(merchantId: string, jobId: string) {
   return data
 }
 
+export async function findMerchantJobByRequestId(
+  merchantId: string,
+  requestId: string,
+) {
+  const db = getSupabaseClient()
+  const { data, error } = await db
+    .from('tryon_jobs')
+    .select(JOB_SELECT)
+    .eq('merchant_id', merchantId)
+    .eq('metadata->>request_id', requestId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<TryOnJobRecord>()
+
+  if (error) {
+    throw new AppError(error.message, 500, 'JOB_LOOKUP_FAILED')
+  }
+
+  return data ?? null
+}
+
 export async function markMerchantJobFailed(options: {
   merchantId: string
   jobId: string
   errorMessage: string
   replicatePredictionId?: string | null
+  failureCode?: string | null
+  metadataPatch?: Record<string, unknown>
 }) {
   const db = getSupabaseClient()
+  const existingJob = await getMerchantJobById(options.merchantId, options.jobId)
 
   const { error } = await db
     .from('tryon_jobs')
@@ -170,6 +266,11 @@ export async function markMerchantJobFailed(options: {
       status: 'failed',
       error_message: options.errorMessage,
       replicate_prediction_id: options.replicatePredictionId ?? undefined,
+      metadata: mergeMetadata(existingJob.metadata, {
+        stage: 'done',
+        failure_code: options.failureCode ?? 'PROCESSING_FAILED',
+        ...(options.metadataPatch ?? {}),
+      }),
       completed_at: new Date().toISOString(),
     })
     .eq('merchant_id', options.merchantId)
@@ -191,10 +292,11 @@ export async function completeMerchantJob(options: JobCompletionPayload) {
       error_message: null,
       result_image_url: options.resultImageUrl,
       replicate_prediction_id: options.replicatePredictionId ?? undefined,
-      metadata: {
-        ...(existingJob.metadata ?? {}),
+      metadata: mergeMetadata(existingJob.metadata, {
+        stage: 'done',
+        failure_code: null,
         ...(options.metadataPatch ?? {}),
-      },
+      }),
       completed_at: new Date().toISOString(),
     })
     .eq('merchant_id', options.merchantId)
@@ -205,6 +307,60 @@ export async function completeMerchantJob(options: JobCompletionPayload) {
   }
 
   return getMerchantJobById(options.merchantId, options.jobId)
+}
+
+export async function updateMerchantJobMetadata(
+  merchantId: string,
+  jobId: string,
+  patch: Record<string, unknown>,
+) {
+  const db = getSupabaseClient()
+  const existingJob = await getMerchantJobById(merchantId, jobId)
+
+  const { error } = await db
+    .from('tryon_jobs')
+    .update({
+      metadata: mergeMetadata(existingJob.metadata, patch),
+    })
+    .eq('merchant_id', merchantId)
+    .eq('id', jobId)
+
+  if (error) {
+    throw new AppError(error.message, 500, 'JOB_UPDATE_FAILED')
+  }
+}
+
+export async function updateMerchantJobStage(
+  merchantId: string,
+  jobId: string,
+  stage: TryOnJobStage,
+  patch?: Record<string, unknown>,
+) {
+  return updateMerchantJobMetadata(merchantId, jobId, {
+    stage,
+    ...(patch ?? {}),
+  })
+}
+
+export async function getLatestPreparedGarmentForProduct(
+  merchantId: string,
+  productId: string,
+) {
+  const db = getSupabaseClient()
+  const { data, error } = await db
+    .from('tryon_jobs')
+    .select('metadata')
+    .eq('merchant_id', merchantId)
+    .eq('product_id', productId)
+    .eq('status', 'completed')
+    .not('metadata->prepared_garment_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  return (data.metadata as TryOnJobMetadata)?.prepared_garment_url ?? null
 }
 
 export async function updateMerchantJobPrediction(
@@ -244,6 +400,31 @@ export async function listPendingJobsForProcessing(limit: number) {
   return data ?? []
 }
 
+export async function claimPendingJobsAtomic(limit: number): Promise<TryOnJobRecord[]> {
+  const db = getSupabaseClient()
+
+  const { data, error } = await db.rpc('claim_pending_jobs', {
+    p_limit: limit,
+  })
+
+  if (error) {
+    console.warn('[jobs] RPC claim_pending_jobs not available, falling back to non-atomic claiming')
+    const pendingJobs = await listPendingJobsForProcessing(limit)
+    const claimedJobs: TryOnJobRecord[] = []
+
+    for (const job of pendingJobs) {
+      const claimed = await claimPendingJob(job.id)
+      if (claimed) {
+        claimedJobs.push(claimed)
+      }
+    }
+
+    return claimedJobs
+  }
+
+  return (data ?? []) as TryOnJobRecord[]
+}
+
 export async function claimPendingJob(jobId: string) {
   const db = getSupabaseClient()
   const { data, error } = await db
@@ -262,7 +443,16 @@ export async function claimPendingJob(jobId: string) {
     throw new AppError(error.message, 500, 'JOB_CLAIM_FAILED')
   }
 
-  return data ?? null
+  if (!data) {
+    return null
+  }
+
+  await updateMerchantJobStage(data.merchant_id, data.id, 'predicting')
+  return getMerchantJobById(data.merchant_id, data.id)
+}
+
+export async function claimPendingJobs(limit: number) {
+  return claimPendingJobsAtomic(limit)
 }
 
 export async function listTimedOutProcessingJobs(timeoutMs: number) {
@@ -287,28 +477,51 @@ export async function createMerchantTryOnJob(input: {
   userImageUrl: string
   productImageUrl: string
   productId: string
-  category: TryOnCategory
+  productName?: string | null
+  requestId?: string | null
+  category?: TryOnCategory | null
   metadata?: Record<string, unknown>
 }) {
   const merchant = await getMerchantOrThrow(input.merchantId)
   await ensureMerchantCanCreateJobs(merchant)
 
+  const normalizedRequestId = input.requestId?.trim() || null
+  if (normalizedRequestId) {
+    const existingJob = await findMerchantJobByRequestId(merchant.id, normalizedRequestId)
+    if (existingJob && existingJob.status !== 'failed' && existingJob.status !== 'canceled') {
+      return existingJob
+    }
+  }
+
   const db = getSupabaseClient()
+  const legacyCategory = input.category ?? inferLegacyCategoryFromText(input.productName)
+  const metadata = {
+    stage: 'queued',
+    request_id: normalizedRequestId,
+    product_name: input.productName ?? null,
+    ...(input.metadata ?? {}),
+  }
+
   const rpcInput = {
     p_merchant_id: merchant.id,
     p_user_image_url: input.userImageUrl,
     p_product_image_url: input.productImageUrl,
     p_product_id: input.productId,
-    p_category: input.category,
-    p_metadata: input.metadata ?? {},
+    p_category: legacyCategory,
+    p_metadata: metadata,
   }
+
   const { data, error } = await db.rpc('create_tryon_job_with_credit', rpcInput)
 
   if (error) {
     const normalizedMessage = normalizeSupabaseMessage(error.message)
 
     if (isMissingRpcFunction(normalizedMessage, 'create_tryon_job_with_credit')) {
-      return createMerchantTryOnJobFallback(merchant.id, input)
+      return createMerchantTryOnJobFallback(merchant.id, {
+        ...input,
+        category: legacyCategory,
+        metadata,
+      })
     }
 
     if (normalizedMessage.includes('NO_CREDITS')) {
@@ -351,6 +564,7 @@ async function createMerchantTryOnJobFallback(
     userImageUrl: string
     productImageUrl: string
     productId: string
+    productName?: string | null
     category: TryOnCategory
     metadata?: Record<string, unknown>
   },
@@ -365,7 +579,10 @@ async function createMerchantTryOnJobFallback(
       product_image_url: input.productImageUrl,
       product_id: input.productId,
       category: input.category,
-      metadata: input.metadata ?? {},
+      metadata: input.metadata ?? {
+        stage: 'queued',
+        product_name: input.productName ?? null,
+      },
     })
     .select(JOB_SELECT)
     .single<TryOnJobRecord>()
@@ -385,13 +602,11 @@ async function createMerchantTryOnJobFallback(
 
   if (deductError) {
     await db.from('tryon_jobs').delete().eq('merchant_id', merchantId).eq('id', createdJob.id)
-
     throw new AppError(deductError.message, 500, 'JOB_CREATE_FAILED')
   }
 
   if (deducted !== true) {
     await db.from('tryon_jobs').delete().eq('merchant_id', merchantId).eq('id', createdJob.id)
-
     throw new AppError(
       'No credits remaining for this merchant.',
       409,

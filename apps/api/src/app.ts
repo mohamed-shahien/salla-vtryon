@@ -2,6 +2,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import compression from 'compression'
+import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
@@ -45,7 +46,14 @@ export function createApp() {
   app.disable('x-powered-by')
   app.set('trust proxy', 1)
 
-  app.use(helmet())
+  app.use(
+    helmet({
+      frameguard: false,
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' }, // Crucial for widget.js
+    }),
+  )
+  app.use(cookieParser())
 
   // Helmet sets Cross-Origin-Resource-Policy: same-origin globally.
   // Widget routes are loaded by Salla storefronts (cross-origin) — override it here,
@@ -59,8 +67,7 @@ export function createApp() {
 
   app.use((request, response, next) => {
     if (request.path.startsWith('/api/widget') || request.path === '/widget.js') {
-      widgetCors(request, response, next)
-      return
+      return widgetCors(request, response, next)
     }
 
     dashboardCors(request, response, next)
@@ -87,6 +94,7 @@ export function createApp() {
   app.use('/webhooks', webhookRouter)
   app.use(express.json({ limit: '1mb' }))
   app.use(express.urlencoded({ extended: true }))
+  app.use('/api/widget', widgetRouter)
   app.use(apiLimiter)
 
   app.use('/api/auth', authRouter)
@@ -94,7 +102,6 @@ export function createApp() {
   app.use('/api/jobs', jobsRouter)
   app.use('/api/products', productsRouter)
   app.use('/api/upload', uploadRouter)
-  app.use('/api/widget', widgetRouter)
   app.use('/health', healthRouter)
 
   app.use(notFoundHandler)

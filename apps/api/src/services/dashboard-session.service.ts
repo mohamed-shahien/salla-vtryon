@@ -14,6 +14,7 @@ export interface DashboardSessionPayload {
   merchant_uuid: string
   merchant_id: number
   user_id: number | null
+  local_user_id: string | null
   store_name: string | null
   issued_at: string
   exp: string
@@ -63,6 +64,7 @@ function createSessionPayload(input: {
   merchantUuid: string
   merchantId: number
   userId: number | null
+  localUserId: string | null
   storeName: string | null
 }) {
   const issuedAt = new Date()
@@ -71,6 +73,7 @@ function createSessionPayload(input: {
     merchant_uuid: input.merchantUuid,
     merchant_id: input.merchantId,
     user_id: input.userId,
+    local_user_id: input.localUserId,
     store_name: input.storeName,
     issued_at: issuedAt.toISOString(),
     exp: new Date(issuedAt.getTime() + SESSION_TTL_MS).toISOString(),
@@ -166,6 +169,7 @@ export function createDashboardSession(input: {
   merchantUuid: string
   merchantId: number
   userId: number | null
+  localUserId: string | null
   storeName: string | null
 }) {
   return createSessionPayload(input)
@@ -192,8 +196,11 @@ export function consumeDashboardAuthHandoff(token: string) {
   return parsed.session
 }
 
-export function readDashboardSession(cookieHeader?: string | null) {
-  const cookies = parseCookies(cookieHeader)
+export function readDashboardSession(
+  parsedCookies?: Record<string, string>,
+  cookieHeader?: string | null,
+) {
+  const cookies = parsedCookies || parseCookies(cookieHeader)
   const rawCookie = cookies[SESSION_COOKIE_NAME]
 
   if (!rawCookie) {
@@ -219,10 +226,14 @@ export function readDashboardSession(cookieHeader?: string | null) {
 }
 
 export function setDashboardSessionCookie(response: Response, session: DashboardSessionPayload) {
+  const isProd = env.NODE_ENV === 'production'
+
   response.cookie(SESSION_COOKIE_NAME, serializeSignedPayload(session), {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: env.NODE_ENV === 'production',
+    // sameSite 'lax' is generally safe for local dev, but 'none' + secure is needed for cross-site.
+    // Since we use a proxy on localhost:5173, 'lax' should be fine.
+    sameSite: isProd ? 'lax' : 'lax',
+    secure: isProd,
     path: '/',
     maxAge: SESSION_TTL_MS,
   })

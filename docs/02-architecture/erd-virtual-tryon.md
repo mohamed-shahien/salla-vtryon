@@ -65,6 +65,16 @@ erDiagram
         timestamptz updated_at
     }
 
+    USERS {
+        uuid id PK
+        text email UK
+        text password_hash
+        text full_name
+        timestamptz email_verified_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
     TRYON_JOBS {
         uuid id PK
         uuid merchant_id FK

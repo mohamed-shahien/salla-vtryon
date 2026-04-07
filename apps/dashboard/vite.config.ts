@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, loadEnv } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -16,6 +17,13 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
       babel({ presets: [reactCompilerPreset()] }),
+      visualizer({
+        open: false,
+        gzipSize: true,
+        brotliSize: true,
+        filename: 'bundle-analysis.html',
+        template: 'treemap',
+      }),
     ],
     resolve: {
       alias: {
@@ -26,6 +34,10 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
+          target: env.API_PROXY_TARGET ?? 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/widget.js': {
           target: env.API_PROXY_TARGET ?? 'http://localhost:3001',
           changeOrigin: true,
         },

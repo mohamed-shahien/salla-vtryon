@@ -50,6 +50,24 @@ interface SallaUserInfoResponse {
   }
 }
 
+export interface SallaProduct {
+  id: number
+  name: string
+  status: string
+  is_available: boolean
+  main_image: string | null
+  thumbnail: string | null
+  images?: { id: number; url: string; main: boolean }[]
+  urls?: {
+    customer?: string
+    admin?: string
+  }
+  price?: {
+    amount: number
+    currency: string
+  }
+}
+
 export interface SallaMerchantUserInfo {
   id: number
   name: string
@@ -221,7 +239,7 @@ async function runMerchantApiRequest<TData>(
 }
 
 export async function listMerchantProducts(sallaMerchantId: number, page = 1) {
-  return runMerchantApiRequest<unknown[]>(sallaMerchantId, `/products?page=${page}`)
+  return runMerchantApiRequest<SallaProduct[]>(sallaMerchantId, `/products?page=${page}`)
 }
 
 export async function getMerchantProduct(sallaMerchantId: number, productId: string | number) {

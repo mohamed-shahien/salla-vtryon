@@ -42,6 +42,11 @@ export interface DashboardMerchantIdentity {
       avatar?: string
     }
   } | null
+  user?: {
+    id: string
+    email: string
+    full_name: string | null
+  }
 }
 
 export interface CreditTransaction {
@@ -75,6 +80,8 @@ export interface MerchantWidgetSettings {
   widget_products: number[]
   widget_button_text: string
   default_category: TryOnCategory
+  onboarding_completed: boolean
+  widget_config?: Record<string, unknown> | null
 }
 
 export interface TryOnJob {
@@ -114,17 +121,14 @@ export interface SallaProductImage {
 export interface SallaProduct {
   id: number
   name: string
-  status?: string
-  is_available?: boolean
-  main_image?: string
-  thumbnail?: string
-  quantity?: number
-  description?: string
-  images?: SallaProductImage[]
+  status: string
+  is_available: boolean
+  main_image: string | null
+  thumbnail: string | null
+  images?: { id: number; url: string; main: boolean }[]
   urls?: {
     customer?: string
     admin?: string
-    product_card?: string
   }
   price?: {
     amount: number
@@ -133,7 +137,8 @@ export interface SallaProduct {
   sale_price?: {
     amount: number
     currency: string
-  } | null
+  }
+  widget_enabled?: boolean
 }
 
 export interface MerchantUploadResult {
@@ -183,6 +188,32 @@ async function parseApiResponse<TData>(response: Response, fallbackMessage: stri
   }
 
   return (await response.json()) as ApiResponse<TData>
+}
+
+export async function enableMerchantProducts(productIds: number[]) {
+  const response = await fetch('/api/products/enable', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ product_ids: productIds }),
+  })
+
+  return parseApiResponse<MerchantWidgetSettings>(response, 'Failed to enable products.')
+}
+
+export async function disableMerchantProducts(productIds: number[]) {
+  const response = await fetch('/api/products/disable', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ product_ids: productIds }),
+  })
+
+  return parseApiResponse<MerchantWidgetSettings>(response, 'Failed to disable products.')
 }
 
 export async function verifyAuthHandoff(handoff: string) {
@@ -372,4 +403,87 @@ export async function fetchEmbedScript() {
     response,
     `Embed script lookup failed with status ${response.status}`,
   )
+}
+
+export async function loginMerchant(email: string, password: string) {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ email, password }),
+  })
+
+  return parseApiResponse<DashboardMerchantIdentity>(response, 'Failed to login.')
+}
+
+export async function forgotPassword(email: string) {
+  const response = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ email }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(getApiErrorMessage(text, 'Failed to process forgot password request.'))
+  }
+
+  return response.json()
+}
+
+export async function setPassword(token: string, password: string) {
+  const response = await fetch('/api/auth/set-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ token, password }),
+  })
+
+  return parseApiResponse<DashboardMerchantIdentity>(response, 'Failed to set password.')
+}
+
+export async function resetPassword(token: string, password: string) {
+  const response = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ token, password }),
+  })
+
+  return parseApiResponse<DashboardMerchantIdentity>(response, 'Failed to reset password.')
+}
+
+export async function updateProfile(fullName: string) {
+  const response = await fetch('/api/auth/profile', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ full_name: fullName }),
+  })
+
+  return parseApiResponse<{ ok: boolean }>(response, 'Failed to update profile.')
+}
+
+export async function changePassword(current: string, next: string) {
+  const response = await fetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ current_password: current, new_password: next }),
+  })
+
+  return parseApiResponse<{ ok: boolean }>(response, 'Failed to change password.')
 }

@@ -11,7 +11,9 @@ export function requireDashboardSession(
   response: Response,
   next: NextFunction,
 ) {
-  const session = readDashboardSession(request.headers.cookie)
+  // Try using request.cookies (populated by cookie-parser) first,
+  // falling back to manual header parsing via readDashboardSession.
+  const session = readDashboardSession((request as any).cookies, request.headers.cookie)
 
   if (!session) {
     response.status(401).json({

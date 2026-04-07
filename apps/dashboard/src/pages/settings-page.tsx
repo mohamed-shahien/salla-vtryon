@@ -1,389 +1,338 @@
-import { useEffect, useRef, useState } from 'react'
-
-import { Panel } from '@/components/ui/panel'
-import { StatusPill } from '@/components/ui/status-pill'
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
-  fetchCurrentMerchant,
-  fetchEmbedScript,
-  fetchWidgetSettings,
-  updateWidgetSettings,
-  type EmbedScriptData,
-  type MerchantWidgetSettings,
-  type TryOnCategory,
-  type WidgetMode,
-} from '@/lib/api'
-import { useAuthStore } from '@/stores/auth-store'
+   Monitor,
+   Check,
+   Save,
+   ShieldCheck,
+   Globe,
+   Layout,
+   MousePointer2,
+   Loader2,
+   Terminal,
+   Settings2,
+   AlertCircle,
+   User,
+} from "lucide-react"
+import { motion } from "framer-motion"
+import {
+   Code,
+   CodeHeader,
+   CodeBlock,
+} from "@/components/animate-ui/components/animate/code"
+
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select"
+import {
+   TooltipProvider,
+} from "@/components/ui/tooltip"
+import { fetchCurrentMerchant, fetchEmbedScript, fetchWidgetSettings, updateWidgetSettings, type EmbedScriptData, type MerchantWidgetSettings, type TryOnCategory, type WidgetMode } from "@/lib/api"
+import { useAuthStore } from "@/stores/auth-store"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 const CATEGORY_OPTIONS: Array<{ value: TryOnCategory; label: string; description: string }> = [
-  { value: 'upper_body', label: 'Upper Body', description: 'Tops, shirts, jackets, and blazers' },
-  { value: 'lower_body', label: 'Lower Body', description: 'Pants, skirts, and similar pieces' },
-  { value: 'dresses', label: 'Dresses', description: 'One-piece outfits and dresses' },
+   { value: 'upper_body', label: 'ملابس علوية', description: 'قمصان، تيشيرتات، جاكيتات' },
+   { value: 'lower_body', label: 'ملابس سفلية', description: 'بناطيل، تنانير' },
+   { value: 'dresses', label: 'فساتين وأطقم', description: 'فساتين كاملة' },
 ]
 
 const MODE_OPTIONS: Array<{ value: WidgetMode; label: string; description: string }> = [
-  {
-    value: 'all',
-    label: 'All products',
-    description: 'Show the shopper widget on every eligible product page.',
-  },
-  {
-    value: 'selected',
-    label: 'Selected products',
-    description: 'Render the shopper widget only on products chosen from the Products page.',
-  },
+   {
+      value: 'all',
+      label: 'شامل',
+      description: 'تلقائياً لكافة المنتجات.',
+   },
+   {
+      value: 'selected',
+      label: 'محدد',
+      description: 'المنتجات المختارة يدوياً.',
+   },
 ]
 
+const item = {
+   hidden: { opacity: 0, y: 10 },
+   show: { opacity: 1, y: 0 }
+}
+
 export function SettingsPage() {
-  const setAuthenticated = useAuthStore((state) => state.setAuthenticated)
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle')
-  const [settings, setSettings] = useState<MerchantWidgetSettings | null>(null)
-  const [draft, setDraft] = useState<MerchantWidgetSettings | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ready' | 'failed'>('idle')
-  const [saveMessage, setSaveMessage] = useState<string | null>(null)
-  const [embedScript, setEmbedScript] = useState<EmbedScriptData | null>(null)
-  const [copied, setCopied] = useState(false)
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+   const navigate = useNavigate()
+   const setAuthenticated = useAuthStore((state) => state.setAuthenticated)
+   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle')
+   const [settings, setSettings] = useState<MerchantWidgetSettings | null>(null)
+   const [draft, setDraft] = useState<MerchantWidgetSettings | null>(null)
+   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ready' | 'failed'>('idle')
+   const [embedScript, setEmbedScript] = useState<EmbedScriptData | null>(null)
 
-  useEffect(() => {
-    let active = true
+   // Profile states
+   const identity = useAuthStore((state) => state.identity)
 
-    async function loadAll() {
-      setStatus('loading')
-      setError(null)
+   useEffect(() => {
+      let active = true
 
-      try {
-        const [settingsResponse, scriptResponse] = await Promise.all([
-          fetchWidgetSettings(),
-          fetchEmbedScript().catch(() => null),
-        ])
+      async function loadAll() {
+         setStatus('loading')
+         try {
+            const [settingsResponse, scriptResponse] = await Promise.all([
+               fetchWidgetSettings(),
+               fetchEmbedScript().catch(() => null),
+            ])
 
-        if (!active) return
+            if (!active) return
 
-        setSettings(settingsResponse.data)
-        setDraft(settingsResponse.data)
-        if (scriptResponse) setEmbedScript(scriptResponse.data)
-        setStatus('ready')
-      } catch (loadError) {
-        if (!active) return
-        setStatus('failed')
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load widget settings.')
+            setSettings(settingsResponse.data)
+            setDraft(settingsResponse.data)
+            if (scriptResponse) setEmbedScript(scriptResponse.data)
+            setStatus('ready')
+         } catch {
+            if (!active) return
+            setStatus('failed')
+            toast.error('تعذر تحميل الإعدادات')
+         }
       }
-    }
 
-    void loadAll()
+      void loadAll()
+      return () => { active = false }
+   }, [])
 
-    return () => {
-      active = false
-    }
-  }, [])
+   async function handleSave() {
+      if (!draft) return
+      setSaveStatus('saving')
+      try {
+         const response = await updateWidgetSettings({
+            widget_enabled: draft.widget_enabled,
+            widget_mode: draft.widget_mode,
+            widget_button_text: draft.widget_button_text,
+            default_category: draft.default_category,
+         })
 
-  function handleCopy() {
-    if (!embedScript) return
-    void navigator.clipboard.writeText(embedScript.script_tag).then(() => {
-      setCopied(true)
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-      copyTimerRef.current = setTimeout(() => setCopied(false), 2500)
-    })
-  }
+         setSettings(response.data)
+         setDraft(response.data)
+         setSaveStatus('ready')
+         toast.success("تم الحفظ بنجاح")
 
-  async function refreshIdentity() {
-    const merchant = await fetchCurrentMerchant()
+         const merchant = await fetchCurrentMerchant()
+         if (merchant) setAuthenticated(merchant.data)
+      } catch {
+         setSaveStatus('failed')
+         toast.error('فشل في حفظ الإعدادات')
+      }
+   }
 
-    if (merchant) {
-      setAuthenticated(merchant.data)
-    }
-  }
-
-  async function handleSave() {
-    if (!draft) {
-      return
-    }
-
-    setSaveStatus('saving')
-    setSaveMessage(null)
-
-    try {
-      const response = await updateWidgetSettings({
-        widget_enabled: draft.widget_enabled,
-        widget_mode: draft.widget_mode,
-        widget_button_text: draft.widget_button_text,
-        default_category: draft.default_category,
-      })
-
-      setSettings(response.data)
-      setDraft(response.data)
-      setSaveStatus('ready')
-      setSaveMessage('Widget settings were saved for the storefront experience.')
-      await refreshIdentity()
-    } catch (saveError) {
-      setSaveStatus('failed')
-      setSaveMessage(
-        saveError instanceof Error ? saveError.message : 'Failed to save widget settings.',
+   if (status === 'loading') {
+      return (
+         <div className="flex h-96 flex-col items-center justify-center gap-3 text-center">
+            <Loader2 className="size-6 animate-spin text-primary opacity-50" />
+            <p className="text-[10px] font-black text-muted-foreground">تجهيز الإعدادات المتقدمة...</p>
+         </div>
       )
-    }
-  }
+   }
 
-  if (status === 'loading') {
-    return (
-      <Panel
-        eyebrow="Settings"
-        title="Storefront widget settings"
-        description="Loading the merchant configuration for the shopper widget."
-      >
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-300">
-          Loading widget settings...
-        </div>
-      </Panel>
-    )
-  }
+   const draftChanged = JSON.stringify(draft) !== JSON.stringify(settings)
 
-  if (status === 'failed' || !draft) {
-    return (
-      <Panel
-        eyebrow="Settings"
-        title="Storefront widget settings"
-        description="The dashboard could not load the current merchant configuration."
-      >
-        <div className="rounded-2xl border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">
-          {error ?? 'Widget settings are unavailable.'}
-        </div>
-      </Panel>
-    )
-  }
+   return (
+      <TooltipProvider>
+         <div className="space-y-4 animate-in fade-in duration-700 pb-20">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6">
+               <div className="space-y-1">
+                  <h1 className="text-2xl font-black tracking-tight">الإعدادات والربط</h1>
+                  <p className="text-muted-foreground font-medium text-xs opacity-80">
+                     إدارة خصائص العرض الفني، معلومات المتجر، وأدوات الربط البرمجي.
+                  </p>
+               </div>
 
-  const draftChanged =
-    JSON.stringify({
-      widget_enabled: draft.widget_enabled,
-      widget_mode: draft.widget_mode,
-      widget_button_text: draft.widget_button_text,
-      default_category: draft.default_category,
-    }) !==
-    JSON.stringify({
-      widget_enabled: settings?.widget_enabled,
-      widget_mode: settings?.widget_mode,
-      widget_button_text: settings?.widget_button_text,
-      default_category: settings?.default_category,
-    })
-
-  return (
-    <div className="space-y-5">
-      {embedScript && (
-        <Panel
-          eyebrow="Installation"
-          title="Add the widget to your Salla store"
-          description="Paste this script tag into your Salla store's custom code section (Settings → Custom Scripts → Before </body>). The widget will appear automatically on every product page."
-        >
-          <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
-            <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-emerald-300">
-              {embedScript.script_tag}
-            </pre>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-5 py-2.5 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/25"
-            >
-              {copied ? 'Copied!' : 'Copy script tag'}
-            </button>
-            <span className="text-xs text-slate-500">
-              Merchant ID: <span className="font-mono text-slate-300">{embedScript.merchant_id}</span>
-            </span>
-          </div>
-        </Panel>
-      )}
-
-      <Panel
-        eyebrow="Settings"
-        title="Storefront widget configuration"
-        description="This page controls how the shopper widget behaves on eligible product pages. It does not run try-on jobs itself."
-      >
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <p className="text-slate-400">Widget Status</p>
-            <div className="mt-3">
-              <StatusPill ok={draft.widget_enabled} label={draft.widget_enabled ? 'enabled' : 'disabled'} />
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <p className="text-slate-400">Display Mode</p>
-            <p className="mt-2 font-medium text-white">{draft.widget_mode}</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <p className="text-slate-400">Button Text</p>
-            <p className="mt-2 font-medium text-white">{draft.widget_button_text}</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <p className="text-slate-400">Default Category</p>
-            <p className="mt-2 font-medium text-white">{draft.default_category}</p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-          <div className="space-y-4 rounded-3xl border border-white/10 bg-black/20 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-sky-300/80">
-                  Availability
-                </p>
-                <p className="mt-2 text-sm text-slate-300">
-                  Turn the shopper widget on or off for the whole store.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setDraft((current) =>
-                    current ? { ...current, widget_enabled: !current.widget_enabled } : current,
-                  )
-                }
-                className={`rounded-full border px-4 py-2 text-sm transition ${
-                  draft.widget_enabled
-                    ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
-                    : 'border-white/10 bg-white/10 text-slate-200 hover:border-white/20 hover:bg-white/15'
-                }`}
-              >
-                {draft.widget_enabled ? 'Disable widget' : 'Enable widget'}
-              </button>
+               <div className="flex items-center gap-3">
+                  <Button
+                     onClick={() => void handleSave()}
+                     disabled={!draftChanged || saveStatus === 'saving'}
+                     className="rounded-lg font-black text-xs h-11 px-6 shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                     {saveStatus === 'saving' ? <Loader2 className="me-2 size-4 animate-spin" /> : <Save className="me-2 size-4" />}
+                     {saveStatus === 'saving' ? "جاري الحفظ..." : "حفظ الإعدادات"}
+                  </Button>
+               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-              <label className="text-xs uppercase tracking-[0.22em] text-slate-400" htmlFor="widget-button-text">
-                Button Text
-              </label>
-              <input
-                id="widget-button-text"
-                value={draft.widget_button_text}
-                onChange={(event) =>
-                  setDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          widget_button_text: event.target.value,
-                        }
-                      : current,
-                  )
-                }
-                maxLength={40}
-                className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-300/40"
-              />
+            <div className="grid gap-3 lg:grid-cols-3">
+               <div className="lg:col-span-2 space-y-3">
+                  {/* General Configuration */}
+                  <motion.div variants={item} initial="hidden" animate="show">
+                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg text-right">
+                        <CardHeader className="p-3 border-b border-border/10">
+                           <div className="flex items-center justify-between">
+                              <div className="space-y-0.5">
+                                 <CardTitle className="text-base font-black flex items-center gap-2 justify-end">
+                                    حالة العرض العام
+                                    <Monitor className="size-4 text-primary" />
+                                 </CardTitle>
+                                 <CardDescription className="text-[9px] font-black opacity-60">تفعيل أو تعطيل الإضافة تماماً من المتجر</CardDescription>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-lg border border-border/40">
+                                 <span className={cn("text-[9px] font-black", draft?.widget_enabled ? "text-emerald-600" : "text-muted-foreground opacity-60")}>
+                                    {draft?.widget_enabled ? "نشط" : "معطل"}
+                                 </span>
+                                 <Switch
+                                    checked={draft?.widget_enabled}
+                                    onCheckedChange={(val) => setDraft(c => c ? { ...c, widget_enabled: val } : null)}
+                                    className="data-[state=checked]:bg-emerald-500 scale-90"
+                                 />
+                              </div>
+                           </div>
+                        </CardHeader>
+                        <CardContent className="p-3 space-y-4">
+                           <div className="grid md:grid-cols-2 gap-3">
+                              <div className="space-y-1.5 text-right">
+                                 <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">نص الزر في المتجر</Label>
+                                 <Input
+                                    value={draft?.widget_button_text}
+                                    onChange={(e) => setDraft(c => c ? { ...c, widget_button_text: e.target.value } : null)}
+                                    className="h-9 rounded-lg bg-background border-border/60 font-bold text-[10px] text-right"
+                                    placeholder="مثال: قياس افتراضي"
+                                 />
+                              </div>
+                              <div className="space-y-1.5 text-right">
+                                 <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">التصنيف الافتراضي</Label>
+                                 <Select
+                                    value={draft?.default_category}
+                                    onValueChange={(val) => setDraft(c => c ? { ...c, default_category: val as TryOnCategory } : null)}
+                                 >
+                                    <SelectTrigger className="h-9 rounded-lg font-bold text-[10px] bg-background border-border/60">
+                                       <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-lg border-border/40" dir="rtl">
+                                       {CATEGORY_OPTIONS.map(opt => (
+                                          <SelectItem key={opt.value} value={opt.value} className="text-[10px] font-black">
+                                             {opt.label}
+                                          </SelectItem>
+                                       ))}
+                                    </SelectContent>
+                                 </Select>
+                              </div>
+                           </div>
+                        </CardContent>
+                     </Card>
+                  </motion.div>
+
+                  {/* Mode & Target Section */}
+                  <motion.div variants={item} initial="hidden" animate="show">
+                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg text-right">
+                        <CardHeader className="p-3 border-b border-border/10 pb-2">
+                           <CardTitle className="text-base font-black flex items-center gap-2 justify-end">
+                              نطاق تفعيل الميزة
+                              <Layout className="size-4 text-primary" />
+                           </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 grid sm:grid-cols-2 gap-2">
+                           {MODE_OPTIONS.map((option) => (
+                              <button
+                                 key={option.value}
+                                 onClick={() => setDraft(c => c ? { ...c, widget_mode: option.value } : null)}
+                                 className={cn(
+                                    "relative flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 text-right group",
+                                    draft?.widget_mode === option.value
+                                       ? "border-primary bg-primary/5 ring-1 ring-primary/10 shadow-sm"
+                                       : "border-border/40 hover:bg-muted/30 opacity-70"
+                                 )}
+                              >
+                                 <div className={cn(
+                                    "size-8 rounded-lg flex items-center justify-center transition-colors",
+                                    draft?.widget_mode === option.value ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-muted/80"
+                                 )}>
+                                    {option.value === 'all' ? <Globe className="size-4" /> : <MousePointer2 className="size-4" />}
+                                 </div>
+                                 <div className="space-y-0.5">
+                                    <p className="font-black text-xs">{option.label}</p>
+                                    <p className="text-[9px] font-bold text-muted-foreground leading-none">{option.description}</p>
+                                 </div>
+                                 {draft?.widget_mode === option.value && (
+                                    <div className="absolute top-2 left-2 p-0.5 bg-primary rounded-full">
+                                       <Check className="size-2 text-white" />
+                                    </div>
+                                 )}
+                              </button>
+                           ))}
+                        </CardContent>
+                     </Card>
+                  </motion.div>
+
+                  {/* Integration Snippet */}
+                  {embedScript && (
+                     <motion.div variants={item} initial="hidden" animate="show" className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                           <Terminal className="size-4 text-primary" />
+                           <h3 className="font-black text-sm">كود الربط التقني</h3>
+                        </div>
+                        <Card className="border-border/40 shadow-2xl bg-card/40 backdrop-blur-2xl rounded-lg overflow-hidden text-left" dir="ltr">
+                           <Code code={embedScript.script_tag} className="border-none bg-transparent">
+                              <CodeHeader copyButton icon={Settings2} className="bg-muted/50 border-border/20 text-[10px] font-bold">
+                                 Integration Script (Salla Storefront)
+                              </CodeHeader>
+                              <CodeBlock lang="html" className="text-xs p-6" />
+                           </Code>
+                        </Card>
+
+                        <div className="flex items-center justify-between px-4 py-3 bg-primary/5 rounded-lg border border-primary/10">
+                           <div className="flex items-center gap-2">
+                              <ShieldCheck className="size-4 text-emerald-500" />
+                              <span className="text-[10px] font-black text-foreground/70">معرف السحابة الآمنة:</span>
+                           </div>
+                           <span className="text-xs font-black text-primary font-mono select-all">
+                              {embedScript.merchant_id}
+                           </span>
+                        </div>
+                     </motion.div>
+                  )}
+               </div>
+
+               {/* Right Sidebar - General Info */}
+               <div className="space-y-4">
+                  <Card className="border-border/40 shadow-sm bg-card/60 rounded-lg overflow-hidden">
+                     <div className="p-5 space-y-4">
+                        <div className="flex justify-center">
+                           <div className="size-20 rounded-lg bg-primary/20 flex items-center justify-center border-4 border-background shadow-inner">
+                              <User className="size-10 text-primary" />
+                           </div>
+                        </div>
+                        <div className="text-center space-y-1">
+                           <h3 className="font-black text-sm">{identity?.user?.full_name}</h3>
+                           <p className="text-[10px] font-bold text-muted-foreground">{identity?.user?.email}</p>
+                        </div>
+                     </div>
+                     <div className="px-3 pb-3">
+                        <Button
+                           variant="secondary"
+                           onClick={() => navigate('/profile')}
+                           className="w-full h-10 rounded-lg font-black text-[10px] gap-2 border border-border/40"
+                        >
+                           <Settings2 className="size-3.5" />
+                           إدارة الحساب الشخصي
+                        </Button>
+                     </div>
+                  </Card>
+
+                  <Card className="border-border/40 shadow-sm bg-muted/20 rounded-lg p-5 space-y-2">
+                     <div className="flex items-center gap-2 text-primary">
+                        <AlertCircle className="size-4" />
+                        <h4 className="text-[10px] font-black">تحتاج مساعدة؟</h4>
+                     </div>
+                     <p className="text-[10px] leading-relaxed font-bold text-muted-foreground">
+                        إذا كنت تواجه صعوبة في دمج الكود في متجرك، يمكنك دائماً التواصل مع فريق الدعم الفني الخاص بنا.
+                     </p>
+                  </Card>
+               </div>
             </div>
-          </div>
-
-          <div className="space-y-4 rounded-3xl border border-white/10 bg-black/20 p-5">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-sky-300/80">
-                Widget Mode
-              </p>
-              <p className="mt-2 text-sm text-slate-300">
-                Decide whether the shopper widget should appear on every eligible product page or
-                only on products selected by the merchant.
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              {MODE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() =>
-                    setDraft((current) =>
-                      current
-                        ? {
-                            ...current,
-                            widget_mode: option.value,
-                          }
-                        : current,
-                    )
-                  }
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    draft.widget_mode === option.value
-                      ? 'border-sky-300/50 bg-sky-400/10'
-                      : 'border-white/10 bg-slate-950/70 hover:border-white/20 hover:bg-white/6'
-                  }`}
-                >
-                  <p className="font-medium text-white">{option.label}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">{option.description}</p>
-                </button>
-              ))}
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-              <p className="text-sm text-slate-300">
-                Selected product count: <span className="font-medium text-white">{draft.widget_products.length}</span>
-              </p>
-              <p className="mt-2 text-xs leading-6 text-slate-500">
-                Manage the exact product list from the Products page when `selected` mode is active.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-3xl border border-white/10 bg-black/20 p-5">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-sky-300/80">
-              Default Category
-            </p>
-            <p className="mt-2 text-sm text-slate-300">
-              This is the category preselected for the shopper inside the storefront widget.
-            </p>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {CATEGORY_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() =>
-                  setDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          default_category: option.value,
-                        }
-                      : current,
-                  )
-                }
-                className={`rounded-2xl border p-4 text-left transition ${
-                  draft.default_category === option.value
-                    ? 'border-sky-300/50 bg-sky-400/10'
-                    : 'border-white/10 bg-slate-950/70 hover:border-white/20 hover:bg-white/6'
-                }`}
-              >
-                <p className="font-medium text-white">{option.label}</p>
-                <p className="mt-2 text-xs leading-6 text-slate-400">{option.description}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={!draftChanged || saveStatus === 'saving'}
-            className="rounded-full border border-sky-300/30 bg-sky-400/15 px-5 py-2.5 text-sm font-medium text-sky-100 transition hover:bg-sky-400/20 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saveStatus === 'saving' ? 'Saving widget settings...' : 'Save widget settings'}
-          </button>
-          <span className="text-sm text-slate-400">
-            Shopper uploads and AI processing happen only in the storefront widget.
-          </span>
-        </div>
-
-        {saveMessage ? (
-          <div
-            className={`mt-4 rounded-2xl border p-4 text-sm ${
-              saveStatus === 'failed'
-                ? 'border-amber-300/30 bg-amber-300/10 text-amber-100'
-                : 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100'
-            }`}
-          >
-            {saveMessage}
-          </div>
-        ) : null}
-      </Panel>
-    </div>
-  )
+         </div>
+      </TooltipProvider>
+   )
 }

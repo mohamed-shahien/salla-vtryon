@@ -25,7 +25,14 @@ export interface WidgetJobResponse {
   result_image_url: string | null
   replicate_prediction_id: string | null
   error_message: string | null
-  metadata: Record<string, unknown>
+  metadata: {
+    current_step?: 'ANALYZING_IMAGES' | 'PREPARING_GARMENT' | 'GENERATING_RESULT' | 'FINALIZING'
+    progress?: number
+    retry_count?: number
+    cache_hit?: boolean
+    request_id?: string
+    duration?: number
+  }
   processing_started_at: string | null
   completed_at: string | null
   created_at: string
@@ -41,13 +48,6 @@ function normalizeBaseUrl(value: string) {
   return value.replace(/\/$/, '')
 }
 
-/**
- * Base headers sent with every widget API request.
- *
- * ngrok-skip-browser-warning: bypasses ngrok's HTML interstitial page in
- * development. The header is silently ignored by any non-ngrok server, so it
- * is safe to include unconditionally.
- */
 function baseHeaders(extra?: Record<string, string>): Record<string, string> {
   return {
     'ngrok-skip-browser-warning': '1',
@@ -98,14 +98,16 @@ export async function createWidgetJob(
   baseUrl: string,
   token: string,
   file: File,
-  category: WidgetCategory,
   productImageUrl?: string | null,
+  requestId?: string | null,
 ) {
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('category', category)
   if (productImageUrl) {
     formData.append('product_image_url', productImageUrl)
+  }
+  if (requestId) {
+    formData.append('request_id', requestId)
   }
 
   const response = await fetch(getWidgetApiUrl(baseUrl, '/api/widget/job'), {
@@ -129,4 +131,15 @@ export async function fetchWidgetJob(baseUrl: string, token: string, jobId: stri
     response,
     `Widget job lookup failed with status ${response.status}`,
   )
+}
+
+export function getPollInterval(job: WidgetJobResponse): number {
+  if (job.status === 'pending') return 10000 // 10s
+  if (job.status === 'processing') {
+    const progress = job.metadata?.progress || 0
+    if (progress > 70) return 3000 // 3s - near completion
+    if (progress > 30) return 5000 // 5s - in progress
+    return 5000 // 5s - early processing
+  }
+  return 3000 // 3s default
 }

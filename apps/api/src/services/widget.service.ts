@@ -1,7 +1,14 @@
+import { randomUUID } from 'node:crypto'
+
 import { AppError } from '../utils/app-error.js'
+import {
+  analyzeGarmentImage,
+  analyzeHumanImage,
+} from './image-analysis.service.js'
 import { getMerchantProductDetail } from './products.service.js'
 import {
   createMerchantTryOnJob,
+  findMerchantJobByRequestId,
   getMerchantJobById,
   type TryOnCategory,
 } from './jobs.service.js'
@@ -9,6 +16,8 @@ import {
   ensureMerchantRecord,
   findMerchantById,
   findMerchantBySallaMerchantId,
+  getMerchantProductRule,
+  getMerchantProductRules,
   getMerchantWidgetSettings,
   isWidgetEnabledForProduct,
   normalizeWidgetSettings,
@@ -21,12 +30,17 @@ interface WidgetConfigPayload {
   current_product_id: string | null
   overall_enabled: boolean
   current_product_enabled: boolean
+  mode: 'all' | 'selected'
+  products: number[]
+  enabled: boolean
+
   widget_mode: 'all' | 'selected'
   widget_products: number[]
   button_text: string
   default_category: TryOnCategory
   widget_token: string | null
   reason: string | null
+  widget_config: Record<string, unknown> | null
 }
 
 function extractProductImage(product: unknown) {
@@ -68,31 +82,37 @@ function extractProductName(product: unknown) {
   return typeof candidate.name === 'string' ? candidate.name : null
 }
 
-function buildDisabledConfig(
-  merchantId: number,
-  productId: string | null,
-  reason: string,
-): WidgetConfigPayload {
-  return {
-    merchant_id: merchantId,
-    current_product_id: productId,
-    overall_enabled: false,
-    current_product_enabled: false,
-    widget_mode: 'all',
-    widget_products: [],
-    button_text: '',
-    default_category: 'upper_body',
-    widget_token: null,
-    reason,
-  }
+function detectCategory(name: string): TryOnCategory {
+  const n = name.toLowerCase()
+  if (
+    n.includes('pant') ||
+    n.includes('trouser') ||
+    n.includes('jean') ||
+    n.includes('short') ||
+    n.includes('skirt') ||
+    n.includes('legging') ||
+    n.includes('بنطلون') ||
+    n.includes('تنورة') ||
+    n.includes('شورت')
+  ) return 'lower_body'
+
+  if (
+    n.includes('dress') ||
+    n.includes('gown') ||
+    n.includes('jumpsuit') ||
+    n.includes('abaya') ||
+    n.includes('فستان') ||
+    n.includes('عباية') ||
+    n.includes('جمبسوت')
+  ) return 'dresses'
+
+  return 'upper_body'
 }
 
 export async function getWidgetConfig(
   sallaMerchantId: number,
   currentProductId?: string | null,
 ) {
-  // Auto-register the merchant on first widget contact — no manual install step required.
-  // The merchant starts on the free plan (10 credits) with the widget enabled by default.
   let merchant = await findMerchantBySallaMerchantId(sallaMerchantId)
 
   if (!merchant) {
@@ -101,34 +121,66 @@ export async function getWidgetConfig(
 
   const settings = normalizeWidgetSettings(merchant.settings)
   const overallEnabled =
-    merchant.is_active === true &&
-    merchant.plan_status === 'active' &&
-    settings.widget_enabled
+    merchant.is_active === true && merchant.plan_status === 'active' && settings.widget_enabled
+
+  let currentProductRule: { enabled: boolean } | null = null
+  let productName = ''
+
+  if (currentProductId) {
+    currentProductRule = await getMerchantProductRule(merchant.id, currentProductId)
+    try {
+      const productDetail = await getMerchantProductDetail(sallaMerchantId, currentProductId)
+      productName = extractProductName(productDetail?.data) || ''
+    } catch { }
+  }
 
   const currentProductEnabled =
     overallEnabled && currentProductId
-      ? isWidgetEnabledForProduct(settings, currentProductId)
+      ? isWidgetEnabledForProduct(settings, currentProductId, currentProductRule)
       : overallEnabled && settings.widget_mode === 'all'
+
+  let widgetProducts = settings.widget_products
+  if (settings.widget_mode === 'selected') {
+    const rules = await getMerchantProductRules(merchant.id)
+    const enabledFromRules = rules.filter((r) => r.enabled).map((r) => r.product_id)
+    const disabledFromRules = new Set(rules.filter((r) => !r.enabled).map((r) => r.product_id))
+
+    widgetProducts = Array.from(
+      new Set([
+        ...enabledFromRules,
+        ...settings.widget_products.filter((id) => !disabledFromRules.has(id)),
+      ]),
+    )
+  }
+
+  const finalProductEnabled =
+    currentProductEnabled &&
+    (settings.widget_mode === 'all' || widgetProducts.length > 0)
 
   const reason = !overallEnabled
     ? 'Widget is disabled for this merchant.'
     : !currentProductId
       ? 'Product context is missing for this storefront page.'
-    : currentProductId && !currentProductEnabled
-      ? 'Widget is not enabled for this product.'
-      : null
+      : currentProductId && !finalProductEnabled
+        ? 'Widget is not enabled for this product or no products are selected.'
+        : null
 
-  return {
+  const config = {
     merchant_id: sallaMerchantId,
     current_product_id: currentProductId ?? null,
     overall_enabled: overallEnabled,
-    current_product_enabled: currentProductEnabled,
+    current_product_enabled: finalProductEnabled,
     widget_mode: settings.widget_mode,
-    widget_products: settings.widget_products,
+    widget_products: widgetProducts,
+
+    mode: settings.widget_mode,
+    products: widgetProducts,
+    enabled: finalProductEnabled,
+
     button_text: settings.widget_button_text,
-    default_category: settings.default_category,
+    default_category: productName ? detectCategory(productName) : settings.default_category,
     widget_token:
-      currentProductId && currentProductEnabled
+      currentProductId && finalProductEnabled
         ? createWidgetToken({
             merchantUuid: merchant.id,
             merchantId: merchant.salla_merchant_id,
@@ -136,14 +188,46 @@ export async function getWidgetConfig(
           })
         : null,
     reason,
+    widget_config: settings.widget_config ?? null,
   } satisfies WidgetConfigPayload
+
+  return config
+}
+
+function formatQualityRejection(label: string, report: any): string {
+  const reasons = report?.reasons ?? []
+  const warnings = report?.warnings ?? []
+  const issues = [...reasons, ...warnings]
+  return `${label}: ${issues.length > 0 ? issues.join(' ') : 'Quality check failed.'}`
+}
+
+async function validateImagesBeforeJobCreation(
+  productImageUrl: string,
+  userImageUrl: string,
+): Promise<void> {
+  const [garmentReport, humanReport] = await Promise.all([
+    analyzeGarmentImage(productImageUrl),
+    analyzeHumanImage(userImageUrl),
+  ])
+
+  if (garmentReport.verdict === 'reject') {
+    const message = formatQualityRejection('Product image rejected', garmentReport)
+    console.log(`[widget] quality_gate=reject reason=garment: "${message}"`)
+    throw new AppError(message, 422, 'IMAGE_QUALITY_REJECTED', { failure_code: 'GARMENT_QUALITY_REJECT' })
+  }
+
+  if (humanReport.verdict === 'reject') {
+    const message = formatQualityRejection('Customer image rejected', humanReport)
+    console.log(`[widget] quality_gate=reject reason=human: "${message}"`)
+    throw new AppError(message, 422, 'IMAGE_QUALITY_REJECTED', { failure_code: 'HUMAN_QUALITY_REJECT' })
+  }
 }
 
 export async function createWidgetTryOnJob(options: {
   token: string
   shopperImageBuffer: Buffer
-  category?: TryOnCategory
   productImageUrl?: string | null
+  requestId?: string | null
 }) {
   const widgetContext = readWidgetToken(options.token)
   const merchant = await findMerchantById(widgetContext.merchant_uuid)
@@ -152,9 +236,18 @@ export async function createWidgetTryOnJob(options: {
     throw new AppError('This merchant is not active for widget jobs.', 403, 'WIDGET_DISABLED')
   }
 
-  const settings = await getMerchantWidgetSettings(widgetContext.merchant_uuid)
+  if (options.requestId) {
+    const existingJob = await findMerchantJobByRequestId(widgetContext.merchant_uuid, options.requestId)
+    if (existingJob) {
+      console.log(`[widget] idempotency: returning existing job ${existingJob.id} for request_id ${options.requestId}`)
+      return { job: existingJob, upload: null }
+    }
+  }
 
-  if (!isWidgetEnabledForProduct(settings, widgetContext.product_id)) {
+  const settings = await getMerchantWidgetSettings(widgetContext.merchant_uuid)
+  const rule = await getMerchantProductRule(widgetContext.merchant_uuid, widgetContext.product_id)
+
+  if (!isWidgetEnabledForProduct(settings, widgetContext.product_id, rule)) {
     throw new AppError('This product is not enabled for widget try-on.', 403, 'PRODUCT_NOT_ENABLED')
   }
 
@@ -165,8 +258,6 @@ export async function createWidgetTryOnJob(options: {
 
   const clientProductImageUrl = options.productImageUrl?.trim() || null
 
-  // Fetch product details from Salla (best-effort).
-  // If OAuth tokens are absent but the widget already sent an image URL, we proceed without them.
   let productPayload: Awaited<ReturnType<typeof getMerchantProductDetail>> | null = null
   try {
     productPayload = await getMerchantProductDetail(
@@ -175,15 +266,12 @@ export async function createWidgetTryOnJob(options: {
     )
   } catch (fetchError) {
     if (!clientProductImageUrl) {
-      // No fallback — cannot proceed without at least one image source
       throw new AppError(
         'Product image could not be retrieved. Re-authorize the app in your Salla dashboard.',
         422,
         'PRODUCT_IMAGE_MISSING',
       )
     }
-    // Log and continue — we have a client-provided image URL
-    console.warn('[widget] Salla product fetch failed, using client-provided product image URL', fetchError instanceof Error ? fetchError.message : fetchError)
   }
 
   const productImageUrl = clientProductImageUrl ?? extractProductImage(productPayload?.data)
@@ -196,18 +284,26 @@ export async function createWidgetTryOnJob(options: {
     )
   }
 
+  await validateImagesBeforeJobCreation(productImageUrl, upload.url)
+
+  const metadata: Record<string, unknown> = {
+    source: 'widget',
+    product_name: extractProductName(productPayload?.data ?? null),
+    product_thumbnail: productImageUrl,
+    upload_storage_path: upload.storage_path,
+  }
+
+  if (options.requestId) {
+    metadata.request_id = options.requestId
+  }
+
   const job = await createMerchantTryOnJob({
     merchantId: widgetContext.merchant_uuid,
     userImageUrl: upload.url,
     productImageUrl,
     productId: widgetContext.product_id,
-    category: options.category ?? settings.default_category,
-    metadata: {
-      source: 'widget',
-      product_name: extractProductName(productPayload?.data ?? null),
-      product_thumbnail: productImageUrl,
-      upload_storage_path: upload.storage_path,
-    },
+    category: settings.default_category,
+    metadata,
   })
 
   return {
