@@ -9,5 +9,6 @@ export const navigationItems: NavigationItem[] = [
   { to: '/products', label: 'إدارة المنتجات' },
   { to: '/jobs', label: 'سجل العمليات' },
   { to: '/credits', label: 'الرصيد والاشتراك' },
+  { to: '/widget-studio', label: 'استوديو الويدجت' },
   { to: '/settings', label: 'الإعدادات' },
 ]

@@ -34,6 +34,8 @@ interface WidgetConfigPayload {
   default_category: TryOnCategory
   widget_token: string | null
   reason: string | null
+  // Widget Studio extended config (optional for storefront)
+  widget_config: Record<string, unknown> | null
 }
 
 function extractProductImage(product: unknown) {
@@ -158,6 +160,7 @@ export async function getWidgetConfig(
           })
         : null,
     reason,
+    widget_config: settings.widget_config ?? null,
   } satisfies WidgetConfigPayload
 
   return config

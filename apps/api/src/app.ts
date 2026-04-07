@@ -2,6 +2,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import compression from 'compression'
+import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
@@ -46,6 +47,7 @@ export function createApp() {
   app.set('trust proxy', 1)
 
   app.use(helmet())
+  app.use(cookieParser())
 
   // Helmet sets Cross-Origin-Resource-Policy: same-origin globally.
   // Widget routes are loaded by Salla storefronts (cross-origin) — override it here,

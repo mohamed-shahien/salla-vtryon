@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { fetchMerchantJobs, type TryOnJob } from '@/lib/api'
 
 export function useMerchantJobs(limit = 10) {
@@ -6,7 +6,7 @@ export function useMerchantJobs(limit = 10) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetchMerchantJobs({ limit })
@@ -18,11 +18,16 @@ export function useMerchantJobs(limit = 10) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [limit])
 
   useEffect(() => {
     refresh()
-  }, [limit])
+  }, [refresh])
 
-  return { jobs, loading, error, refresh }
+  return useMemo(() => ({ 
+    jobs, 
+    loading, 
+    error, 
+    refresh 
+  }), [jobs, loading, error, refresh])
 }

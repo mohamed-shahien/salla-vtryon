@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { fetchMerchantProducts } from '@/lib/api'
 import type { SallaProduct, ApiPagination } from '@/lib/api'
 
@@ -26,11 +26,11 @@ export function useSallaProducts(page = 1) {
     load()
   }, [page])
 
-  return {
+  return useMemo(() => ({
     products,
     pagination,
     isLoading,
     error,
     mutate: load,
-  }
+  }), [products, pagination, isLoading, error, load])
 }

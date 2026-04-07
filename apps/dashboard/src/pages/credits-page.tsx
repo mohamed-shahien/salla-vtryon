@@ -90,7 +90,7 @@ export function CreditsPage() {
                   <Badge variant="outline" className="text-[9px] font-black   px-2 py-0.5 bg-primary/5 text-primary border-primary/20 rounded-xl">
                      النظام المالي
                   </Badge>
-                  <h1 className="text-2xl font-black  leading-tight">الرصيد والاشتراك</h1>
+                  <h1 className="text-xl font-black  leading-tight">الرصيد والاشتراك</h1>
                   <p className="text-muted-foreground font-bold text-[10px] max-w-xl opacity-70">
                      إدارة موارد المتجر، تتبع الاستهلاك، وترقية باقتك الحالية لزيادة الإنتاجية.
                   </p>
@@ -124,7 +124,7 @@ export function CreditsPage() {
                      <CardHeader className="p-4 pb-2 relative z-10">
                         <div className="flex items-center justify-between">
                            <div className="space-y-0.5 text-right">
-                              <CardTitle className="text-lg font-black flex items-center gap-2 justify-end">
+                              <CardTitle className="text-base font-black flex items-center gap-2 justify-end">
                                  <CreditCard className="size-5 text-white/80" />
                                  ملخص المحفظة
                               </CardTitle>
@@ -140,15 +140,15 @@ export function CreditsPage() {
                         <div className="grid grid-cols-3 gap-3 text-right">
                            <div className="space-y-0.5">
                               <span className="text-[8px] font-black text-white/50  ">الإجمالي</span>
-                              <div className="text-xl font-black text-white ">{totalCredits.toLocaleString()}</div>
+                              <div className="text-lg font-black text-white ">{totalCredits.toLocaleString()}</div>
                            </div>
                            <div className="space-y-0.5">
                               <span className="text-[8px] font-black text-white/50  ">المستنفذ</span>
-                              <div className="text-xl font-black text-amber-300 ">{usedCredits.toLocaleString()}</div>
+                              <div className="text-lg font-black text-amber-300 ">{usedCredits.toLocaleString()}</div>
                            </div>
                            <div className="space-y-0.5 bg-white/10 p-2 px-3 rounded-xl border border-white/10 backdrop-blur-sm">
                               <span className="text-[8px] font-black text-white/80  ">المتبقي</span>
-                              <div className="text-2xl font-black text-emerald-300 ">{credits.toLocaleString()}</div>
+                              <div className="text-xl font-black text-emerald-300 ">{credits.toLocaleString()}</div>
                            </div>
                         </div>
 
@@ -222,7 +222,7 @@ export function CreditsPage() {
 
             {/* Plans Section */}
             <div className="space-y-3 pt-2 text-right">
-               <h2 className="text-lg font-black flex items-center gap-2 justify-end">
+               <h2 className="text-base font-black flex items-center gap-2 justify-end">
                   خطط الاشتراك المتوفرة
                   <Gem className="size-5 text-primary" />
                </h2>
@@ -272,7 +272,7 @@ export function CreditsPage() {
                <Card className="border-border/40 shadow-xl bg-card/60 backdrop-blur-md rounded-xl overflow-hidden">
                   <CardHeader className="p-3 border-b border-border/10 flex flex-row items-center justify-between gap-3 text-right">
                      <div className="space-y-0.5">
-                        <CardTitle className="text-base font-black flex items-center gap-2 justify-end">
+                        <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
                            سجل الحركات المالية
                            <History className="size-5 text-primary" />
                         </CardTitle>

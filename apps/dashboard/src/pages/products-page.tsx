@@ -1,4 +1,4 @@
-import { useState, useMemo, useDeferredValue } from "react"
+import { useState, useMemo, useDeferredValue, memo, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Package,
@@ -33,10 +33,7 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
   DropdownMenu,
@@ -67,10 +64,190 @@ const container = {
   }
 }
 
-const item = {
+const itemTransitions = {
   hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0 }
 }
+
+// --- Memoized Components ---
+
+const ProductListItem = memo(({ 
+  product, 
+  isSelected, 
+  isUpdating, 
+  onToggle, 
+  onSelect 
+}: { 
+  product: SallaProduct, 
+  isSelected: boolean, 
+  isUpdating: boolean, 
+  onToggle: (id: number, val: boolean) => void,
+  onSelect: (id: number) => void
+}) => {
+  const isEnabled = product.widget_enabled
+  return (
+    <motion.div
+      variants={itemTransitions}
+      className={cn(
+        "group relative flex items-center gap-3 p-2 rounded-xl border bg-card/60 backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:border-primary/30",
+        isSelected && "border-primary/40 bg-primary/5 shadow-md",
+        !product.is_available && "opacity-60"
+      )}
+    >
+      <Checkbox
+        checked={isSelected}
+        onCheckedChange={() => onSelect(product.id)}
+        className="size-4 rounded-xl border-muted-foreground/30 data-[state=checked]:bg-primary"
+      />
+      <Avatar className="size-10 shrink-0 border border-border/20 overflow-hidden">
+        <AvatarImage src={product.main_image || ""} alt={product.name} className="object-cover" />
+        <AvatarFallback className="rounded-xl bg-muted text-muted-foreground/30">
+          <Package className="size-5" />
+        </AvatarFallback>
+      </Avatar>
+
+      <div className="flex-1 min-w-0 text-right">
+        <h4 className="text-[10px] font-black text-foreground truncate">{product.name}</h4>
+        <div className="flex items-center gap-2 justify-end mt-0.5">
+          <span className={cn("text-[8px] font-black", product.is_available ? "text-emerald-600" : "text-destructive")}>
+            {product.is_available ? "متوفر" : "نفذ"}
+          </span>
+          <span className="text-[8px] font-bold text-muted-foreground/40">#{product.id}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Badge variant={isEnabled ? "default" : "secondary"} className={cn(
+          "rounded-xl px-2 text-[8px] font-black h-4 border-0 hidden sm:flex",
+          isEnabled ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
+        )}>
+          {isEnabled ? "مفعل" : "معطل"}
+        </Badge>
+        <div className="flex items-center gap-2">
+          {isUpdating && <Loader2 className="size-3 animate-spin text-primary" />}
+          <Switch
+            checked={isEnabled}
+            onCheckedChange={(val) => onToggle(product.id, val)}
+            disabled={isUpdating}
+            className="scale-75 data-[state=checked]:bg-emerald-500"
+          />
+        </div>
+        <DropdownMenu dir="rtl">
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="size-7 rounded-xl text-muted-foreground">
+              <MoreVertical className="size-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="rounded-xl font-black text-[10px] w-40" align="end">
+            <DropdownMenuItem className="h-8 rounded-xl"><Eye className="me-2 size-3" /> عرض التفاصيل</DropdownMenuItem>
+            {product.urls?.customer && (
+              <DropdownMenuItem asChild className="h-8 rounded-xl">
+                <a href={product.urls.customer} target="_blank" rel="noreferrer"><ExternalLink className="me-2 size-3" /> المتجر</a>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </motion.div>
+  )
+})
+
+const ProductCard = memo(({ 
+  product, 
+  isSelected, 
+  isUpdating, 
+  onToggle, 
+  onSelect 
+}: { 
+  product: SallaProduct, 
+  isSelected: boolean, 
+  isUpdating: boolean, 
+  onToggle: (id: number, val: boolean) => void,
+  onSelect: (id: number) => void
+}) => {
+  const isEnabled = product.widget_enabled
+  return (
+    <motion.div
+      variants={itemTransitions}
+      className={cn(
+        "group relative flex flex-col rounded-xl border bg-card/70 backdrop-blur-md transition-all duration-500 hover:shadow-xl hover:border-primary/40 overflow-hidden h-full",
+        isSelected && "border-primary/40 bg-primary/5 shadow-md",
+        !product.is_available && "opacity-75"
+      )}
+    >
+      <div className="aspect-4/5 relative overflow-hidden bg-muted/30">
+        <Avatar className="size-full rounded-none">
+          <AvatarImage
+            src={product.main_image || ""}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          <AvatarFallback className="rounded-none bg-muted/30 flex items-center justify-center opacity-10">
+            <Package className="size-10" />
+          </AvatarFallback>
+        </Avatar>
+
+        <div className="absolute top-2 right-2 z-10">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onSelect(product.id)}
+            className={cn(
+              "size-4 rounded-xl border-white/40 bg-black/20 backdrop-blur-md shadow-lg transition-all",
+              isSelected ? "opacity-100 scale-100" : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
+            )}
+          />
+        </div>
+
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1.5">
+          <Badge className={cn(
+            "rounded-xl px-2 py-0.5 text-[8px] font-black border-0 shadow-lg backdrop-blur-md",
+            isEnabled ? "bg-emerald-500 text-white" : "bg-slate-900/80 text-white/50"
+          )}>
+            {isEnabled ? "منشور" : "مخفي"}
+          </Badge>
+          {!product.is_available && (
+            <Badge className="bg-destructive text-white rounded-xl px-2 py-0.5 text-[8px] font-black border-0">نفذ</Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col p-3 text-right">
+        <h4 className="text-[10px] font-black text-foreground/90 truncate leading-tight mb-1">{product.name}</h4>
+        <div className="flex items-center gap-2 justify-end opacity-60">
+          <span className="text-[8px] font-black line-through scale-90">
+            {product.price?.amount} {product.price?.currency}
+          </span>
+          {product.sale_price && (
+            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 rounded-lg border border-emerald-100">
+              {product.sale_price.amount} {product.sale_price.currency}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-auto pt-3 flex items-center justify-between border-t border-border/10">
+          <div className="flex flex-col items-end">
+            <span className="text-[8px] font-black text-muted-foreground   leading-none mb-0.5">القياس</span>
+            <span className="text-[8px] font-black text-foreground/70">{isEnabled ? "نشط" : "معطل"}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {isUpdating && <Loader2 className="size-3 animate-spin text-primary" />}
+            <Switch
+              checked={isEnabled}
+              onCheckedChange={(val) => onToggle(product.id, val)}
+              disabled={isUpdating}
+              className="scale-75 data-[state=checked]:bg-emerald-500"
+            />
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+})
+
+ProductListItem.displayName = "ProductListItem"
+ProductCard.displayName = "ProductCard"
+
+// --- Main Page Component ---
 
 export function ProductsPage() {
   const navigate = useNavigate()
@@ -91,7 +268,7 @@ export function ProductsPage() {
   const filteredProducts = useMemo(() => {
     if (!products) return []
     return products.filter((p: SallaProduct) => {
-      const matchesSearch = p.name.toLowerCase().includes(deferredSearch.toLowerCase())
+      const matchesSearch = p.name.toLowerCase().includes(deferredSearch.toLowerCase()) || p.id.toString().includes(deferredSearch)
       const isEnabled = p.widget_enabled
       const matchesStatus = statusFilter === "all" ||
         (statusFilter === "enabled" && isEnabled) ||
@@ -106,7 +283,7 @@ export function ProductsPage() {
     return filteredProducts.slice(start, start + itemsPerPage)
   }, [filteredProducts, currentPage])
 
-  const handleSync = async () => {
+  const handleSync = useCallback(async () => {
     setIsUpdating("sync")
     try {
       await refreshProducts()
@@ -116,9 +293,9 @@ export function ProductsPage() {
     } finally {
       setIsUpdating(null)
     }
-  }
+  }, [refreshProducts, refreshSettings])
 
-  const toggleProduct = async (productId: number, enabled: boolean) => {
+  const toggleProduct = useCallback(async (productId: number, enabled: boolean) => {
     setIsUpdating(productId)
     try {
       if (enabled) await enableMerchantProducts([productId])
@@ -129,9 +306,9 @@ export function ProductsPage() {
     } finally {
       setIsUpdating(null)
     }
-  }
+  }, [refreshProducts, refreshSettings])
 
-  const handleBulkAction = async (enabled: boolean) => {
+  const handleBulkAction = useCallback(async (enabled: boolean) => {
     const ids = Array.from(selectedIds)
     setIsUpdating("bulk")
     try {
@@ -144,29 +321,28 @@ export function ProductsPage() {
     } finally {
       setIsUpdating(null)
     }
-  }
+  }, [selectedIds, refreshProducts, refreshSettings])
 
-
-
-  const toggleSelection = (productId: number) => {
-    const next = new Set(selectedIds)
-    if (next.has(productId)) next.delete(productId)
-    else next.add(productId)
-    setSelectedIds(next)
-  }
-
+  const toggleSelection = useCallback((productId: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(productId)) next.delete(productId)
+      else next.add(productId)
+      return next
+    })
+  }, [])
 
   return (
     <TooltipProvider>
-      <div className="space-y-4 animate-in fade-in duration-700 pb-20">
+      <div className="space-y-3 animate-in fade-in duration-700 pb-20">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-border/40 text-right">
           <div className="space-y-1">
             <Badge variant="outline" className="text-[9px] font-black   px-2 py-0.5 bg-primary/5 text-primary border-primary/20 rounded-xl">
               إدارة المحتوى
             </Badge>
-            <h1 className="text-2xl font-black  leading-tight">كتالوج المنتجات النشط</h1>
-            <p className="text-muted-foreground font-bold text-[10px] max-w-xl opacity-70">
+            <h1 className="text-xl font-black  leading-tight">كتالوج المنتجات النشط</h1>
+            <p className="text-muted-foreground font-bold text-[9px] max-w-xl opacity-70">
               تحكم في ظهور ميزة القياس لكل منتج، قم بالمزامنة مع متجر سلة، وتابع حالة التفعيل.
             </p>
           </div>
@@ -174,7 +350,7 @@ export function ProductsPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={handleSync}
+              onClick={() => void handleSync()}
               disabled={isUpdating === "sync"}
               className="rounded-xl font-black text-[10px] h-9 px-4 shadow-xs bg-card/50 backdrop-blur-sm border-border/60"
             >
@@ -192,7 +368,7 @@ export function ProductsPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex flex-1 flex-col md:flex-row md:items-center gap-3">
+          <div className="flex flex-1 flex-col md:flex-row md:items-center gap-2">
             <div className="relative flex-1 group">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
@@ -205,7 +381,7 @@ export function ProductsPage() {
 
             <div className="flex items-center gap-2">
               <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as FilterStatus)}>
-                <SelectTrigger className="w-[140px] h-9 rounded-xl font-black text-[10px] bg-background/50 border-border/60">
+                <SelectTrigger className="w-[120px] h-9 rounded-xl font-black text-[10px] bg-background/50 border-border/60">
                   <Filter className="me-2 size-3.5 text-muted-foreground" />
                   <SelectValue placeholder="الحالة" />
                 </SelectTrigger>
@@ -240,7 +416,7 @@ export function ProductsPage() {
           <div className="flex items-center gap-3 border-r lg:border-r border-border/20 ps-0 lg:ps-4">
             <div className="flex  items-center gap-3">
               <span className="text-[8px] font-black text-muted-foreground  leading-none">الإجمالي</span>
-              <span className="text-sm font-black tabular-nums">{filteredProducts.length}</span>
+              <span className="text-xs font-black tabular-nums">{filteredProducts.length}</span>
             </div>
             <Button
               variant="ghost"
@@ -271,15 +447,15 @@ export function ProductsPage() {
         ) : productsError ? (
           <Card className="border-destructive/20 bg-destructive/5 rounded-xl p-10 text-center">
             <AlertCircle className="size-12 text-destructive mx-auto mb-4 opacity-40" />
-            <h3 className="text-lg font-black text-destructive mb-1 ">خطأ في المزامنة</h3>
-            <p className="text-[10px] font-black text-destructive/70 mb-6">{productsError.message}</p>
-            <Button onClick={handleSync} variant="outline" className="rounded-xl font-black border-destructive/20 text-destructive h-10 px-8">إعادة مزامنة</Button>
+            <h3 className="text-base font-black text-destructive mb-1 ">خطأ في المزامنة</h3>
+            <p className="text-[9px] font-black text-destructive/70 mb-6">{productsError.message}</p>
+            <Button onClick={() => void handleSync()} variant="outline" className="rounded-xl font-black border-destructive/20 text-destructive h-10 px-8">إعادة مزامنة</Button>
           </Card>
         ) : filteredProducts.length === 0 ? (
           <Card className="border-dashed border-border/60 bg-muted/20 rounded-xl p-16 text-center opacity-60">
             <Package className="h-12 w-12 text-muted-foreground opacity-20 mx-auto mb-4" />
-            <h3 className="text-lg font-black text-foreground mb-1">لا توجد منتجات</h3>
-            <p className="text-[10px] font-black text-muted-foreground max-w-sm mx-auto">لم نجد أي منتج يطابق خيارات البحث الحالية.</p>
+            <h3 className="text-base font-black text-foreground mb-1">لا توجد منتجات</h3>
+            <p className="text-[9px] font-black text-muted-foreground max-w-sm mx-auto">لم نجد أي منتج يطابق خيارات البحث الحالية.</p>
           </Card>
         ) : (
           <div className="space-y-4 text-right">
@@ -288,168 +464,30 @@ export function ProductsPage() {
               initial="hidden"
               animate="show"
               className={cn(
-                "grid gap-3",
+                "grid gap-2",
                 viewMode === "grid" ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
               )}>
-              {paginatedProducts.map((product) => {
-                const isEnabled = product.widget_enabled
-                const isSelected = selectedIds.has(product.id)
-                const isCurrentlyUpdating = isUpdating === product.id
-
-                if (viewMode === "list") {
-                  return (
-                    <motion.div
-                      variants={item}
-                      key={product.id}
-                      className={cn(
-                        "group relative flex items-center gap-3 p-3 rounded-xl border bg-card/60 backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:border-primary/30",
-                        isSelected && "border-primary/40 bg-primary/5 shadow-md",
-                        !product.is_available && "opacity-60"
-                      )}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelection(product.id)}
-                        className="size-4 rounded-xl border-muted-foreground/30 data-[state=checked]:bg-primary"
-                      />
-                      <Avatar className="size-12 shrink-0 border border-border/20 overflow-hidden">
-                        <AvatarImage src={product.main_image || ""} alt={product.name} className="object-cover" />
-                        <AvatarFallback className="rounded-xl bg-muted text-muted-foreground/30">
-                          <Package className="size-6" />
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex-1 min-w-0 text-right">
-                        <h4 className="text-[11px] font-black text-foreground truncate">{product.name}</h4>
-                        <div className="flex items-center gap-2 justify-end mt-1">
-                          <span className={cn("text-[9px] font-black", product.is_available ? "text-emerald-600" : "text-destructive")}>
-                            {product.is_available ? "متوفر" : "نفذ"}
-                          </span>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-[9px] font-bold text-muted-foreground/40 cursor-help">#{product.id}</span>
-                            </TooltipTrigger>
-                            <TooltipContent className="font-black text-[9px]">{product.id}</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="hidden sm:flex flex-col items-end">
-                          <Badge variant={isEnabled ? "default" : "secondary"} className={cn(
-                            "rounded-xl px-2 text-[8px] font-black h-4 border-0",
-                            isEnabled ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
-                          )}>
-                            {isEnabled ? "مفعل" : "معطل"}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isCurrentlyUpdating && <Loader2 className="size-3 animate-spin text-primary" />}
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(val) => toggleProduct(product.id, val)}
-                            disabled={isCurrentlyUpdating}
-                            className="scale-90 data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
-                        <DropdownMenu dir="rtl">
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-7 rounded-xl text-muted-foreground">
-                              <MoreVertical className="size-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="rounded-xl font-black text-[10px] w-40" align="end">
-                            <DropdownMenuItem className="h-8 rounded-xl"><Eye className="me-2 size-3" /> عرض التفاصيل</DropdownMenuItem>
-                            {product.urls?.customer && (
-                              <DropdownMenuItem asChild className="h-8 rounded-xl">
-                                <a href={product.urls.customer} target="_blank" rel="noreferrer"><ExternalLink className="me-2 size-3" /> المتجر</a>
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </motion.div>
-                  )
-                }
-
-                return (
-                  <motion.div
-                    variants={item}
+              {paginatedProducts.map((product) => (
+                viewMode === "list" ? (
+                  <ProductListItem 
                     key={product.id}
-                    className={cn(
-                      "group relative flex flex-col rounded-xl border bg-card/70 backdrop-blur-md transition-all duration-500 hover:shadow-xl hover:border-primary/40 overflow-hidden h-full",
-                      isSelected && "border-primary/40 bg-primary/5 shadow-md",
-                      !product.is_available && "opacity-75"
-                    )}
-                  >
-                    <div className="aspect-4/5 relative overflow-hidden bg-muted/30">
-                      <Avatar className="size-full rounded-none">
-                        <AvatarImage
-                          src={product.main_image || ""}
-                          alt={product.name}
-                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                        <AvatarFallback className="rounded-none bg-muted/30 flex items-center justify-center opacity-10">
-                          <Package className="size-10" />
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="absolute top-2 right-2 z-10">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleSelection(product.id)}
-                          className={cn(
-                            "size-5 rounded-xl border-white/40 bg-black/20 backdrop-blur-md shadow-lg transition-all",
-                            isSelected ? "opacity-100 scale-100" : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
-                          )}
-                        />
-                      </div>
-
-                      <div className="absolute top-2 left-2 z-10 flex flex-col gap-1.5">
-                        <Badge className={cn(
-                          "rounded-xl px-2 py-0.5 text-[8px] font-black border-0 shadow-lg backdrop-blur-md",
-                          isEnabled ? "bg-emerald-500 text-white" : "bg-slate-900/80 text-white/50"
-                        )}>
-                          {isEnabled ? "منشور" : "مخفي"}
-                        </Badge>
-                        {!product.is_available && (
-                          <Badge className="bg-destructive text-white rounded-xl px-2 py-0.5 text-[8px] font-black border-0">نفذ</Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-1 flex-col p-3 text-right">
-                      <h4 className="text-[11px] font-black text-foreground/90 truncate leading-tight mb-1">{product.name}</h4>
-                      <div className="flex items-center gap-2 justify-end opacity-60">
-                        <span className="text-[8px] font-black line-through scale-90">
-                          {product.price?.amount} {product.price?.currency}
-                        </span>
-                        {product.sale_price && (
-                          <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 rounded-lg border border-emerald-100">
-                            {product.sale_price.amount} {product.sale_price.currency}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-auto pt-3 flex items-center justify-between border-t border-border/10">
-                        <div className="flex flex-col items-end">
-                          <span className="text-[8px] font-black text-muted-foreground   leading-none mb-0.5">القياس</span>
-                          <span className="text-[9px] font-black text-foreground/70">{(isEnabled) ? "نشط" : "معطل"}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isCurrentlyUpdating && <Loader2 className="size-3 animate-spin text-primary" />}
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(val) => toggleProduct(product.id, val)}
-                            disabled={isCurrentlyUpdating}
-                            className="scale-90 data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
+                    product={product}
+                    isSelected={selectedIds.has(product.id)}
+                    isUpdating={isUpdating === product.id}
+                    onToggle={toggleProduct}
+                    onSelect={toggleSelection}
+                  />
+                ) : (
+                  <ProductCard 
+                    key={product.id}
+                    product={product}
+                    isSelected={selectedIds.has(product.id)}
+                    isUpdating={isUpdating === product.id}
+                    onToggle={toggleProduct}
+                    onSelect={toggleSelection}
+                  />
                 )
-              })}
+              ))}
             </motion.div>
 
             {/* Pagination Controls */}
@@ -517,7 +555,7 @@ export function ProductsPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <Button
-                  onClick={() => handleBulkAction(true)}
+                  onClick={() => void handleBulkAction(true)}
                   disabled={isUpdating === "bulk"}
                   className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] shadow-lg shadow-emerald-600/20"
                 >
@@ -526,7 +564,7 @@ export function ProductsPage() {
                 </Button>
 
                 <Button
-                  onClick={() => handleBulkAction(false)}
+                  onClick={() => void handleBulkAction(false)}
                   disabled={isUpdating === "bulk"}
                   variant="secondary"
                   className="h-10 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-black text-[10px] shadow-lg"

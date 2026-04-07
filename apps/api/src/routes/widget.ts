@@ -7,7 +7,11 @@ import {
   requireDashboardSession,
   type DashboardAuthenticatedRequest,
 } from '../middleware/require-dashboard-session.js'
-import { widgetLimiter } from '../middleware/rate-limit.js'
+import {
+  widgetConfigLimiter,
+  widgetJobCreateLimiter,
+  widgetJobPollLimiter,
+} from '../middleware/rate-limit.js'
 import {
   getMerchantWidgetSettings,
   updateMerchantWidgetSettings,
@@ -43,6 +47,8 @@ const widgetSettingsSchema = z.object({
   widget_button_text: z.string().trim().min(1).max(40).optional(),
   default_category: z.enum(TRYON_CATEGORIES).optional(),
   onboarding_completed: z.boolean().optional(),
+  // Widget Studio extended config — stored as nested JSONB under settings
+  widget_config: z.record(z.unknown()).optional(),
 })
 
 const widgetJobBodySchema = z.object({
@@ -63,7 +69,7 @@ function getWidgetTokenFromRequest(request: DashboardAuthenticatedRequest) {
 
 export const widgetRouter = Router()
 
-widgetRouter.get('/config/:merchantId', widgetLimiter, async (request, response, next) => {
+widgetRouter.get('/config/:merchantId', widgetConfigLimiter, async (request, response, next) => {
   try {
     const params = widgetConfigParamsSchema.parse(request.params)
     const query = widgetConfigQuerySchema.parse(request.query)
@@ -164,7 +170,7 @@ widgetRouter.get(
 
 widgetRouter.post(
   '/job',
-  widgetLimiter,
+  widgetJobCreateLimiter,
   upload.single('file'),
   async (request: DashboardAuthenticatedRequest, response, next) => {
     try {
@@ -195,7 +201,7 @@ widgetRouter.post(
   },
 )
 
-widgetRouter.get('/job/:id', widgetLimiter, async (request, response, next) => {
+widgetRouter.get('/job/:id', widgetJobPollLimiter, async (request, response, next) => {
   try {
     const params = widgetJobParamsSchema.parse(request.params)
     const token = getWidgetTokenFromRequest(request as DashboardAuthenticatedRequest)

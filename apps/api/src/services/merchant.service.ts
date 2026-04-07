@@ -20,6 +20,7 @@ export interface WidgetSettings {
   widget_button_text: string
   default_category: WidgetCategory
   onboarding_completed: boolean
+  widget_config?: Record<string, unknown> | null
 }
 
 const DEFAULT_SETTINGS: WidgetSettings = {
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS: WidgetSettings = {
   widget_button_text: 'جرّب الآن',
   default_category: 'upper_body',
   onboarding_completed: false,
+  widget_config: null,
 }
 
 export const PLAN_CREDIT_ALLOCATIONS = {
@@ -189,6 +191,8 @@ export function normalizeWidgetSettings(settings: Record<string, unknown> | null
 
   const rawOnboardingCompleted = source.onboarding_completed
 
+  const rawWidgetConfig = source.widget_config
+
   return {
     widget_enabled: normalizeBoolean(rawEnabled, DEFAULT_SETTINGS.widget_enabled),
     widget_mode: normalizeWidgetMode(rawMode),
@@ -196,6 +200,10 @@ export function normalizeWidgetSettings(settings: Record<string, unknown> | null
     widget_button_text: buttonText,
     default_category: normalizeWidgetCategory(rawDefaultCategory),
     onboarding_completed: normalizeBoolean(rawOnboardingCompleted, false),
+    // Preserve widget_config as-is — it's an opaque bag for Widget Studio
+    widget_config: rawWidgetConfig != null && typeof rawWidgetConfig === 'object'
+      ? rawWidgetConfig as Record<string, unknown>
+      : null,
   } satisfies WidgetSettings
 }
 

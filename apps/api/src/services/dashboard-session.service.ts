@@ -196,8 +196,11 @@ export function consumeDashboardAuthHandoff(token: string) {
   return parsed.session
 }
 
-export function readDashboardSession(cookieHeader?: string | null) {
-  const cookies = parseCookies(cookieHeader)
+export function readDashboardSession(
+  parsedCookies?: Record<string, string>,
+  cookieHeader?: string | null,
+) {
+  const cookies = parsedCookies || parseCookies(cookieHeader)
   const rawCookie = cookies[SESSION_COOKIE_NAME]
 
   if (!rawCookie) {
@@ -223,10 +226,14 @@ export function readDashboardSession(cookieHeader?: string | null) {
 }
 
 export function setDashboardSessionCookie(response: Response, session: DashboardSessionPayload) {
+  const isProd = env.NODE_ENV === 'production'
+
   response.cookie(SESSION_COOKIE_NAME, serializeSignedPayload(session), {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: env.NODE_ENV === 'production',
+    // sameSite 'lax' is generally safe for local dev, but 'none' + secure is needed for cross-site.
+    // Since we use a proxy on localhost:5173, 'lax' should be fine.
+    sameSite: isProd ? 'lax' : 'lax',
+    secure: isProd,
     path: '/',
     maxAge: SESSION_TTL_MS,
   })

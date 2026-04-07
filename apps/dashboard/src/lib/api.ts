@@ -81,6 +81,7 @@ export interface MerchantWidgetSettings {
   widget_button_text: string
   default_category: TryOnCategory
   onboarding_completed: boolean
+  widget_config?: Record<string, unknown> | null
 }
 
 export interface TryOnJob {

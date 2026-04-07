@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { fetchWidgetSettings } from '@/lib/api'
 import type { MerchantWidgetSettings } from '@/lib/api'
 
@@ -7,7 +7,7 @@ export function useWidgetSettings() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setIsLoading(true)
     try {
       const res = await fetchWidgetSettings()
@@ -18,16 +18,16 @@ export function useWidgetSettings() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     load()
-  }, [])
+  }, [load])
 
-  return {
+  return useMemo(() => ({
     settings: data,
     isLoading,
     error,
     mutate: load,
-  }
+  }), [data, isLoading, error, load])
 }

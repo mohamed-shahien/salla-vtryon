@@ -64,31 +64,77 @@ function getModelFamily(): 'idm-vton' | 'flux' {
 
 // ─── Input builders ───────────────────────────────────────────────────────────
 
-const CATEGORY_LABEL: Record<TryOnCategory, string> = {
-  upper_body: 'upper body garment',
-  lower_body: 'lower body clothing',
-  dresses: 'full-length dress or one-piece outfit',
+/**
+ * Category-specific short English descriptions for IDM-VTON.
+ *
+ * IDM-VTON uses `garment_des` as a SHORT semantic label — NOT a long prompt.
+ * The model's IP-Adapter maps this to high-level garment features.
+ * Keep it concise: type + basic attributes. The model does the rest visually.
+ */
+const CATEGORY_FALLBACK: Record<TryOnCategory, string> = {
+  upper_body: 'Short sleeve round neck t-shirt',
+  lower_body: 'Casual straight-leg trousers',
+  dresses: 'Full-length one-piece dress',
 }
+
+/**
+ * Builds a short, precise garment description for IDM-VTON.
+ *
+ * The model performs best with a simple, factual English description
+ * of the garment type. Long instructions or Arabic text degrade quality.
+ */
+function buildSmartGarmentDescription(
+  category: TryOnCategory,
+  rawName?: string | null,
+): string {
+  // IDM-VTON wants a short English garment label.
+  // We try to extract something useful from the product name,
+  // but fall back to a category-appropriate default.
+  if (!rawName?.trim()) {
+    return CATEGORY_FALLBACK[category]
+  }
+
+  // If the product name is English and reasonably short, use it directly
+  const name = rawName.trim()
+
+  // Check if name is primarily ASCII (English) — use as-is if so
+  const isEnglish = /^[\x20-\x7E]+$/.test(name)
+  if (isEnglish && name.length <= 80) {
+    return name
+  }
+
+  // For Arabic or very long names, use the category fallback
+  // The visual information in the (now preprocessed) image is more reliable
+  // than a translated product name
+  return CATEGORY_FALLBACK[category]
+}
+
 
 /**
  * Builds the Replicate prediction input for IDM-VTON.
  *
- * The model takes the person's exact photo and the garment photo, then
- * composites the garment onto the person while preserving identity, pose,
- * and background details.
+ * Optimized parameters:
+ *  - `category`    : explicit garment category (upper/lower/dresses)
+ *  - `crop: true`  : handles non-3:4 human images without distortion
+ *  - `denoise_steps: 40`: maximum quality (vs 30 default)
+ *  - `force_dc`    : enables DressCode pipeline for full-body garments
+ *  - `seed`        : randomized to avoid repeating artifacts
  */
 function buildIdmVtonInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
-  const garmentDescription =
-    input.garmentDescription?.trim() || CATEGORY_LABEL[input.category]
+  const garmentDescription = buildSmartGarmentDescription(
+    input.category,
+    input.garmentDescription,
+  )
 
   return {
     human_img: input.humanImageUrl,
     garm_img: input.garmentImageUrl,
     garment_des: garmentDescription,
-    is_checked: true,        // auto-mask the garment region on the human photo
-    is_checked_crop: false,  // keep full image dimensions
-    denoise_steps: 30,       // 20–40; 30 is a good quality/speed balance
-    seed: 42,
+    category: input.category,
+    crop: true,
+    denoise_steps: 40,
+    force_dc: input.category === 'dresses',
+    seed: Math.floor(Math.random() * 2147483647),
   }
 }
 
@@ -101,7 +147,7 @@ function buildIdmVtonInput(input: CreateTryOnPredictionInput): Record<string, un
 function buildFluxInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
   const garmentPart = input.garmentDescription?.trim()
     ? `The garment is "${input.garmentDescription.trim()}".`
-    : `A ${CATEGORY_LABEL[input.category]}.`
+    : `A single ${input.category.replace('_', ' ')} garment.`
 
   const prompt = [
     'Professional fashion editorial photograph.',
@@ -154,10 +200,23 @@ export async function createTryOnPrediction(input: CreateTryOnPredictionInput) {
 
   console.log(`[replicate] Creating prediction. family=${family} identifier=${'version' in identifier ? (identifier.version ? identifier.version.slice(0, 8) + '...' : 'unknown') : identifier.model}`)
 
+  const tryOnInput = buildTryOnInput(input)
+
+  // Log the exact input for debugging quality issues
+  console.log(`[replicate] Input details:`, {
+    category: input.category,
+    garment_des: tryOnInput.garment_des,
+    garment_img: typeof tryOnInput.garm_img === 'string' ? tryOnInput.garm_img.slice(0, 80) + '...' : 'N/A',
+    crop: tryOnInput.crop,
+    denoise_steps: tryOnInput.denoise_steps,
+    force_dc: tryOnInput.force_dc,
+    seed: tryOnInput.seed,
+  })
+
   try {
     return await client.predictions.create({
       ...identifier,
-      input: buildTryOnInput(input),
+      input: tryOnInput,
     })
   } catch (error) {
     if (error instanceof Error && error.message.includes('401')) {

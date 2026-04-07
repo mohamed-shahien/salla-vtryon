@@ -128,7 +128,7 @@ export function DashboardPage() {
                   أهـلاً بك في مستقبل التجارة الإلكترونية
                 </Badge>
                 <div className="space-y-1">
-                  <h1 className="text-2xl md:text-xl font-black  leading-tight">
+                  <h1 className="text-xl font-black  leading-tight">
                     طـورت مبيعاتك، {merchantName}
                   </h1>
                   <p className="text-indigo-100/70 text-sm md:text-base font-medium max-w-2xl leading-relaxed">
@@ -166,7 +166,7 @@ export function DashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 p-3 text-right">
-                  <div className="text-xl font-black er text-foreground">{stat.value}</div>
+                  <div className="text-lg font-black er text-foreground">{stat.value}</div>
                   <div className="mt-1 flex items-center justify-end gap-2 text-[9px]">
                     <span className="text-muted-foreground font-bold order-2">مقارنة بالشهر الماضي</span>
                     <Badge variant={stat.trend.includes("+") ? "default" : "secondary"} className={cn(
@@ -347,7 +347,7 @@ export function DashboardPage() {
                 </div>
                 <CardContent className="p-5 space-y-3 text-right relative z-10">
                   <div className="space-y-1">
-                    <h4 className="text-lg font-black leading-tight">مركز المساعدة</h4>
+                    <h4 className="text-base font-black leading-tight">مركز المساعدة</h4>
                     <p className="text-indigo-100/60 text-[10px] font-bold leading-relaxed">
                       فريق الخبراء متاح لمساعدتك في ضبط إعدادات العرض وتحسين الأداء.
                     </p>

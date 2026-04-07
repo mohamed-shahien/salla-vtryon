@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, memo, useCallback, useMemo } from "react"
 import {
   History,
-  CheckCircle2,
   Construction,
   Trophy,
   PieChart,
@@ -13,13 +12,11 @@ import {
   AlertCircle,
   Loader2,
   Clock,
-  Zap,
-  ChevronLeft,
-  ChevronRight
+  Zap
 } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -70,6 +67,109 @@ const item = {
   show: { opacity: 1, y: 0 }
 }
 
+const getStatusInfo = (status: TryOnJobStatus) => {
+  switch (status) {
+    case "completed":
+      return { label: "مكتمل", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: Zap }
+    case "failed":
+      return { label: "فشل", color: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle }
+    case "processing":
+      return { label: "جاري المعالجة", color: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: Clock }
+    case "pending":
+      return { label: "قيد الانتظار", color: "bg-muted text-muted-foreground border-muted-foreground/20", icon: Clock }
+    default:
+      return { label: "غير معروف", color: "bg-muted text-muted-foreground border-muted-foreground/20", icon: Clock }
+  }
+}
+
+const JobCard = memo(({ 
+  job, 
+  product, 
+  onView 
+}: { 
+  job: VirtualTryOnJob, 
+  product: any, 
+  onView: (id: string) => void 
+}) => {
+  const status = getStatusInfo(job.status)
+  const productName = product?.name || "منتج غير مسجل"
+  const productImage = job.product_image_url || product?.main_image
+
+  return (
+    <motion.div variants={item}>
+      <Card
+        className="group border-border/40 shadow-xs hover:shadow-xl transition-all duration-500 bg-card/70 backdrop-blur-md rounded-xl overflow-hidden hover:border-primary/30 relative h-full flex flex-col"
+      >
+        <CardContent className="p-3 space-y-4 text-right flex-1 flex flex-col">
+          <div className="flex justify-between items-start">
+            <Badge variant="outline" className={cn("text-[8px] font-black py-0 px-2 rounded-xl border-0 shadow-xs", status.color)}>
+              <status.icon className="me-1.5 size-3" />
+              {status.label}
+            </Badge>
+            <span className="text-[9px] font-black text-muted-foreground opacity-60">
+              {new Date(job.created_at).toLocaleDateString("ar-SA", { month: "short", day: "numeric" })}
+            </span>
+          </div>
+
+          <div className="space-y-1 flex-1">
+            <div className="flex items-center gap-2 justify-end">
+              {job.status === "processing" && <div className="size-2 rounded-full bg-amber-500 animate-pulse" />}
+              <h3 className="text-xs font-black  text-foreground/90 truncate">{productName}</h3>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5 justify-end">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1.5 bg-muted/60 px-2 py-0.5 rounded-xl border border-border/10 text-[9px] font-bold cursor-help">
+                    <Package className="size-3 opacity-60" /> #{job.product_id?.toString().slice(-6) || "N/A"}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="font-black text-[10px]">
+                  معرف المنتج: {job.product_id}
+                </TooltipContent>
+              </Tooltip>
+              {job.category && (
+                <span className="font-black text-[9px] text-primary/80 bg-primary/10 px-2 py-0.5 rounded-xl border border-primary/10">
+                  {job.category === 'upper_body' ? 'علوي' : job.category === 'lower_body' ? 'سفلي' : 'فستان'}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Previews */}
+          <div className="flex items-center gap-3 pt-3 border-t border-border/10 justify-between">
+            <AvatarGroup>
+              <Avatar className="size-11 border-2 border-background">
+                <AvatarImage src={job.user_image_url} alt="Person" className="object-cover" />
+                <AvatarFallback className="rounded-xl text-[8px] font-black">U</AvatarFallback>
+              </Avatar>
+              <Avatar className="size-11 border-2 border-background">
+                <AvatarImage src={productImage} alt="Product" className="object-cover" />
+                <AvatarFallback className="rounded-xl text-[8px] font-black">P</AvatarFallback>
+              </Avatar>
+              {job.result_image_url && (
+                <Avatar className="size-11 border-2 border-background ring-1 ring-primary/20">
+                  <AvatarImage src={job.result_image_url} alt="Result" className="object-cover" />
+                  <AvatarFallback className="rounded-xl text-[8px] font-black">R</AvatarFallback>
+                </Avatar>
+              )}
+            </AvatarGroup>
+
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => onView(job.id)}
+              className="size-9 rounded-xl text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all duration-300 shadow-sm active:scale-90"
+            >
+              <Eye className="size-5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+})
+JobCard.displayName = "JobCard"
+
 export function JobsPage() {
   const [jobs, setJobs] = useState<VirtualTryOnJob[]>([])
   const [loading, setLoading] = useState(true)
@@ -80,13 +180,14 @@ export function JobsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const { products } = useSallaProducts()
 
-  // Create products lookup map
-  const productMap = (products || []).reduce((acc: Record<string, any>, p) => {
-    acc[p.id.toString()] = p
-    return acc
-  }, {})
+  const productMap = useMemo(() => {
+    return (products || []).reduce((acc: Record<string, any>, p) => {
+      acc[p.id.toString()] = p
+      return acc
+    }, {})
+  }, [products])
 
-  const loadJobs = async (silent = false) => {
+  const loadJobs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     setError(null)
     try {
@@ -100,71 +201,57 @@ export function JobsPage() {
       setLoading(false)
       setIsRefreshing(false)
     }
-  }
+  }, [statusFilter])
 
   useEffect(() => {
     void loadJobs()
-  }, [statusFilter])
+  }, [loadJobs])
 
-  const filteredJobs = jobs.filter(job => {
-    const product = job.product_id ? productMap[job.product_id] : null
-    const productName = product?.name || ""
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(job => {
+      const product = job.product_id ? productMap[job.product_id] : null
+      const productName = product?.name || ""
 
-    return (
-      job.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.product_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      productName.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })
+      return (
+        job.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.product_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        productName.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    })
+  }, [jobs, productMap, searchQuery])
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: jobs.length,
     success: jobs.filter(j => j.status === 'completed').length,
     failed: jobs.filter(j => j.status === 'failed').length,
     processing: jobs.filter(j => j.status === 'processing').length,
-  }
+  }), [jobs])
 
   const successRate = stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setIsRefreshing(true)
     void loadJobs(true)
-  }
+  }, [loadJobs])
 
-  const handleViewJob = async (id: string) => {
+  const handleViewJob = useCallback(async (id: string) => {
     try {
       const response = await fetchMerchantJob(id)
       setSelectedJob(response.data)
     } catch (err) {
       console.error("Failed to fetch job details:", err)
     }
-  }
-
-  const getStatusInfo = (status: TryOnJobStatus) => {
-    switch (status) {
-      case "completed":
-        return { label: "مكتمل", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: Zap }
-      case "failed":
-        return { label: "فشل", color: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle }
-      case "processing":
-        return { label: "جاري المعالجة", color: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: Clock }
-      case "pending":
-        return { label: "قيد الانتظار", color: "bg-muted text-muted-foreground border-muted-foreground/20", icon: Clock }
-      default:
-        return { label: "غير معروف", color: "bg-muted text-muted-foreground border-muted-foreground/20", icon: Clock }
-    }
-  }
+  }, [])
 
   return (
     <TooltipProvider>
       <div className="space-y-3 animate-in fade-in duration-700 pb-10">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-border/40 text-right">
           <div className="space-y-1">
-            <Badge variant="outline" className="text-[9px] font-black   px-2 py-0.5 bg-primary/5 text-primary border-primary/20 rounded-xl">
+            <Badge variant="outline" className="text-[9px] font-black px-2 py-0.5 bg-primary/5 text-primary border-primary/20 rounded-xl">
               إحصائيات النظام
             </Badge>
-            <h1 className="text-2xl font-black  leading-tight">سجل العمليات الذكي</h1>
+            <h1 className="text-xl font-black leading-tight">سجل العمليات الذكي</h1>
             <p className="text-muted-foreground font-bold text-[10px] max-w-xl opacity-70">
               استعراض شامل لجميع تجارب القياس الافتراضي بتفاصيل المنتجات وحالات المعالجة.
             </p>
@@ -184,7 +271,6 @@ export function JobsPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: "إجمالي العمليات", value: stats.total, icon: History, color: "primary", border: "primary" },
@@ -195,8 +281,8 @@ export function JobsPage() {
             <Card key={i} className={cn("border-border/40 shadow-xs bg-card/50 backdrop-blur-md rounded-xl overflow-hidden relative group hover:border-primary/20 transition-all duration-300", stat.border && `hover:border-${stat.border}/20`)}>
               <CardContent className="p-3 flex items-center justify-between">
                 <div className="space-y-0.5 text-right">
-                  <p className="text-[9px] font-black text-muted-foreground ">{stat.label}</p>
-                  <h3 className={cn("text-xl font-black ", stat.color && `text-${stat.color}`)}>{stat.value}</h3>
+                  <p className="text-[9px] font-black text-muted-foreground">{stat.label}</p>
+                  <h3 className={cn("text-lg font-black", stat.color && `text-${stat.color}`)}>{stat.value}</h3>
                 </div>
                 <div className={cn("size-9 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform", stat.bg ? `bg-${stat.bg}/5 text-${stat.bg}` : "bg-primary/5 text-primary")}>
                   <stat.icon className="size-5" />
@@ -206,13 +292,12 @@ export function JobsPage() {
           ))}
         </div>
 
-        {/* Toolbar */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-3 bg-card/40 backdrop-blur-md p-3 rounded-xl border border-border/40 shadow-xs">
           <Tabs value={statusFilter} onValueChange={(val) => setStatusFilter(val as any)} className="w-full lg:w-auto">
             <TabsList className="bg-muted/50 p-1 h-9 rounded-xl border border-border/20 w-full lg:w-auto">
               {["all", "completed", "processing", "failed"].map((key) => (
                 <TabsTrigger key={key} value={key} className={cn(
-                  "text-[10px] font-black   px-4 h-7 rounded-xl transition-all",
+                  "text-[10px] font-black px-4 h-7 rounded-xl transition-all",
                   key === "all" ? "data-[state=active]:bg-white data-[state=active]:text-primary" :
                     key === "completed" ? "data-[state=active]:bg-emerald-500 data-[state=active]:text-white" :
                       key === "processing" ? "data-[state=active]:bg-amber-500 data-[state=active]:text-white" :
@@ -261,7 +346,7 @@ export function JobsPage() {
         ) : error ? (
           <Card className="border-destructive/20 bg-destructive/5 rounded-xl p-10 text-center">
             <AlertCircle className="size-12 text-destructive mx-auto mb-4 opacity-80" />
-            <h3 className="text-lg font-black text-destructive mb-2  ">فشل تحميل البيانات</h3>
+            <h3 className="text-base font-black text-destructive mb-2">فشل تحميل البيانات</h3>
             <p className="text-[10px] font-bold text-destructive/70 mb-6 max-w-sm mx-auto leading-relaxed">{error}</p>
             <Button onClick={() => void loadJobs()} variant="outline" className="rounded-xl font-black border-destructive/20 hover:bg-destructive/10 text-destructive h-10 px-6 shadow-sm">
               إعادة المحاولة
@@ -270,7 +355,7 @@ export function JobsPage() {
         ) : filteredJobs.length === 0 ? (
           <Card className="border-dashed border-border/60 bg-muted/20 rounded-xl p-16 text-center opacity-70">
             <History className="size-12 text-muted-foreground mx-auto mb-4 opacity-30" />
-            <h3 className="text-lg font-black text-foreground mb-1">لا توجد سجلات</h3>
+            <h3 className="text-base font-black text-foreground mb-1">لا توجد سجلات</h3>
             <p className="text-[10px] font-bold text-muted-foreground max-w-sm mx-auto">لم نعثر على عمليات تطابق اختياراتك الحالية.</p>
           </Card>
         ) : (
@@ -280,89 +365,17 @@ export function JobsPage() {
             animate="show"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
           >
-            {filteredJobs.map((job) => {
-              const status = getStatusInfo(job.status)
-              const product = job.product_id ? productMap[job.product_id] : null
-              const productName = product?.name || "منتج غير مسجل"
-              const productImage = job.product_image_url || product?.main_image
-
-              return (
-                <motion.div variants={item} key={job.id}>
-                  <Card
-                    className="group border-border/40 shadow-xs hover:shadow-xl transition-all duration-500 bg-card/70 backdrop-blur-md rounded-xl overflow-hidden hover:border-primary/30 relative h-full flex flex-col"
-                  >
-                    <CardContent className="p-3 space-y-4 text-right flex-1 flex flex-col">
-                      <div className="flex justify-between items-start">
-                        <Badge variant="outline" className={cn("text-[8px] font-black py-0 px-2 rounded-xl border-0 shadow-xs", status.color)}>
-                          <status.icon className="me-1.5 size-3" />
-                          {status.label}
-                        </Badge>
-                        <span className="text-[9px] font-black text-muted-foreground opacity-60">
-                          {new Date(job.created_at).toLocaleDateString("ar-SA", { month: "short", day: "numeric" })}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2 justify-end">
-                          {job.status === "processing" && <div className="size-2 rounded-full bg-amber-500 animate-pulse" />}
-                          <h3 className="text-xs font-black  text-foreground/90 truncate">{productName}</h3>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 mt-1.5 justify-end">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex items-center gap-1.5 bg-muted/60 px-2 py-0.5 rounded-xl border border-border/10 text-[9px] font-bold cursor-help">
-                                <Package className="size-3 opacity-60" /> #{job.product_id?.toString().slice(-6) || "N/A"}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" className="font-black text-[10px]">
-                              معرف المنتج: {job.product_id}
-                            </TooltipContent>
-                          </Tooltip>
-                          {job.category && (
-                            <span className="font-black text-[9px] text-primary/80 bg-primary/10 px-2 py-0.5 rounded-xl border border-primary/10">
-                              {job.category === 'upper_body' ? 'علوي' : job.category === 'lower_body' ? 'سفلي' : 'فستان'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Previews */}
-                      <div className="flex items-center gap-3 pt-3 border-t border-border/10 justify-between">
-                        <AvatarGroup>
-                          <Avatar className="size-11 border-2 border-background">
-                            <AvatarImage src={job.user_image_url} alt="Person" className="object-cover" />
-                            <AvatarFallback className="rounded-xl text-[8px] font-black">U</AvatarFallback>
-                          </Avatar>
-                          <Avatar className="size-11 border-2 border-background">
-                            <AvatarImage src={productImage} alt="Product" className="object-cover" />
-                            <AvatarFallback className="rounded-xl text-[8px] font-black">P</AvatarFallback>
-                          </Avatar>
-                          {job.result_image_url && (
-                            <Avatar className="size-11 border-2 border-background ring-1 ring-primary/20">
-                              <AvatarImage src={job.result_image_url} alt="Result" className="object-cover" />
-                              <AvatarFallback className="rounded-xl text-[8px] font-black">R</AvatarFallback>
-                            </Avatar>
-                          )}
-                        </AvatarGroup>
-
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          onClick={() => handleViewJob(job.id)}
-                          className="size-9 rounded-xl text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all duration-300 shadow-sm active:scale-90"
-                        >
-                          <Eye className="size-5" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
+            {filteredJobs.map((job) => (
+              <JobCard 
+                key={job.id} 
+                job={job} 
+                product={job.product_id ? productMap[job.product_id] : null} 
+                onView={handleViewJob} 
+              />
+            ))}
           </motion.div>
         )}
 
-        {/* Details Dialog */}
         <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
           <DialogContent className="max-w-3xl border-border/40 shadow-2xl rounded-2xl bg-card/95 backdrop-blur-2xl p-0 overflow-hidden z-50 overflow-y-auto max-h-[90vh]" dir="rtl">
             {selectedJob && (
@@ -373,7 +386,7 @@ export function JobsPage() {
                       <Badge variant="outline" className={cn("text-[9px] font-black px-3 py-0.5 rounded-xl border-0 shadow-xs", getStatusInfo(selectedJob.status).color)}>
                         {getStatusInfo(selectedJob.status).label}
                       </Badge>
-                      <DialogTitle className="text-xl font-black  leading-tight">تفاصيل عملية القياس</DialogTitle>
+                      <DialogTitle className="text-lg font-black leading-tight">تفاصيل عملية القياس</DialogTitle>
                       <DialogDescription className="text-[9px] font-bold text-muted-foreground opacity-60">
                         سجل: {selectedJob.id.toUpperCase()}
                       </DialogDescription>
@@ -384,13 +397,13 @@ export function JobsPage() {
                 <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-5">
                   {[
                     { label: "صورة العميل", url: selectedJob.user_image_url, color: "primary" },
-                    { label: "صورة المنتج", url: selectedJob.product_image_url || productMap[selectedJob.product_id || ""]?.main_image, color: "indigo-500" },
+                    { label: "صورة المنتج", url: selectedJob.product_image_url || (selectedJob.product_id ? productMap[selectedJob.product_id]?.main_image : undefined), color: "indigo-500" },
                     { label: "النتيجة النهائية", url: selectedJob.result_image_url, color: "emerald-500", isResult: true }
                   ].map((img, idx) => (
                     <div key={idx} className="space-y-3 text-right">
-                      <h4 className="text-[10px] font-black text-muted-foreground   flex items-center gap-2 justify-end">
+                      <h4 className="text-[10px] font-black text-muted-foreground flex items-center gap-2 justify-end">
                         {img.label}
-                        <div className={cn("size-1.5 rounded-full", `bg-${img.color}`)} />
+                        <div className={cn("size-1.5 rounded-full", idx === 0 ? "bg-primary" : idx === 1 ? "bg-indigo-500" : "bg-emerald-500")} />
                       </h4>
                       <div className="aspect-3/4 rounded-xl overflow-hidden border border-border shadow-xl bg-muted relative group">
                         {img.url ? (

@@ -11,6 +11,7 @@ import { DirectionProvider } from '@/components/ui/direction'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { SettingsPage } from '@/pages/settings-page'
+import { WidgetStudioPage } from '@/components/features/widget-studio/WidgetStudioPage'
 import { LoginPage } from '@/pages/auth/login-page'
 import ForgotPasswordPage from '@/pages/auth/forgot-password-page'
 import SetPasswordPage from '@/pages/auth/set-password-page'
@@ -43,6 +44,7 @@ function App() {
               <Route path="/jobs" element={<JobsPage />} />
               <Route path="/credits" element={<CreditsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/widget-studio" element={<WidgetStudioPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -1,5 +1,11 @@
 import { env } from '../config/env.js'
 import { refundMerchantCredit } from '../services/credits.service.js'
+import { preprocessGarmentImage } from '../services/garment-preprocessing.service.js'
+import {
+  analyzeGarmentImage,
+  analyzeHumanImage,
+  type ImageQualityReport,
+} from '../services/image-analysis.service.js'
 import {
   claimPendingJob,
   completeMerchantJob,
@@ -21,6 +27,18 @@ import { AppError } from '../utils/app-error.js'
 function extractGarmentDescription(metadata: Record<string, unknown>) {
   const productName = metadata.product_name
   return typeof productName === 'string' ? productName : null
+}
+
+/**
+ * Formats a quality report into a human-readable failure message.
+ */
+function formatQualityRejection(
+  label: string,
+  report: ImageQualityReport,
+): string {
+  const issues = [...report.reasons, ...report.warnings]
+  const detail = issues.length > 0 ? issues.join(' ') : 'Quality check failed.'
+  return `${label}: ${detail}`
 }
 
 async function failTimedOutJobs() {
@@ -46,9 +64,106 @@ async function processClaimedJob(jobId: string) {
   let predictionId: string | null = null
 
   try {
+    // ─── Phase 1: Input Quality Gating ─────────────────────────────────
+    // Analyze both images BEFORE sending to Replicate.
+    // A rejection here means the input is fundamentally unsuitable —
+    // we fail fast, refund the credit, and give a clear reason.
+
+    console.log(`[jobs] preprocessing job ${claimedJob.id}`)
+
+    const [garmentReport, humanReport] = await Promise.all([
+      analyzeGarmentImage(claimedJob.product_image_url),
+      analyzeHumanImage(claimedJob.user_image_url),
+    ])
+
+    // Log quality reports for debugging
+    if (garmentReport.warnings.length > 0) {
+      console.warn(`[jobs] garment quality warnings for ${claimedJob.id}:`, garmentReport.warnings)
+    }
+    if (humanReport.warnings.length > 0) {
+      console.warn(`[jobs] human quality warnings for ${claimedJob.id}:`, humanReport.warnings)
+    }
+
+    // Hard reject: garment image is fundamentally broken
+    if (garmentReport.verdict === 'reject') {
+      const message = formatQualityRejection('Product image rejected', garmentReport)
+      console.error(`[jobs] garment REJECTED for ${claimedJob.id}: ${message}`)
+
+      await markMerchantJobFailed({
+        merchantId: claimedJob.merchant_id,
+        jobId: claimedJob.id,
+        errorMessage: message,
+      })
+      await refundMerchantCredit(claimedJob.merchant_id, claimedJob.id)
+      return
+    }
+
+    // Hard reject: human image is fundamentally broken
+    if (humanReport.verdict === 'reject') {
+      const message = formatQualityRejection('Customer image rejected', humanReport)
+      console.error(`[jobs] human REJECTED for ${claimedJob.id}: ${message}`)
+
+      await markMerchantJobFailed({
+        merchantId: claimedJob.merchant_id,
+        jobId: claimedJob.id,
+        errorMessage: message,
+      })
+      await refundMerchantCredit(claimedJob.merchant_id, claimedJob.id)
+      return
+    }
+
+    // ─── Phase 2: Garment Preprocessing ────────────────────────────────
+    // Clean the garment image: trim background, isolate primary garment,
+    // normalize to 3:4 ratio, flatten to white background.
+
+    const merchant = await findMerchantById(claimedJob.merchant_id)
+    if (!merchant) {
+      throw new AppError('Merchant record was not found.', 404, 'MERCHANT_NOT_FOUND')
+    }
+
+    let garmentImageUrl = claimedJob.product_image_url
+    let preprocessingMeta: Record<string, unknown> = {}
+
+    try {
+      const preprocessed = await preprocessGarmentImage({
+        imageUrl: claimedJob.product_image_url,
+        merchantId: merchant.salla_merchant_id,
+        category: claimedJob.category,
+      })
+
+      garmentImageUrl = preprocessed.cleanedUrl
+
+      preprocessingMeta = {
+        preprocessing_applied: true,
+        preprocessing_steps: preprocessed.steps,
+        original_garment_dimensions: `${preprocessed.originalWidth}×${preprocessed.originalHeight}`,
+        cleaned_garment_url: preprocessed.cleanedUrl,
+      }
+
+      console.log(
+        `[jobs] garment preprocessed for ${claimedJob.id}: ${preprocessed.steps.join(' → ')}`,
+      )
+    } catch (preprocessError) {
+      // Preprocessing failure is NOT fatal — we proceed with the original image
+      // but log the error for debugging
+      console.warn(
+        `[jobs] garment preprocessing failed for ${claimedJob.id}, using original:`,
+        preprocessError instanceof Error ? preprocessError.message : preprocessError,
+      )
+
+      preprocessingMeta = {
+        preprocessing_applied: false,
+        preprocessing_error: preprocessError instanceof Error ? preprocessError.message : 'Unknown preprocessing error',
+      }
+    }
+
+    // ─── Phase 3: Create Replicate Prediction ──────────────────────────
+    // Send the cleaned garment + original human image to IDM-VTON
+    // with optimized parameters.
+
     const prediction = await createTryOnPrediction({
       humanImageUrl: claimedJob.user_image_url,
-      garmentImageUrl: claimedJob.product_image_url,
+      garmentImageUrl,
       category: claimedJob.category,
       garmentDescription: extractGarmentDescription(claimedJob.metadata),
     })
@@ -77,10 +192,7 @@ async function processClaimedJob(jobId: string) {
       )
     }
 
-    const merchant = await findMerchantById(claimedJob.merchant_id)
-    if (!merchant) {
-      throw new AppError('Merchant record was not found.', 404, 'MERCHANT_NOT_FOUND')
-    }
+    // ─── Phase 4: Upload Result ────────────────────────────────────────
 
     const uploadedResult = await processAndUploadReplicateResultImage({
       merchantId: merchant.salla_merchant_id,
@@ -97,6 +209,20 @@ async function processClaimedJob(jobId: string) {
         replicate_output_url: outputUrl,
         result_storage_path: uploadedResult.storage_path,
         replicate_metrics: finalPrediction.metrics ?? null,
+        // Quality reports for observability
+        garment_quality: {
+          verdict: garmentReport.verdict,
+          warnings: garmentReport.warnings,
+          dimensions: `${garmentReport.metadata.width}×${garmentReport.metadata.height}`,
+          brightness: garmentReport.metadata.meanBrightness,
+        },
+        human_quality: {
+          verdict: humanReport.verdict,
+          warnings: humanReport.warnings,
+          dimensions: `${humanReport.metadata.width}×${humanReport.metadata.height}`,
+          brightness: humanReport.metadata.meanBrightness,
+        },
+        ...preprocessingMeta,
       },
     })
   } catch (error) {

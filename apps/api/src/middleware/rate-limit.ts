@@ -18,9 +18,23 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
 })
 
-export const widgetLimiter = rateLimit({
+export const widgetConfigLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 10,
+  limit: 30,             // config lookups — one per page load
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+export const widgetJobCreateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 10,             // job creation — expensive, keep strict
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+export const widgetJobPollLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 120,            // job status polling — widget polls every 2-3 sec during processing
   standardHeaders: true,
   legacyHeaders: false,
 })
