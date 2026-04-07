@@ -1,13 +1,11 @@
-import React, { useRef } from 'react'
-import { Wand2, ChevronLeft, ChevronRight, Check } from 'lucide-react'
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import React from 'react'
+import { Wand2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 
 import type { WidgetStudioConfig } from '../schema/widget-studio.schema'
 import { WIDGET_TEMPLATES, type WidgetTemplate } from '../schema/widget-studio.defaults'
 import { createDefaultWidgetStudioConfig } from '../schema/widget-studio.defaults'
+import { StudioTemplateCarousel } from './shared/StudioTemplateCarousel'
 
 interface WidgetTemplateCarouselProps {
   config: WidgetStudioConfig
@@ -52,14 +50,6 @@ export const WidgetTemplateCarousel = React.memo(function WidgetTemplateCarousel
   config,
   onApplyTemplate,
 }: WidgetTemplateCarouselProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  function scroll(dir: 'left' | 'right') {
-    if (!scrollRef.current) return
-    const amount = dir === 'left' ? -160 : 160
-    scrollRef.current.scrollBy({ left: amount, behavior: 'smooth' })
-  }
-
   function applyTemplate(template: WidgetTemplate) {
     const defaults = createDefaultWidgetStudioConfig()
     const next: WidgetStudioConfig = {
@@ -73,56 +63,18 @@ export const WidgetTemplateCarousel = React.memo(function WidgetTemplateCarousel
   }
 
   return (
-    <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg text-right">
-      <CardHeader className="p-3 border-b border-border/10">
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon" onClick={() => scroll('right')} className="size-6 rounded-md">
-              <ChevronRight className="size-3" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => scroll('left')} className="size-6 rounded-md">
-              <ChevronLeft className="size-3" />
-            </Button>
-          </div>
-          <div className="space-y-0.5">
-            <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
-              قوالب الويدجت
-              <Wand2 className="size-4 text-primary" />
-            </CardTitle>
-            <CardDescription className="text-[9px] font-bold opacity-60">
-              اختر قالب جاهز كنقطة انطلاق ثم خصّصه
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-3">
-        <div
-          ref={scrollRef}
-          className="flex gap-2 overflow-x-auto scrollbar-hide scroll-smooth pb-1"
-          style={{ scrollSnapType: 'x mandatory' }}
-        >
-          {WIDGET_TEMPLATES.map((template) => {
-            const isActive = config.active_widget_template === template.id
-            return (
-              <button
-                key={template.id}
-                onClick={() => applyTemplate(template)}
-                className={cn(
-                  "shrink-0 w-[130px] rounded-lg border p-2 transition-all duration-200 text-right space-y-1.5 snap-start",
-                  isActive
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/10 shadow-sm"
-                    : "border-border/40 hover:bg-muted/20 opacity-80 hover:opacity-100"
-                )}
-              >
-                <TemplateVisual template={template} isActive={isActive} />
-                <p className="text-[9px] font-black truncate">{template.nameAr}</p>
-                <p className="text-[7px] font-bold text-muted-foreground truncate">{template.description}</p>
-              </button>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <StudioTemplateCarousel<WidgetTemplate>
+      title="قوالب الويدجت"
+      description="اختر قالب جاهز كنقطة انطلاق ثم خصّصه"
+      icon={<Wand2 className="size-4 text-primary" />}
+      items={WIDGET_TEMPLATES}
+      activeId={config.active_widget_template || ''}
+      onSelect={applyTemplate}
+      getItemId={(t) => t.id}
+      getItemName={(t) => t.nameAr}
+      getItemDescription={(t) => t.description}
+      renderVisual={(t, isActive) => <TemplateVisual template={t} isActive={isActive} />}
+    />
   )
 })
+

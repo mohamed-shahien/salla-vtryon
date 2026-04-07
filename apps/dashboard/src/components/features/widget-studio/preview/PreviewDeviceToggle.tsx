@@ -1,10 +1,12 @@
 import React from 'react'
-import { Monitor, Smartphone } from 'lucide-react'
+import { Monitor, Smartphone, Tablet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+export type PreviewDevice = 'desktop' | 'tablet' | 'mobile'
+
 interface PreviewDeviceToggleProps {
-  device: 'desktop' | 'mobile'
-  onChange: (device: 'desktop' | 'mobile') => void
+  device: PreviewDevice
+  onChange: (device: PreviewDevice) => void
 }
 
 export const PreviewDeviceToggle = React.memo(function PreviewDeviceToggle({
@@ -23,7 +25,19 @@ export const PreviewDeviceToggle = React.memo(function PreviewDeviceToggle({
         )}
       >
         <Monitor className="size-3" />
-        سطح المكتب
+        كمبيوتر
+      </button>
+      <button
+        onClick={() => onChange('tablet')}
+        className={cn(
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black transition-all",
+          device === 'tablet'
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <Tablet className="size-3" />
+        تابلت
       </button>
       <button
         onClick={() => onChange('mobile')}
@@ -40,3 +54,4 @@ export const PreviewDeviceToggle = React.memo(function PreviewDeviceToggle({
     </div>
   )
 })
+

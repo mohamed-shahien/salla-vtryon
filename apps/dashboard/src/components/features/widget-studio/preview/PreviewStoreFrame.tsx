@@ -3,10 +3,11 @@ import { ShoppingCart, Heart, Share2, Star, Camera, X, Shirt } from 'lucide-reac
 import { cn } from '@/lib/utils'
 
 import type { WidgetStudioConfig } from '../schema/widget-studio.schema'
+import type { PreviewDevice } from './PreviewDeviceToggle'
 
 interface PreviewStoreFrameProps {
   config: WidgetStudioConfig
-  device: 'desktop' | 'mobile'
+  device: PreviewDevice
 }
 
 /** Resolve border-radius from corner_style */
@@ -51,7 +52,12 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
   const shadow = getShadow(appearance.shadow_intensity)
   const padding = getPadding(appearance.spacing_density)
   const btnSize = getButtonSize(launch.button_size)
+  
   const isMobile = device === 'mobile'
+  const isTablet = device === 'tablet'
+
+  // Dimensions based on device
+  const frameWidth = isMobile ? 310 : isTablet ? 580 : '100%'
 
   // Determine trigger position based on placement
   const triggerPosition: React.CSSProperties = (() => {
@@ -110,7 +116,7 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
         width: isFloat ? '100%' : undefined,
       }}
       className={cn(
-        "font-black flex items-center justify-center gap-1.5 transition-all hover:opacity-90 active:scale-[0.97] cursor-pointer",
+        "font-black flex items-center justify-center gap-1.5 transition-all hover:opacity-90 active:scale-[0.97] cursor-pointer whitespace-nowrap",
         isDisabled && "opacity-30 pointer-events-none"
       )}
     >
@@ -120,44 +126,47 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
   )
 
   return (
-    <div className="relative">
+    <div className="relative w-full flex justify-center">
       {/* Store Frame */}
       <div
         className={cn(
-          "bg-white rounded-lg border border-border/40 overflow-hidden relative transition-all duration-300",
-          isMobile ? "max-w-[320px] mx-auto" : "w-full"
+          "bg-white rounded-xl border border-border/40 overflow-hidden relative transition-all duration-500 shadow-xl",
+          isMobile || isTablet ? "mx-auto" : "w-full"
         )}
-        style={{ minHeight: isMobile ? 420 : 360 }}
+        style={{ 
+          width: frameWidth,
+          minHeight: isMobile ? 420 : 360 
+        }}
       >
         {/* -- Store Header -- */}
-        <div className="h-8 bg-linear-to-l from-muted/60 to-muted/30 border-b border-border/20 flex items-center justify-between px-3">
+        <div className="h-9 bg-linear-to-l from-muted/60 to-muted/30 border-b border-border/20 flex items-center justify-between px-3">
           <div className="flex items-center gap-1.5">
             <div className="size-1.5 rounded-full bg-red-400" />
             <div className="size-1.5 rounded-full bg-yellow-400" />
             <div className="size-1.5 rounded-full bg-emerald-400" />
           </div>
-          <div className="h-4 w-28 bg-muted/50 rounded-sm" />
-          <ShoppingCart className="size-3 text-muted-foreground" />
+          <div className="h-4 w-32 bg-muted/50 rounded-md" />
+          <ShoppingCart className="size-3.5 text-muted-foreground" />
         </div>
 
-        <div className={cn("p-3", isMobile ? "space-y-3" : "grid grid-cols-2 gap-3")}>
+        <div className={cn("p-4", isMobile ? "space-y-4" : "grid grid-cols-2 gap-4 items-start")}>
           {/* -- Product Image Area -- */}
           <div className="relative">
             <div className={cn(
-              "bg-linear-to-br from-slate-100 to-slate-50 rounded-lg overflow-hidden border border-border/20 flex items-center justify-center",
+              "bg-linear-to-br from-slate-100 to-slate-50 rounded-lg overflow-hidden border border-border/20 flex items-center justify-center transition-all duration-500",
               isMobile ? "aspect-square" : "aspect-4/5"
             )}>
               {/* Product image placeholder */}
               <div className="text-center space-y-2 opacity-40">
-                <Shirt className="size-12 mx-auto text-muted-foreground" />
-                <p className="text-[8px] font-bold text-muted-foreground">صورة المنتج</p>
+                <Shirt className="size-16 mx-auto text-muted-foreground" />
+                <p className="text-[10px] font-black text-muted-foreground">صورة المنتج التجريبية</p>
               </div>
 
               {/* Gallery dots */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                <div className="size-1.5 rounded-full bg-foreground/50" />
-                <div className="size-1.5 rounded-full bg-foreground/15" />
-                <div className="size-1.5 rounded-full bg-foreground/15" />
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                <div className="size-1.5 rounded-full bg-foreground/60" />
+                <div className="size-1.5 rounded-full bg-foreground/20" />
+                <div className="size-1.5 rounded-full bg-foreground/20" />
               </div>
             </div>
 
@@ -168,44 +177,44 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
           </div>
 
           {/* -- Product Info -- */}
-          <div className="space-y-2 text-right">
+          <div className="space-y-3 text-right">
             <div className="flex items-center gap-1 justify-end">
               {[1, 2, 3, 4, 5].map((i) => (
-                <Star key={i} className="size-2.5 text-amber-400 fill-amber-400" />
+                <Star key={i} className="size-3 text-amber-400 fill-amber-400" />
               ))}
-              <span className="text-[8px] text-muted-foreground font-bold">(124)</span>
+              <span className="text-[9px] text-muted-foreground font-black mr-1">(124 تقييم)</span>
             </div>
-            <h3 className="font-black text-xs text-slate-800">فستان سهرة أنيق</h3>
-            <p className="text-[8px] text-muted-foreground leading-relaxed font-medium">
-              فستان أنيق بتصميم عصري مناسب لجميع المناسبات
+            <h3 className="font-black text-sm text-slate-800">فستان سهرة كلاسيكي</h3>
+            <p className="text-[10px] text-muted-foreground leading-relaxed font-bold">
+              هذا عرض تجريبي لكيفية ظهور الويدجت على منتجاتك. التصميم متوافق مع كافة العناصر.
             </p>
             <div className="flex items-center gap-2 justify-end">
-              <span className="text-[10px] font-black text-slate-800">٢٤٩ ر.س</span>
-              <span className="text-[8px] text-muted-foreground line-through">٣٤٩ ر.س</span>
+              <span className="text-xs font-black text-slate-800">٢٤٩ ر.س</span>
+              <span className="text-[10px] text-muted-foreground line-through opacity-50">٣٤٩ ر.س</span>
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-1.5 pt-1">
-              <button className="size-7 rounded-lg border border-border/40 flex items-center justify-center hover:bg-muted/30">
-                <Heart className="size-3 text-muted-foreground" />
+            <div className="flex gap-2 pt-2">
+              <button className="size-8 rounded-lg border border-border/40 flex items-center justify-center hover:bg-muted/30 transition-colors">
+                <Heart className="size-4 text-muted-foreground" />
               </button>
-              <button className="size-7 rounded-lg border border-border/40 flex items-center justify-center hover:bg-muted/30">
-                <Share2 className="size-3 text-muted-foreground" />
+              <button className="size-8 rounded-lg border border-border/40 flex items-center justify-center hover:bg-muted/30 transition-colors">
+                <Share2 className="size-4 text-muted-foreground" />
               </button>
-              <button className="flex-1 h-7 rounded-lg bg-slate-800 text-white text-[9px] font-black flex items-center justify-center gap-1">
-                <ShoppingCart className="size-3" />
+              <button className="flex-1 h-8 rounded-lg bg-slate-800 text-white text-[10px] font-black flex items-center justify-center gap-2 hover:bg-slate-700 transition-all">
+                <ShoppingCart className="size-4" />
                 أضف للسلة
               </button>
             </div>
 
             {/* Below-gallery trigger */}
             {placement.type === 'below_gallery' && !isDisabled && (
-              <div className="pt-1">{TriggerButton}</div>
+              <div className="pt-2">{TriggerButton}</div>
             )}
 
             {/* Access rule hint */}
             {access.require_login && (
-              <div className="p-2 rounded-lg bg-amber-50 border border-amber-200/50 text-[8px] font-bold text-amber-700 text-center">
+              <div className="p-2.5 rounded-xl bg-amber-50/50 border border-amber-200/50 text-[9px] font-black text-amber-700 text-center animate-in fade-in zoom-in duration-300">
                 🔒 {access.login_helper_text}
               </div>
             )}
@@ -214,7 +223,7 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
 
         {/* Bottom float trigger */}
         {isFloat && !isDisabled && (
-          <div style={triggerPosition} className="p-2 border-t border-border/20 bg-white">
+          <div style={triggerPosition} className="p-3 border-t border-border/20 bg-white">
             {TriggerButton}
           </div>
         )}
@@ -228,37 +237,37 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
       {/* -- Dialog Preview Overlay -- */}
       {showDialog && (
         <div
-          className="absolute inset-0 z-30 flex items-center justify-center bg-black/20 backdrop-blur-[2px] rounded-lg"
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/30 backdrop-blur-xs rounded-xl overflow-hidden animate-in fade-in duration-300"
           onClick={() => setShowDialog(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-border/30 relative"
+            className="bg-white border border-border/30 relative animate-in zoom-in-95 duration-300 shadow-2xl"
             style={{
-              width: config.dialog.width === 'sm' ? '60%' : config.dialog.width === 'lg' ? '85%' : config.dialog.width === 'full' ? '95%' : '72%',
+              width: config.dialog.width === 'sm' ? (isMobile ? '80%' : '60%') : config.dialog.width === 'lg' ? '90%' : config.dialog.width === 'full' ? '95%' : '75%',
               borderRadius: radius,
               boxShadow: shadow,
               padding,
-              maxHeight: '80%',
+              maxHeight: '90%',
             }}
           >
             <button
               onClick={() => setShowDialog(false)}
-              className="absolute top-2 left-2 size-5 rounded-full bg-muted/50 flex items-center justify-center hover:bg-muted"
+              className="absolute top-2 left-2 size-6 rounded-full bg-muted/60 flex items-center justify-center hover:bg-muted transition-colors"
             >
-              <X className="size-3 text-muted-foreground" />
+              <X className="size-3.5 text-muted-foreground" />
             </button>
 
-            <div className="text-right space-y-2 pt-2">
+            <div className="text-right space-y-3 pt-2">
               <div className="flex items-center gap-2 justify-end">
-                <Camera className="size-4" style={{ color: accent }} />
-                <h4 className="font-black text-[11px] text-slate-800">القياس الافتراضي</h4>
+                <Camera className="size-5" style={{ color: accent }} />
+                <h4 className="font-black text-sm text-slate-800">القياس الافتراضي</h4>
               </div>
 
-              <div className="aspect-3/4 max-h-44 rounded-lg bg-linear-to-br from-slate-100 to-slate-50 border border-border/20 flex items-center justify-center">
-                <div className="text-center space-y-1 opacity-40">
-                  <Camera className="size-8 mx-auto text-muted-foreground" />
-                  <p className="text-[7px] font-bold text-muted-foreground">التقط صورتك</p>
+              <div className="aspect-3/4 max-h-56 rounded-xl bg-linear-to-br from-slate-100 to-slate-50 border border-border/20 flex items-center justify-center shadow-inner">
+                <div className="text-center space-y-2 opacity-40">
+                  <Camera className="size-10 mx-auto text-muted-foreground" />
+                  <p className="text-[9px] font-black text-muted-foreground">قم برفع صورتك لبدء التجربة</p>
                 </div>
               </div>
 
@@ -268,9 +277,9 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
                   borderRadius: radius,
                   boxShadow: shadow,
                 }}
-                className="w-full h-8 text-white font-black text-[9px] flex items-center justify-center gap-1.5 mt-2"
+                className="w-full h-9 text-white font-black text-[11px] flex items-center justify-center gap-2 mt-2 hover:opacity-90 active:scale-[0.98] transition-all"
               >
-                <Camera className="size-3" />
+                <Camera className="size-4" />
                 ابدأ التجربة
               </button>
             </div>
@@ -280,3 +289,5 @@ export const PreviewStoreFrame = React.memo(function PreviewStoreFrame({
     </div>
   )
 })
+
+

@@ -19,6 +19,7 @@ import {
   cancelPrediction,
   createTryOnPrediction,
   extractPredictionOutputUrl,
+  removeImageBackground,
   waitForPredictionCompletion,
 } from '../services/replicate.service.js'
 import { processAndUploadReplicateResultImage } from '../services/upload.service.js'
@@ -125,8 +126,13 @@ async function processClaimedJob(jobId: string) {
     let preprocessingMeta: Record<string, unknown> = {}
 
     try {
+      // Step A: Advanced Garment Cleaning (AI-powered rembg)
+      // This is the CRITICAL fix for 'noisy' product images (shoes, belts, mannequins)
+      const cleanedGarmentUrl = await removeImageBackground(claimedJob.product_image_url)
+      
+      // Step B: Regional Cropping & Normalization
       const preprocessed = await preprocessGarmentImage({
-        imageUrl: claimedJob.product_image_url,
+        imageUrl: cleanedGarmentUrl, // Use the clean version
         merchantId: merchant.salla_merchant_id,
         category: claimedJob.category,
       })
@@ -158,15 +164,34 @@ async function processClaimedJob(jobId: string) {
     }
 
     // ─── Phase 3: Create Replicate Prediction ──────────────────────────
-    // Send the cleaned garment + original human image to IDM-VTON
-    // with optimized parameters.
+    let prediction
+    let attempts = 0
+    const MAX_ATTEMPTS = 5
+    
+    while (attempts < MAX_ATTEMPTS) {
+      try {
+        prediction = await createTryOnPrediction({
+          humanImageUrl: claimedJob.user_image_url,
+          garmentImageUrl,
+          category: claimedJob.category,
+          garmentDescription: extractGarmentDescription(claimedJob.metadata),
+        })
+        break
+      } catch (err) {
+        attempts++
+        const message = err instanceof Error ? err.message : ''
+        if (message.includes('429') && attempts < MAX_ATTEMPTS) {
+          console.warn(`[jobs] Replicate rate limit (429) hit, retrying in 10s... (Attempt ${attempts}/${MAX_ATTEMPTS})`)
+          await new Promise(resolve => setTimeout(resolve, 10000))
+          continue
+        }
+        throw err
+      }
+    }
 
-    const prediction = await createTryOnPrediction({
-      humanImageUrl: claimedJob.user_image_url,
-      garmentImageUrl,
-      category: claimedJob.category,
-      garmentDescription: extractGarmentDescription(claimedJob.metadata),
-    })
+    if (!prediction) {
+      throw new Error('Failed to create Replicate prediction after multiple retries.')
+    }
 
     predictionId = prediction.id
     await updateMerchantJobPrediction(claimedJob.merchant_id, claimedJob.id, prediction.id)

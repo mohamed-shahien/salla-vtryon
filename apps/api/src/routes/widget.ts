@@ -8,9 +8,7 @@ import {
   type DashboardAuthenticatedRequest,
 } from '../middleware/require-dashboard-session.js'
 import {
-  widgetConfigLimiter,
-  widgetJobCreateLimiter,
-  widgetJobPollLimiter,
+  apiLimiter,
 } from '../middleware/rate-limit.js'
 import {
   getMerchantWidgetSettings,
@@ -69,7 +67,7 @@ function getWidgetTokenFromRequest(request: DashboardAuthenticatedRequest) {
 
 export const widgetRouter = Router()
 
-widgetRouter.get('/config/:merchantId', widgetConfigLimiter, async (request, response, next) => {
+widgetRouter.get('/config/:merchantId', async (request, response, next) => {
   try {
     const params = widgetConfigParamsSchema.parse(request.params)
     const query = widgetConfigQuerySchema.parse(request.query)
@@ -170,7 +168,6 @@ widgetRouter.get(
 
 widgetRouter.post(
   '/job',
-  widgetJobCreateLimiter,
   upload.single('file'),
   async (request: DashboardAuthenticatedRequest, response, next) => {
     try {
@@ -201,7 +198,7 @@ widgetRouter.post(
   },
 )
 
-widgetRouter.get('/job/:id', widgetJobPollLimiter, async (request, response, next) => {
+widgetRouter.get('/job/:id', async (request, response, next) => {
   try {
     const params = widgetJobParamsSchema.parse(request.params)
     const token = getWidgetTokenFromRequest(request as DashboardAuthenticatedRequest)

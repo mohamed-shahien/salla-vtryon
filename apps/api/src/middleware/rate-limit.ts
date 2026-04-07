@@ -2,7 +2,7 @@ import { rateLimit } from 'express-rate-limit'
 
 export const apiLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 100,
+  limit: 10000, // Effectively disabled for testing
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -13,28 +13,32 @@ export const apiLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 20,
+  limit: 10000,
   standardHeaders: true,
   legacyHeaders: false,
 })
 
 export const widgetConfigLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 30,             // config lookups — one per page load
+  limit: 10000,
   standardHeaders: true,
   legacyHeaders: false,
 })
 
 export const widgetJobCreateLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 10,             // job creation — expensive, keep strict
+  limit: 10000,
   standardHeaders: true,
   legacyHeaders: false,
+  message: {
+    error: 'RATE_LIMITED',
+    message: 'Too many try-on requests. Please wait a minute before trying again.',
+  },
 })
 
 export const widgetJobPollLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 120,            // job status polling — widget polls every 2-3 sec during processing
+  limit: 10000,
   standardHeaders: true,
   legacyHeaders: false,
 })

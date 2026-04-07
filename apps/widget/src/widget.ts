@@ -132,7 +132,7 @@ function readSallaMerchantId(): string | null {
 
   // Check common Salla global objects set by themes
   for (const key of ['sallaConfig', 'SallaConfig', 'SALLA_CONFIG']) {
-    const obj = (window as Record<string, unknown>)[key]
+    const obj = (window as unknown as Record<string, unknown>)[key]
     if (obj && typeof obj === 'object') {
       const candidate = (obj as Record<string, unknown>)
       const id = candidate.merchantId ?? candidate.merchant_id ?? candidate.storeId ?? candidate.store_id
@@ -351,7 +351,7 @@ function getLocalizedJobErrorMessage(message: string | null | undefined) {
     return 'تعذر إكمال التجربة. حاول مرة أخرى بعد قليل.'
   }
 
-  if (message.includes('429 Too Many Requests')) {
+  if (message.includes('429')) {
     return 'الخدمة مزدحمة الآن. حاول مرة أخرى بعد أقل من دقيقة.'
   }
 
@@ -621,12 +621,12 @@ async function initWidget() {
     }
 
     async function ensureWidgetConfig(force = false) {
-      let productId = resolveCurrentProductId(bootstrapScript, bootstrapConfig.initialProductId)
+      let productId = resolveCurrentProductId(bootstrapScript, bootstrapConfig?.initialProductId ?? null)
 
       if (!productId) {
         for (let attempt = 0; attempt < 12; attempt += 1) {
           await delay(250)
-          productId = resolveCurrentProductId(bootstrapScript, bootstrapConfig.initialProductId)
+          productId = resolveCurrentProductId(bootstrapScript, bootstrapConfig?.initialProductId ?? null)
 
           if (productId) {
             break
@@ -652,8 +652,8 @@ async function initWidget() {
       }
 
       configPromise = fetchWidgetConfig(
-        bootstrapConfig.apiBaseUrl,
-        bootstrapConfig.merchantId,
+        bootstrapConfig?.apiBaseUrl ?? '',
+        bootstrapConfig?.merchantId ?? 0,
         productId,
       )
         .then((response) => {
@@ -736,11 +736,23 @@ async function initWidget() {
           return
         }
 
-        const jobResponse = await fetchWidgetJob(
-          bootstrapConfig.apiBaseUrl,
-          currentConfig.widget_token,
-          jobId,
-        )
+        let jobResponse
+        try {
+          jobResponse = await fetchWidgetJob(
+            bootstrapConfig?.apiBaseUrl ?? '',
+            currentConfig.widget_token,
+            jobId,
+          )
+        } catch (error) {
+          // If we hit a rate limit (likely ngrok free tier), wait 10s and retry silently
+          if (error instanceof Error && error.message.includes('429')) {
+            console.warn('[widget] hit 429 rate limit, cooling down for 10s...')
+            await delay(10000)
+            continue
+          }
+          throw error
+        }
+        
         const job = jobResponse.data
 
         if (job.status === 'completed' && job.result_image_url) {
@@ -759,7 +771,7 @@ async function initWidget() {
           return
         }
 
-        await delay(3000)
+        await delay(6000)
       }
     }
 

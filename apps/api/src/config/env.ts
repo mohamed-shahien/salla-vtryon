@@ -38,7 +38,7 @@ const envSchema = z.object({
   REPLICATE_API_TOKEN: z.string().optional(),
   REPLICATE_MODEL: z.string().default('cuuupid/idm-vton'),
   REPLICATE_MODEL_VERSION: z.string().optional(),
-  REPLICATE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
+  REPLICATE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1500),
   REPLICATE_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
   BUNNY_STORAGE_ZONE: z.string().optional(),
   BUNNY_API_KEY: z.string().optional(),
@@ -47,8 +47,8 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
-  JOB_PROCESSOR_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
-  JOB_PROCESSOR_BATCH_SIZE: z.coerce.number().int().min(1).max(20).default(5),
+  JOB_PROCESSOR_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(2000),
+  JOB_PROCESSOR_BATCH_SIZE: z.coerce.number().int().min(1).max(20).default(1),
   ENCRYPTION_KEY: z.string().optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),

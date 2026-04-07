@@ -15,24 +15,42 @@ import { WidgetLivePreview } from './preview/WidgetLivePreview'
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 pb-20">
-      <div className="flex justify-between items-end pb-3 border-b border-border/40">
-        <Skeleton className="h-8 w-48 rounded-lg" />
-        <Skeleton className="h-8 w-32 rounded-lg" />
+    <div className="space-y-4 pb-20">
+      {/* Header Skeleton */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-border/40">
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-28 rounded-lg" />
+          <Skeleton className="h-9 w-24 rounded-lg" />
+        </div>
+        <div className="space-y-2 text-right">
+          <Skeleton className="h-4 w-32 ml-auto rounded-md" />
+          <Skeleton className="h-8 w-56 ml-auto rounded-lg" />
+          <Skeleton className="h-3 w-80 ml-auto rounded-md" />
+        </div>
       </div>
+
       <div className="grid gap-3 lg:grid-cols-5">
         <div className="lg:col-span-3 space-y-3">
-          <Skeleton className="h-44 rounded-lg" />
-          <Skeleton className="h-36 rounded-lg" />
-          <Skeleton className="h-28 rounded-lg" />
+          {/* Two Carousels Skeletons */}
+          <Skeleton className="h-[180px] rounded-xl" />
+          <Skeleton className="h-[180px] rounded-xl" />
+          {/* Settings Section Skeletons */}
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
         </div>
         <div className="lg:col-span-2">
-          <Skeleton className="h-96 rounded-lg" />
+          <div className="sticky top-6">
+            {/* Live Preview Skeleton */}
+            <Skeleton className="h-[600px] rounded-xl" />
+          </div>
         </div>
       </div>
     </div>
   )
 }
+
+
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
@@ -64,7 +82,7 @@ export function WidgetStudioPage() {
   }
 
   return (
-    <div className="space-y-3 animate-in fade-in duration-700 pb-20">
+    <div className="space-y-3 pb-20">
       {/* ── Page Header ───────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-border/40 text-right">
         <div className="space-y-1 text-right">
@@ -101,7 +119,7 @@ export function WidgetStudioPage() {
       )}
 
       {/* ── Main Layout: Settings + Preview ───────────────────────────────── */}
-      <div className="grid gap-3 lg:grid-cols-5">
+      <div className="grid gap-3 lg:grid-cols-5 relative">
         {/* Left: Settings Panels (RTL → actually right visually) */}
         <div className="lg:col-span-3 space-y-3">
           {/* Templates */}
@@ -139,8 +157,10 @@ export function WidgetStudioPage() {
         </div>
 
         {/* Right: Live Preview (sticky) */}
-        <div className="lg:col-span-2">
-          <WidgetLivePreview config={studio.config} />
+        <div className="lg:col-span-2 relative">
+          <div className="sticky top-10 space-y-3 h-fit z-20">
+             <WidgetLivePreview config={studio.config} />
+          </div>
         </div>
       </div>
     </div>

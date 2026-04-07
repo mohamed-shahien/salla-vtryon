@@ -1,12 +1,10 @@
-import React, { useRef } from 'react'
-import { Layers, ChevronLeft, ChevronRight, Check } from 'lucide-react'
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import React from 'react'
+import { Layers } from 'lucide-react'
+import { Check } from 'lucide-react'
 
 import type { WidgetStudioConfig } from '../schema/widget-studio.schema'
 import { DIALOG_TEMPLATES, type DialogTemplate } from '../schema/widget-studio.defaults'
+import { StudioTemplateCarousel } from './shared/StudioTemplateCarousel'
 
 interface DialogTemplateCarouselProps {
   config: WidgetStudioConfig
@@ -56,14 +54,6 @@ export const DialogTemplateCarousel = React.memo(function DialogTemplateCarousel
   config,
   onApplyTemplate,
 }: DialogTemplateCarouselProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  function scroll(dir: 'left' | 'right') {
-    if (!scrollRef.current) return
-    const amount = dir === 'left' ? -160 : 160
-    scrollRef.current.scrollBy({ left: amount, behavior: 'smooth' })
-  }
-
   function applyTemplate(template: DialogTemplate) {
     const next: WidgetStudioConfig = {
       ...config,
@@ -75,56 +65,18 @@ export const DialogTemplateCarousel = React.memo(function DialogTemplateCarousel
   }
 
   return (
-    <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg text-right">
-      <CardHeader className="p-3 border-b border-border/10">
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon" onClick={() => scroll('right')} className="size-6 rounded-md">
-              <ChevronRight className="size-3" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => scroll('left')} className="size-6 rounded-md">
-              <ChevronLeft className="size-3" />
-            </Button>
-          </div>
-          <div className="space-y-0.5">
-            <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
-              قوالب النافذة
-              <Layers className="size-4 text-primary" />
-            </CardTitle>
-            <CardDescription className="text-[9px] font-bold opacity-60">
-              اختر شكل نافذة التجربة الافتراضية
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-3">
-        <div
-          ref={scrollRef}
-          className="flex gap-2 overflow-x-auto scrollbar-hide scroll-smooth pb-1"
-          style={{ scrollSnapType: 'x mandatory' }}
-        >
-          {DIALOG_TEMPLATES.map((template) => {
-            const isActive = config.active_dialog_template === template.id
-            return (
-              <button
-                key={template.id}
-                onClick={() => applyTemplate(template)}
-                className={cn(
-                  "shrink-0 w-[130px] rounded-lg border p-2 transition-all duration-200 text-right space-y-1.5 snap-start",
-                  isActive
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/10 shadow-sm"
-                    : "border-border/40 hover:bg-muted/20 opacity-80 hover:opacity-100"
-                )}
-              >
-                <DialogVisual template={template} isActive={isActive} />
-                <p className="text-[9px] font-black truncate">{template.nameAr}</p>
-                <p className="text-[7px] font-bold text-muted-foreground truncate">{template.description}</p>
-              </button>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <StudioTemplateCarousel<DialogTemplate>
+      title="قوالب النافذة"
+      description="اختر شكل نافذة التجربة الافتراضية"
+      icon={<Layers className="size-4 text-primary" />}
+      items={DIALOG_TEMPLATES}
+      activeId={config.active_dialog_template || ''}
+      onSelect={applyTemplate}
+      getItemId={(t) => t.id}
+      getItemName={(t) => t.nameAr}
+      getItemDescription={(t) => t.description}
+      renderVisual={(t, isActive) => <DialogVisual template={t} isActive={isActive} />}
+    />
   )
 })
+

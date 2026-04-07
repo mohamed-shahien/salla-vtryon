@@ -29,6 +29,10 @@ export default defineConfig(({ mode }) => {
           target: env.API_PROXY_TARGET ?? 'http://localhost:3001',
           changeOrigin: true,
         },
+        '/widget.js': {
+          target: env.API_PROXY_TARGET ?? 'http://localhost:3001',
+          changeOrigin: true,
+        },
         '/health': {
           target: env.API_PROXY_TARGET ?? 'http://localhost:3001',
           changeOrigin: true,

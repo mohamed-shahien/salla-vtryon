@@ -14,22 +14,49 @@ export interface CreateTryOnPredictionInput {
 
 const TERMINAL_STATUSES = new Set(['succeeded', 'failed', 'canceled', 'aborted'])
 
+/**
+ * Global mutex to prevent concurrent Replicate calls.
+ * This is critical because many Replicate accounts have a concurrency limit of 1.
+ * By wrapping our calls in this lock, we ensure we never trigger a 429 internally.
+ */
+let replicateMutex: Promise<void> = Promise.resolve()
+
+async function withReplicateLock<T>(fn: () => Promise<T>): Promise<T> {
+  const currentLock = replicateMutex
+  let resolveLock: () => void
+
+  replicateMutex = new Promise((resolve) => {
+    resolveLock = resolve
+  })
+
+  try {
+    await currentLock
+    return await fn()
+  } finally {
+    // After the API call completes, add a tiny 'settle' delay before releasing the lock
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    resolveLock!()
+  }
+}
+
 // ─── Model identity ───────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = 'cuuupid/idm-vton'
+const DEFAULT_MODEL = 'google/nano-banana'
+const DEFAULT_VERSION = ''
 
 /**
  * Returns the prediction identifier to use with the Replicate API.
  *
  * Priority:
- *  1. REPLICATE_MODEL_VERSION (explicit version hash → required for community models like IDM-VTON)
- *  2. REPLICATE_MODEL          (model slug → works for official deployment models like flux)
+ *  1. REPLICATE_MODEL_VERSION (explicit version hash)
+ *  2. DEFAULT_VERSION (if using the default flux-vton model)
+ *  3. REPLICATE_MODEL (model slug)
  */
 function getPredictionIdentifier() {
   const model = (env.REPLICATE_MODEL ?? DEFAULT_MODEL).trim()
-  const version = env.REPLICATE_MODEL_VERSION?.trim()
+  const version = (env.REPLICATE_MODEL_VERSION || (model === DEFAULT_MODEL ? DEFAULT_VERSION : '')).trim()
 
-  // Use version hash if provided (priority for community models like IDM-VTON)
+  // Use version hash if provided (required for community models like flux-vton)
   if (version) {
     return { version } as const
   }
@@ -40,21 +67,14 @@ function getPredictionIdentifier() {
 
 // ─── Model family detection ───────────────────────────────────────────────────
 
-/**
- * Detects the model family so we can build the correct input schema.
- *
- * - 'idm-vton' : image-to-image try-on (cuuupid/idm-vton, yisol/idm-vton)
- *                Inputs: human_img + garm_img + garment_des
- *                Result: same person, same pose, wearing the garment
- *
- * - 'flux'     : text-to-image (black-forest-labs/flux-*)
- *                Inputs: text prompt only — cannot perform real try-on
- */
-function getModelFamily(): 'idm-vton' | 'flux' {
+function getModelFamily(): 'nano-banana' | 'idm-vton' | 'flux' {
   const model = (env.REPLICATE_MODEL ?? DEFAULT_MODEL).toLowerCase()
   const version = (env.REPLICATE_MODEL_VERSION ?? '').toLowerCase()
   
-  // Check both slug and version for "vton" or "idm-vton"
+  if (model.includes('nano-banana')) {
+    return 'nano-banana'
+  }
+
   if (model.includes('idm-vton') || model.includes('vton') || version.includes('vton')) {
     return 'idm-vton'
   }
@@ -107,6 +127,29 @@ function buildSmartGarmentDescription(
   // The visual information in the (now preprocessed) image is more reliable
   // than a translated product name
   return CATEGORY_FALLBACK[category]
+}
+
+/**
+ * Builds the Replicate prediction input for google/nano-banana.
+ *
+ * Nano-Banana is a general image editor. We treat it as a try-on engine
+ * by providing a prompt that asks to combine the person and the garment.
+ */
+function buildNanoBananaInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
+  const garmentType = input.category.replace('_', ' ')
+  const prompt = [
+    `The first image shows a person and the second image shows a ${garmentType}.`,
+    `Modify the person to be wearing the exact ${garmentType} shown in the second image.`,
+    'Maintain the person\'s pose, facial features, and background.',
+    'The output should be a professional high-quality fashion photograph.',
+  ].join(' ')
+
+  return {
+    prompt,
+    image_input: [input.humanImageUrl, input.garmentImageUrl],
+    aspect_ratio: 'match_input_image',
+    output_format: 'jpg',
+  }
 }
 
 
@@ -167,9 +210,17 @@ function buildFluxInput(input: CreateTryOnPredictionInput): Record<string, unkno
 }
 
 function buildTryOnInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
-  return getModelFamily() === 'idm-vton'
-    ? buildIdmVtonInput(input)
-    : buildFluxInput(input)
+  const family = getModelFamily()
+
+  if (family === 'nano-banana') {
+    return buildNanoBananaInput(input)
+  }
+
+  if (family === 'idm-vton') {
+    return buildIdmVtonInput(input)
+  }
+
+  return buildFluxInput(input)
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -186,38 +237,28 @@ function getReplicateClient() {
   return replicate
 }
 
-/**
- * Creates a Replicate prediction for the virtual try-on job.
- *
- * When REPLICATE_MODEL is set to cuuupid/idm-vton (default), the prediction
- * receives the shopper's photo and the product photo and outputs the same
- * shopper wearing the product — pose, face, and background are preserved.
- */
+
 export async function createTryOnPrediction(input: CreateTryOnPredictionInput) {
   const client = getReplicateClient()
   const identifier = getPredictionIdentifier()
   const family = getModelFamily()
-
-  console.log(`[replicate] Creating prediction. family=${family} identifier=${'version' in identifier ? (identifier.version ? identifier.version.slice(0, 8) + '...' : 'unknown') : identifier.model}`)
-
   const tryOnInput = buildTryOnInput(input)
 
   // Log the exact input for debugging quality issues
+  console.log(`[replicate] Creating prediction. family=${family} identifier=${'version' in identifier ? (identifier.version ? identifier.version.slice(0, 8) + '...' : 'unknown') : identifier.model} (Model: ${env.REPLICATE_MODEL})`)
   console.log(`[replicate] Input details:`, {
+    family,
     category: input.category,
-    garment_des: tryOnInput.garment_des,
-    garment_img: typeof tryOnInput.garm_img === 'string' ? tryOnInput.garm_img.slice(0, 80) + '...' : 'N/A',
-    crop: tryOnInput.crop,
-    denoise_steps: tryOnInput.denoise_steps,
-    force_dc: tryOnInput.force_dc,
-    seed: tryOnInput.seed,
+    ...(family === 'nano-banana' ? { prompt: (tryOnInput.prompt as string).slice(0, 50) + '...' } : { garment: (tryOnInput.garment || tryOnInput.human_img || tryOnInput.image || 'N/A').toString().slice(0, 80) + '...' }),
   })
 
   try {
-    return await client.predictions.create({
-      ...identifier,
-      input: tryOnInput,
-    })
+    return await withReplicateLock(() => 
+      client.predictions.create({
+        ...identifier,
+        input: tryOnInput,
+      })
+    )
   } catch (error) {
     if (error instanceof Error && error.message.includes('401')) {
       throw new AppError(
@@ -245,18 +286,47 @@ export async function cancelPrediction(predictionId: string) {
   }
 }
 
+/**
+ * Removes the background from a garment image to isolate the clothing item.
+ * 
+ * This is CRITICAL for VTON. If the product image has mannequins, shoes, 
+ * or belts, the VTON model will try to put them on the person. 
+ * This cleaner removes everything but the main item.
+ */
+export async function removeImageBackground(imageUrl: string): Promise<string> {
+  const client = getReplicateClient()
+  
+  console.log(`[replicate] Cleaning garment image (removing background/accessories)...`)
+  
+  try {
+    const prediction = await withReplicateLock(() => 
+      client.predictions.create({
+        model: 'lucataco/remove-bg',
+        version: '95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1',
+        input: { image: imageUrl },
+      })
+    )
+
+    const result = await waitForPredictionCompletion(prediction.id)
+    const cleanUrl = extractPredictionOutputUrl(result)
+    
+    if (!cleanUrl) {
+      throw new Error('Background removal failed to return a URL.')
+    }
+
+    console.log(`[replicate] Garment cleaned successfully.`)
+    return cleanUrl
+  } catch (error) {
+    console.warn(`[replicate] Background removal failed, using original image:`, error)
+    return imageUrl
+  }
+}
+
 export function isPredictionTerminal(status: Prediction['status']) {
   return TERMINAL_STATUSES.has(status)
 }
 
-/**
- * Extracts a usable HTTPS URL from any output format Replicate may return.
- *
- * Handles:
- *  - string (direct URL)                   ← IDM-VTON
- *  - FileOutput  { url: () => URL }         ← flux-1.1-pro
- *  - Array of either of the above
- */
+
 export function extractPredictionOutputUrl(prediction: Prediction): string | null {
   const output = prediction.output
 

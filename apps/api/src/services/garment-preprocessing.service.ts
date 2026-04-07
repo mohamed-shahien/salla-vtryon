@@ -21,12 +21,12 @@ const JPEG_QUALITY = 92
  * This physically removes shoes, belts, hats, and other items from the image
  * before the AI model ever sees them.
  *
- * FORMAT: { from: 'top' | 'bottom' | 'full', keepPercent: number }
+ * FORMAT: { from: 'top' | 'bottom' | 'full', offsetPercent: number, keepPercent: number }
  */
-const CATEGORY_REGION: Record<TryOnCategory, { from: 'top' | 'bottom' | 'full'; keepPercent: number }> = {
-  upper_body: { from: 'top', keepPercent: 0.55 },     // Keep top 55% → jacket/shirt area
-  lower_body: { from: 'bottom', keepPercent: 0.55 },   // Keep bottom 55% → pants/skirt area
-  dresses:    { from: 'full', keepPercent: 1.0 },       // Keep everything → full-length
+const CATEGORY_REGION: Record<TryOnCategory, { from: 'top' | 'bottom' | 'full'; offsetPercent: number; keepPercent: number }> = {
+  upper_body: { from: 'top', offsetPercent: 0.12, keepPercent: 0.52 },  // Skip head (top 12%), keep torso
+  lower_body: { from: 'bottom', offsetPercent: 0.05, keepPercent: 0.60 }, // Skip shoes (bottom 5%), keep pants
+  dresses:    { from: 'full', offsetPercent: 0, keepPercent: 1.0 },      // Use full content
 }
 
 // ─── Result Type ──────────────────────────────────────────────────────────────
@@ -131,22 +131,23 @@ export async function preprocessGarmentImage(options: {
 
   if (region.from !== 'full' && region.keepPercent < 1.0 && trimmedHeight > 200) {
     const extractHeight = Math.round(trimmedHeight * region.keepPercent)
+    const offsetRows = Math.round(trimmedHeight * region.offsetPercent)
 
     if (region.from === 'top') {
-      // Upper body: take from the TOP of the content
+      // Upper body: skip the head (offset) and take the torso
       trimmedBuffer = await sharp(trimmedBuffer)
         .extract({
           left: 0,
-          top: 0,
+          top: offsetRows,
           width: trimmedWidth,
-          height: extractHeight,
+          height: Math.min(extractHeight, trimmedHeight - offsetRows),
         })
         .toBuffer()
 
-      steps.push(`category-crop: upper_body → top ${Math.round(region.keepPercent * 100)}% (${trimmedWidth}×${extractHeight})`)
+      steps.push(`head-safe-crop: upper_body → offset ${Math.round(region.offsetPercent * 100)}% + keep ${Math.round(region.keepPercent * 100)}%`)
     } else if (region.from === 'bottom') {
-      // Lower body: take from the BOTTOM of the content
-      const extractTop = trimmedHeight - extractHeight
+      // Lower body: skip the shoes (offset) and take the legs
+      const extractTop = Math.max(0, trimmedHeight - extractHeight - offsetRows)
 
       trimmedBuffer = await sharp(trimmedBuffer)
         .extract({
@@ -157,10 +158,10 @@ export async function preprocessGarmentImage(options: {
         })
         .toBuffer()
 
-      steps.push(`category-crop: lower_body → bottom ${Math.round(region.keepPercent * 100)}% (${trimmedWidth}×${extractHeight})`)
+      steps.push(`shoe-safe-crop: lower_body → offset ${Math.round(region.offsetPercent * 100)}% + keep ${Math.round(region.keepPercent * 100)}%`)
     }
 
-    trimmedHeight = extractHeight
+    trimmedHeight = Math.min(extractHeight, trimmedHeight - offsetRows)
   }
 
   // Step 4: If content is very wide (>1.8:1 ratio), it likely has multiple
