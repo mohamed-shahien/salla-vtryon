@@ -28,7 +28,7 @@ export function AppShell() {
               <div className="absolute bottom-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full bg-indigo-500/5 blur-[120px]" />
             </div>
 
-            <div className="container mx-auto px-3 md:p-3">
+            <div className="mx-auto px-3 md:p-3">
               <Outlet />
             </div>
           </main>

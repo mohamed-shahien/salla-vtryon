@@ -9,7 +9,7 @@ import {
 import {
   claimPendingJob,
   completeMerchantJob,
-  getLatestCleanedGarmentForProduct,
+  getLatestPreparedGarmentForProduct,
   listPendingJobsForProcessing,
   listTimedOutProcessingJobs,
   markMerchantJobFailed,
@@ -32,19 +32,17 @@ function extractGarmentDescription(metadata: Record<string, unknown>) {
   return typeof productName === 'string' ? productName : null
 }
 
-function formatQualityRejection(label: string, report: ImageQualityReport): string {
-  const issues = [...report.reasons, ...report.warnings]
-  return `${label}: ${issues.length > 0 ? issues.join(' ') : 'Quality check failed.'}`
-}
-
 async function failTimedOutJobs() {
-  const timedOutJobs = await listTimedOutProcessingJobs(env.REPLICATE_TIMEOUT_MS)
+  const timeoutMs = env.JOB_TIMEOUT_MS || 150000
+  const timedOutJobs = await listTimedOutProcessingJobs(timeoutMs)
   for (const job of timedOutJobs) {
+    console.log(`[jobs] job=${job.id} timed out, refunding credit`)
     await markMerchantJobFailed({
       merchantId: job.merchant_id,
       jobId: job.id,
       errorMessage: 'Try-on job exceeded the processing timeout window.',
       replicatePredictionId: job.replicate_prediction_id,
+      failureCode: 'JOB_TIMEOUT',
     })
     await refundMerchantCredit(job.merchant_id, job.id)
   }
@@ -60,37 +58,23 @@ async function processClaimedJob(jobId: string) {
   globalJobsInFlight++
   let predictionId: string | null = null
   let jobToCleanup: { merchant_id: string; id: string } | null = null
+  const jobStart = Date.now()
+  let cacheHit = false
+  let retryCount = 0
+  let failureCode: string | null = null
 
   try {
     const claimedJob = await claimPendingJob(jobId)
     if (!claimedJob) return
     jobToCleanup = { merchant_id: claimedJob.merchant_id, id: claimedJob.id }
 
-    console.log(`[jobs] starting job ${claimedJob.id}`)
-    
-    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { 
-      current_step: 'ANALYZING_IMAGES',
-      progress: 10
+    console.log(`[jobs] job=${claimedJob.id} merchant=${claimedJob.merchant_id} product=${claimedJob.product_id} starting`)
+
+    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, {
+      current_step: 'PREPARING_GARMENT',
+      progress: 20,
+      retry_count: 0,
     })
-
-    const [garmentReport, humanReport] = await Promise.all([
-      analyzeGarmentImage(claimedJob.product_image_url),
-      analyzeHumanImage(claimedJob.user_image_url),
-    ])
-
-    if (garmentReport.verdict === 'reject') {
-      const message = formatQualityRejection('Product image rejected', garmentReport)
-      await markMerchantJobFailed({ merchantId: claimedJob.merchant_id, jobId: claimedJob.id, errorMessage: message })
-      await refundMerchantCredit(claimedJob.merchant_id, claimedJob.id)
-      return
-    }
-
-    if (humanReport.verdict === 'reject') {
-      const message = formatQualityRejection('Customer image rejected', humanReport)
-      await markMerchantJobFailed({ merchantId: claimedJob.merchant_id, jobId: claimedJob.id, errorMessage: message })
-      await refundMerchantCredit(claimedJob.merchant_id, claimedJob.id)
-      return
-    }
 
     const merchant = await findMerchantById(claimedJob.merchant_id)
     if (!merchant) throw new AppError('Merchant not found.', 404)
@@ -98,61 +82,79 @@ async function processClaimedJob(jobId: string) {
     let garmentImageUrl = claimedJob.product_image_url
     let preprocessingMeta: Record<string, unknown> = {}
 
-    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { 
-      current_step: 'PREPARING_GARMENT',
-      progress: 30
-    })
+    const cachedUrl = claimedJob.product_id ? await getLatestPreparedGarmentForProduct(claimedJob.merchant_id, claimedJob.product_id) : null
 
-    try {
-      const cachedUrl = claimedJob.product_id ? await getLatestCleanedGarmentForProduct(claimedJob.merchant_id, claimedJob.product_id) : null
+    if (cachedUrl) {
+      console.log(`[jobs] job=${claimedJob.id} cache_hit=true product=${claimedJob.product_id}`)
+      garmentImageUrl = cachedUrl
+      cacheHit = true
+      preprocessingMeta = { cache_hit: true, cleaned_garment_url: cachedUrl }
+    } else {
+      console.log(`[jobs] job=${claimedJob.id} cache_hit=false, starting preprocessing`)
 
-      if (cachedUrl) {
-        console.log(`[jobs] Reusing cached garment for ${claimedJob.product_id}`)
-        garmentImageUrl = cachedUrl
-        preprocessingMeta = { preprocessing_reused: true, cleaned_garment_url: cachedUrl }
+      const garmentReport = await analyzeGarmentImage(claimedJob.product_image_url)
+
+      const needsBackgroundRemoval =
+        garmentReport.verdict === 'warn' &&
+        (garmentReport.warnings.some(w => w.includes('complex')) ||
+         garmentReport.warnings.some(w => w.includes('background')))
+
+      let processImageUrl = claimedJob.product_image_url
+      if (needsBackgroundRemoval) {
+        console.log(`[jobs] job=${claimedJob.id} background_removal=true (garment quality indicates need)`)
+        processImageUrl = await removeImageBackground(claimedJob.product_image_url)
+        preprocessingMeta.background_removal = true
       } else {
-        const cleanedUrl = await removeImageBackground(claimedJob.product_image_url)
-        const pre = await preprocessGarmentImage({
-          imageUrl: cleanedUrl,
-          merchantId: merchant.salla_merchant_id,
-          category: claimedJob.category,
-        })
-        garmentImageUrl = pre.cleanedUrl
-        preprocessingMeta = { preprocessing_applied: true, cleaned_garment_url: pre.cleanedUrl }
+        console.log(`[jobs] job=${claimedJob.id} background_removal=false (garment quality good)`)
       }
-    } catch {
-      preprocessingMeta = { preprocessing_failed: true }
+
+      const pre = await preprocessGarmentImage({
+        imageUrl: processImageUrl,
+        merchantId: merchant.salla_merchant_id,
+      })
+      garmentImageUrl = pre.cleanedUrl
+      preprocessingMeta = {
+        cache_hit: false,
+        preprocessing_applied: true,
+        cleaned_garment_url: pre.cleanedUrl,
+        background_removal: preprocessingMeta.background_removal || false,
+      }
     }
 
-    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { 
-      ...preprocessingMeta, 
+    await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, {
+      ...preprocessingMeta,
       current_step: 'GENERATING_RESULT',
-      progress: 60
+      progress: 50,
     })
 
     const prediction: any = await createTryOnPrediction({
       humanImageUrl: claimedJob.user_image_url,
       garmentImageUrl,
-      category: claimedJob.category,
       garmentDescription: extractGarmentDescription(claimedJob.metadata),
+      jobId: claimedJob.id,
     })
 
     predictionId = prediction?.id
     if (predictionId) {
+      const modelName = prediction.model || env.REPLICATE_MODEL
+      console.log(`[jobs] job=${claimedJob.id} replicate_prediction_id=${predictionId} model=${modelName}`)
       await updateMerchantJobPrediction(claimedJob.merchant_id, claimedJob.id, predictionId)
+      await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { model_name: modelName })
+
       const final: any = await waitForPredictionCompletion(predictionId)
-      
+
       if (final.status !== 'succeeded') {
         const err = final.error ? (typeof final.error === 'string' ? final.error : JSON.stringify(final.error)) : 'AI failed'
+        failureCode = 'AI_GENERATION_FAILED'
         throw new Error(err)
       }
 
       const outputUrl = extractPredictionOutputUrl(final)
       if (!outputUrl) throw new Error('AI output missing.')
 
-      await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, { 
+      await updateMerchantJobMetadata(claimedJob.merchant_id, claimedJob.id, {
         current_step: 'FINALIZING',
-        progress: 90
+        progress: 80,
       })
 
       const uploaded = await processAndUploadReplicateResultImage({
@@ -160,27 +162,46 @@ async function processClaimedJob(jobId: string) {
         sourceUrl: outputUrl,
       })
 
+      const duration = Date.now() - jobStart
+      console.log(`[jobs] job=${claimedJob.id} completed duration=${duration}ms cache_hit=${cacheHit} model=${prediction.model || 'unknown'}`)
+
       await completeMerchantJob({
         merchantId: claimedJob.merchant_id,
         jobId: claimedJob.id,
         resultImageUrl: uploaded.url,
         replicatePredictionId: final.id,
-        metadataPatch: { 
-          ...preprocessingMeta, 
+        metadataPatch: {
+          ...preprocessingMeta,
           current_step: 'COMPLETED',
-          progress: 100
+          progress: 100,
+          duration,
+          cache_hit: cacheHit,
+          retry_count: 0,
+          failure_code: null,
         },
       })
     }
   } catch (error) {
-    console.error(`[jobs] job failed:`, error)
+    const duration = Date.now() - jobStart
+    const errorMessage = error instanceof Error ? error.message : 'Failed'
+
+    if (error instanceof AppError) {
+      failureCode = error.code || 'PROCESSING_ERROR'
+    } else if (!failureCode) {
+      failureCode = 'UNKNOWN_ERROR'
+    }
+
+    console.error(`[jobs] job=${jobToCleanup?.id || jobId} failed duration=${duration}ms cache_hit=${cacheHit} failure_code=${failureCode} error:`, error)
+
     if (predictionId) await cancelPrediction(predictionId).catch(() => {})
+
     if (jobToCleanup) {
       await markMerchantJobFailed({
         merchantId: jobToCleanup.merchant_id,
         jobId: jobToCleanup.id,
-        errorMessage: error instanceof Error ? error.message : 'Failed',
+        errorMessage,
         replicatePredictionId: predictionId,
+        failureCode,
       })
       await refundMerchantCredit(jobToCleanup.merchant_id, jobToCleanup.id)
     }
@@ -203,13 +224,13 @@ export function startJobProcessor() {
     try {
       await failTimedOutJobs()
       const pending = await listPendingJobsForProcessing(env.JOB_PROCESSOR_BATCH_SIZE)
-      
+
       await Promise.all(pending.map(job => processClaimedJob(job.id)))
-    } catch (err) { 
-      console.error('[jobs] cycle error', err) 
-    } finally { 
-      cycleInFlight = false; 
-      schedule() 
+    } catch (err) {
+      console.error('[jobs] cycle error', err)
+    } finally {
+      cycleInFlight = false;
+      schedule()
     }
   }
 

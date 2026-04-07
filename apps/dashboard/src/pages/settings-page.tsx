@@ -1,9 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
    Monitor,
-   Code2,
-   Copy,
    Check,
    Save,
    ShieldCheck,
@@ -11,16 +9,20 @@ import {
    Layout,
    MousePointer2,
    Loader2,
-   ArrowLeft,
-   User,
-   Lock,
-   Mail,
    RefreshCw,
+   Terminal,
+   Settings2,
+   AlertCircle,
+   User,
 } from "lucide-react"
 import { motion } from "framer-motion"
+import {
+   Code,
+   CodeHeader,
+   CodeBlock,
+} from "@/components/animate-ui/components/animate/code"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -35,18 +37,7 @@ import {
 import {
    TooltipProvider,
 } from "@/components/ui/tooltip"
-import {
-   fetchCurrentMerchant,
-   fetchEmbedScript,
-   fetchWidgetSettings,
-   updateWidgetSettings,
-   updateProfile,
-   changePassword,
-   type EmbedScriptData,
-   type MerchantWidgetSettings,
-   type TryOnCategory,
-   type WidgetMode,
-} from "@/lib/api"
+import { fetchCurrentMerchant, fetchEmbedScript, fetchWidgetSettings, updateWidgetSettings, type EmbedScriptData, type MerchantWidgetSettings, type TryOnCategory, type WidgetMode } from "@/lib/api"
 import { useAuthStore } from "@/stores/auth-store"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -83,17 +74,9 @@ export function SettingsPage() {
    const [draft, setDraft] = useState<MerchantWidgetSettings | null>(null)
    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ready' | 'failed'>('idle')
    const [embedScript, setEmbedScript] = useState<EmbedScriptData | null>(null)
-   const [copied, setCopied] = useState(false)
-   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-   // Profile & Security states
+   // Profile states
    const identity = useAuthStore((state) => state.identity)
-   const setIdentity = useAuthStore((state) => state.setIdentity)
-   const [fullName, setFullName] = useState(identity?.user?.full_name || "")
-   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
-   const [newPassword, setNewPassword] = useState("")
-   const [confirmPassword, setConfirmPassword] = useState("")
-   const [isChangingPassword, setIsChangingPassword] = useState(false)
 
    useEffect(() => {
       let active = true
@@ -123,16 +106,6 @@ export function SettingsPage() {
       return () => { active = false }
    }, [])
 
-   function handleCopy() {
-      if (!embedScript) return
-      void navigator.clipboard.writeText(embedScript.script_tag).then(() => {
-         setCopied(true)
-         toast.success("تم نسخ الكود")
-         if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-         copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
-      })
-   }
-
    async function handleSave() {
       if (!draft) return
       setSaveStatus('saving')
@@ -157,53 +130,11 @@ export function SettingsPage() {
       }
    }
 
-   async function handleUpdateProfile(e: React.FormEvent) {
-      e.preventDefault()
-      setIsUpdatingProfile(true)
-      try {
-         const response = await updateProfile(fullName)
-         if (response.ok) {
-            toast.success("تم تحديث معلومات الحساب")
-            if (identity) {
-               setIdentity({
-                  ...identity,
-                  user: identity.user ? { ...identity.user, full_name: fullName } : { id: '', email: '', full_name: fullName }
-               })
-            }
-         }
-      } catch (err: any) {
-         toast.error(err.message || 'فشل التحديث')
-      } finally {
-         setIsUpdatingProfile(false)
-      }
-   }
-
-   async function handleChangePassword(e: React.FormEvent) {
-      e.preventDefault()
-      if (!newPassword || newPassword !== confirmPassword) {
-         toast.error("كلمات المرور غير متطابقة")
-         return
-      }
-      setIsChangingPassword(true)
-      try {
-         const response = await changePassword(undefined as any, newPassword)
-         if (response.ok) {
-            toast.success("تم تغيير كلمة المرور")
-            setNewPassword("")
-            setConfirmPassword("")
-         }
-      } catch (err: any) {
-         toast.error(err.message || 'فشل تغيير كلمة المرور')
-      } finally {
-         setIsChangingPassword(false)
-      }
-   }
-
    if (status === 'loading') {
       return (
          <div className="flex h-96 flex-col items-center justify-center gap-3 text-center">
             <Loader2 className="size-6 animate-spin text-primary opacity-50" />
-            <p className="text-[10px] font-black text-muted-foreground  ">تجهيز الإعدادات المتقدمة...</p>
+            <p className="text-[10px] font-black text-muted-foreground">تجهيز الإعدادات المتقدمة...</p>
          </div>
       )
    }
@@ -214,33 +145,22 @@ export function SettingsPage() {
       <TooltipProvider>
          <div className="space-y-4 animate-in fade-in duration-700 pb-20">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-border/40 text-right">
-               <div className="space-y-1 text-right">
-                  <Badge variant="outline" className="text-[9px] font-black   px-2 py-0.5 bg-primary/5 text-primary border-primary/20 rounded-xl">
-                     النظام الأساسي
-                  </Badge>
-                  <h1 className="text-xl font-black leading-tight">الإعدادات والحساب</h1>
-                  <p className="text-muted-foreground font-bold text-[9px] max-w-xl opacity-70">
-                     تحكم في خصائص العرض، معلوماتك الشخصية، وإعدادات الأمان في مكان واحد.
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6">
+               <div className="space-y-1">
+                  <h1 className="text-2xl font-black tracking-tight">الإعدادات والربط</h1>
+                  <p className="text-muted-foreground font-medium text-xs opacity-80">
+                     إدارة خصائص العرض الفني، معلومات المتجر، وأدوات الربط البرمجي.
                   </p>
                </div>
 
-                <div className="flex items-center gap-2">
-                   <Button
-                      variant="outline"
-                      onClick={() => navigate('/products')}
-                      className="rounded-xl font-black text-[10px] h-9 px-4 shadow-xs bg-card/50 backdrop-blur-sm border-border/60"
-                   >
-                      <ArrowLeft className="me-2 size-3.5" />
-                      العودة للمنتجات
-                   </Button>
+                <div className="flex items-center gap-3">
                    <Button
                       onClick={() => void handleSave()}
                       disabled={!draftChanged || saveStatus === 'saving'}
-                      className="rounded-xl font-black text-[10px] h-9 px-5 shadow-lg shadow-primary/20 bg-primary transition-all active:scale-95"
+                      className="rounded-xl font-black text-xs h-11 px-6 shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] active:scale-[0.98] transition-all"
                    >
-                      {saveStatus === 'saving' ? <Loader2 className="me-2 size-3.5 animate-spin" /> : <Save className="me-2 size-3.5" />}
-                      حفظ التغييرات
+                      {saveStatus === 'saving' ? <Loader2 className="me-2 size-4 animate-spin" /> : <Save className="me-2 size-4" />}
+                      {saveStatus === 'saving' ? "جاري الحفظ..." : "حفظ الإعدادات"}
                    </Button>
                 </div>
             </div>
@@ -274,7 +194,7 @@ export function SettingsPage() {
                         <CardContent className="p-3 space-y-4">
                            <div className="grid md:grid-cols-2 gap-3">
                               <div className="space-y-1.5 text-right">
-                                 <Label className="text-[9px] font-black text-muted-foreground  opacity-70 px-1">نص الزر في المتجر</Label>
+                                 <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">نص الزر في المتجر</Label>
                                  <Input
                                     value={draft?.widget_button_text}
                                     onChange={(e) => setDraft(c => c ? { ...c, widget_button_text: e.target.value } : null)}
@@ -283,7 +203,7 @@ export function SettingsPage() {
                                  />
                               </div>
                               <div className="space-y-1.5 text-right">
-                                 <Label className="text-[9px] font-black text-muted-foreground  opacity-70 px-1">التصنيف الافتراضي</Label>
+                                 <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">التصنيف الافتراضي</Label>
                                  <Select
                                     value={draft?.default_category}
                                     onValueChange={(val) => setDraft(c => c ? { ...c, default_category: val as TryOnCategory } : null)}
@@ -347,138 +267,73 @@ export function SettingsPage() {
                      </Card>
                   </motion.div>
 
-                  {/* Integration Snippet */}
-                  {embedScript && (
-                     <motion.div variants={item} initial="hidden" animate="show">
-                        <Card className="border-primary/20 bg-linear-to-br from-slate-900 to-slate-950 rounded-xl overflow-hidden shadow-xl text-right">
-                           <CardHeader className="p-3 border-b border-white/5 flex flex-row items-center justify-between gap-3 bg-white/5">
-                              <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 font-black text-[8px]  px-2 py-0.5 rounded-full">جاهز للربط</Badge>
-                              <CardTitle className="text-base font-black flex items-center gap-2 text-white">
-                                 كود الربط التقني
-                                 <Code2 className="size-4 text-indigo-400" />
-                              </CardTitle>
-                           </CardHeader>
-                           <CardContent className="p-3 space-y-3">
-                              <div className="rounded-xl bg-black/40 p-4 border border-white/5 relative group overflow-hidden">
-                                 <div className="absolute inset-0 bg-indigo-500/5 blur-3xl opacity-20 pointer-events-none" />
-                                 <pre className="overflow-x-auto font-mono text-[9px] leading-relaxed text-indigo-200/80 scrollbar-hide relative z-10">
-                                    {embedScript.script_tag}
-                                 </pre>
-                                 <Button
-                                    onClick={handleCopy}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 left-2 size-7 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                 >
-                                    {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-                                 </Button>
-                              </div>
-
-                              <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/5 justify-end">
-                                 <span className="text-[9px] font-black text-white/40  ">معرف السحابة:</span>
-                                 <span className="text-[10px] font-black text-indigo-300 font-mono tabular-nums">{embedScript.merchant_id}</span>
-                                 <ShieldCheck className="size-3 text-emerald-400 opacity-50" />
-                              </div>
-                           </CardContent>
-                        </Card>
-                     </motion.div>
-                  )}
+                   {/* Integration Snippet */}
+                   {embedScript && (
+                      <motion.div variants={item} initial="hidden" animate="show" className="space-y-3">
+                         <div className="flex items-center gap-2 px-1">
+                            <Terminal className="size-4 text-primary" />
+                            <h3 className="font-black text-sm">كود الربط التقني</h3>
+                         </div>
+                         <Card className="border-border/40 shadow-2xl bg-card/40 backdrop-blur-2xl rounded-2xl overflow-hidden text-left" dir="ltr">
+                            <Code code={embedScript.script_tag} className="border-none bg-transparent">
+                                <CodeHeader copyButton icon={Settings2} className="bg-muted/50 border-border/20 text-[10px] font-bold">
+                                    Integration Script (Salla Storefront)
+                                </CodeHeader>
+                                <CodeBlock lang="html" className="text-xs p-6" />
+                            </Code>
+                         </Card>
+                         
+                         <div className="flex items-center justify-between px-4 py-3 bg-primary/5 rounded-2xl border border-primary/10">
+                            <div className="flex items-center gap-2">
+                                <ShieldCheck className="size-4 text-emerald-500" />
+                                <span className="text-[10px] font-black text-foreground/70">معرف السحابة الآمنة:</span>
+                            </div>
+                            <span className="text-xs font-black text-primary font-mono select-all">
+                                {embedScript.merchant_id}
+                            </span>
+                         </div>
+                      </motion.div>
+                   )}
                </div>
 
-               {/* Right Sidebar - Account & Security */}
-               <div className="space-y-3">
-                  {/* Personal Info */}
-                  <motion.div variants={item} initial="hidden" animate="show">
-                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-xl text-right">
-                        <CardHeader className="p-3 border-b border-border/10">
-                           <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
-                              المعلومات الشخصية
-                              <User className="size-4 text-primary" />
-                           </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3 space-y-3">
-                           <div className="space-y-1.5 text-right">
-                              <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">الاسم الكامل</Label>
-                              <Input
-                                 value={fullName}
-                                 onChange={(e) => setFullName(e.target.value)}
-                                 className="h-9 rounded-xl bg-background border-border/60 font-bold text-[10px] text-right"
-                              />
-                           </div>
-                           <div className="space-y-1.5 text-right opacity-60">
-                              <Label className="text-[9px] font-black text-muted-foreground px-1">البريد الإلكتروني</Label>
-                              <div className="h-9 rounded-xl border border-border/40 flex items-center px-3 justify-end gap-2 bg-muted/20">
-                                 <span className="text-[10px] font-bold truncate">{identity?.user?.email}</span>
-                                 <Mail className="size-3 text-muted-foreground" />
-                              </div>
-                           </div>
-                           <Button
-                              onClick={(e) => void handleUpdateProfile(e)}
-                              disabled={isUpdatingProfile || fullName === identity?.user?.full_name}
-                              className="w-full h-8 rounded-xl font-black text-[9px] gap-2"
-                           >
-                              {isUpdatingProfile ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
-                              تحديث المعلومات
-                           </Button>
-                        </CardContent>
-                     </Card>
-                  </motion.div>
+                {/* Right Sidebar - General Info */}
+                <div className="space-y-4">
+                   <Card className="border-border/40 shadow-sm bg-card/60 rounded-2xl overflow-hidden">
+                      <div className="p-5 space-y-4">
+                         <div className="flex justify-center">
+                            <div className="size-20 rounded-3xl bg-primary/10 flex items-center justify-center border-4 border-background shadow-inner">
+                               <User className="size-10 text-primary" />
+                            </div>
+                         </div>
+                         <div className="text-center space-y-1">
+                            <h3 className="font-black text-sm">{identity?.user?.full_name}</h3>
+                            <p className="text-[10px] font-bold text-muted-foreground">{identity?.user?.email}</p>
+                         </div>
+                      </div>
+                      <div className="px-3 pb-3">
+                         <Button 
+                            variant="secondary" 
+                            onClick={() => navigate('/profile')} 
+                            className="w-full h-10 rounded-xl font-black text-[10px] gap-2 border border-border/40"
+                         >
+                            <Settings2 className="size-3.5" />
+                            إدارة الحساب الشخصي
+                         </Button>
+                      </div>
+                   </Card>
 
-                  {/* Security */}
-                  <motion.div variants={item} initial="hidden" animate="show">
-                     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-xl text-right">
-                        <CardHeader className="p-3 border-b border-border/10">
-                           <CardTitle className="text-sm font-black flex items-center gap-2 justify-end">
-                              تغيير كلمة المرور
-                              <Lock className="size-4 text-primary" />
-                           </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3 space-y-3">
-                           <div className="space-y-1.5 text-right">
-                              <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">كلمة المرور الجديدة</Label>
-                              <Input
-                                 type="password"
-                                 value={newPassword}
-                                 onChange={(e) => setNewPassword(e.target.value)}
-                                 className="h-9 rounded-xl bg-background border-border/60 font-bold text-[10px] text-right"
-                                 placeholder="••••••••"
-                              />
-                           </div>
-                           <div className="space-y-1.5 text-right">
-                              <Label className="text-[9px] font-black text-muted-foreground opacity-70 px-1">تأكيد كلمة المرور</Label>
-                              <Input
-                                 type="password"
-                                 value={confirmPassword}
-                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                 className="h-9 rounded-xl bg-background border-border/60 font-bold text-[10px] text-right"
-                                 placeholder="••••••••"
-                              />
-                           </div>
-                           <Button
-                              onClick={(e) => void handleChangePassword(e)}
-                              disabled={isChangingPassword || !newPassword || newPassword !== confirmPassword}
-                              variant="secondary"
-                              className="w-full h-8 rounded-xl font-black text-[9px] gap-2"
-                           >
-                              {isChangingPassword ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
-                              تحديث الأمان
-                           </Button>
-                        </CardContent>
-                     </Card>
-                  </motion.div>
-
-                   <Button 
-                     variant="ghost" 
-                     onClick={() => navigate('/products')}
-                     className="w-full text-muted-foreground hover:text-primary font-bold text-[9px] h-8 justify-end gap-2 group"
-                   >
-                      العودة لقائمة المنتجات
-                      <ArrowLeft className="size-3 transition-transform group-hover:translate-x-1" />
-                   </Button>
-               </div>
+                   <Card className="border-border/40 shadow-sm bg-muted/20 rounded-2xl p-5 space-y-2">
+                       <div className="flex items-center gap-2 text-primary">
+                          <AlertCircle className="size-4" />
+                          <h4 className="text-[10px] font-black">تحتاج مساعدة؟</h4>
+                       </div>
+                       <p className="text-[10px] leading-relaxed font-bold text-muted-foreground">
+                          إذا كنت تواجه صعوبة في دمج الكود في متجرك، يمكنك دائماً التواصل مع فريق الدعم الفني الخاص بنا.
+                       </p>
+                   </Card>
+                </div>
             </div>
          </div>
       </TooltipProvider>
    )
 }
-

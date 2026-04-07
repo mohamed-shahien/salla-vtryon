@@ -1,50 +1,58 @@
-import { Palette, AlertCircle, RefreshCw } from 'lucide-react'
+import React from 'react'
+import { 
+  AlertCircle, 
+  RefreshCw, 
+  Settings2, 
+  LayoutTemplate,
+  MousePointer2,
+  ArrowRightLeft,
+  Settings,
+  X,
+  Palette,
+  LayoutPanelTop,
+  Lock as LockIcon
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useSidebar } from '@/components/ui/sidebar'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from '@/components/ui/accordion'
 
 import { useWidgetStudio } from './hooks/use-widget-studio'
 import { WidgetSettingsActions } from './WidgetSettingsActions'
-import { WidgetLaunchSection } from './sections/WidgetLaunchSection'
-import { WidgetPlacementSection } from './sections/WidgetPlacementSection'
-import { WidgetAccessSection } from './sections/WidgetAccessSection'
 import { WidgetTemplateCarousel } from './sections/WidgetTemplateCarousel'
 import { DialogTemplateCarousel } from './sections/DialogTemplateCarousel'
+import { WidgetLaunchSection } from './sections/WidgetLaunchSection'
 import { WidgetAppearanceSection } from './sections/WidgetAppearanceSection'
+import { WidgetPlacementSection } from './sections/WidgetPlacementSection'
+import { WidgetAccessSection } from './sections/WidgetAccessSection'
 import { WidgetLivePreview } from './preview/WidgetLivePreview'
+import { PreviewDeviceToggle, type PreviewDevice } from './preview/PreviewDeviceToggle'
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-4 pb-20">
-      {/* Header Skeleton */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-border/40">
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-28 rounded-lg" />
-          <Skeleton className="h-9 w-24 rounded-lg" />
-        </div>
-        <div className="space-y-2 text-right">
-          <Skeleton className="h-4 w-32 ml-auto rounded-md" />
-          <Skeleton className="h-8 w-56 ml-auto rounded-lg" />
-          <Skeleton className="h-3 w-80 ml-auto rounded-md" />
-        </div>
+    <div className="h-[calc(100vh-3.5rem)] flex items-stretch overflow-hidden bg-background">
+      {/* Sidebar Rail Mock */}
+      <div className="w-12 border-l border-border/40 bg-card/50" />
+      {/* Sidebar Content Mock */}
+      <div className="w-80 border-l border-border/40 bg-card/30 flex flex-col p-6 gap-6">
+        <Skeleton className="h-6 w-1/3 rounded-md" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
       </div>
-
-      <div className="grid gap-3 lg:grid-cols-5">
-        <div className="lg:col-span-3 space-y-3">
-          {/* Two Carousels Skeletons */}
-          <Skeleton className="h-[180px] rounded-xl" />
-          <Skeleton className="h-[180px] rounded-xl" />
-          {/* Settings Section Skeletons */}
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
-        </div>
-        <div className="lg:col-span-2">
-          <div className="sticky top-6">
-            {/* Live Preview Skeleton */}
-            <Skeleton className="h-[600px] rounded-xl" />
-          </div>
-        </div>
+      {/* Stage Mock */}
+      <div className="flex-1 bg-muted/5 flex items-center justify-center p-12">
+        <Skeleton className="h-[600px] w-full max-w-4xl rounded-3xl shadow-2xl" />
       </div>
     </div>
   )
@@ -72,6 +80,14 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 
 export function WidgetStudioPage() {
   const studio = useWidgetStudio()
+  const dashboardSidebar = useSidebar()
+  const [device, setDevice] = React.useState<PreviewDevice>('desktop')
+  const [showSettings, setShowSettings] = React.useState(true)
+
+  // Auto-collapse dashboard sidebar on mount
+  React.useEffect(() => {
+    dashboardSidebar.setOpen(false)
+  }, []) // Empty dependency to only run on mount
 
   if (studio.status === 'loading' || studio.status === 'idle') {
     return <LoadingSkeleton />
@@ -82,87 +98,241 @@ export function WidgetStudioPage() {
   }
 
   return (
-    <div className="space-y-3 pb-20">
-      {/* ── Page Header ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-border/40 text-right">
-        <div className="space-y-1 text-right">
-          <Badge
-            variant="outline"
-            className="text-[9px] font-black px-2 py-0.5 bg-primary/5 text-primary border-primary/20 rounded-lg"
-          >
-            استوديو المصمم
-          </Badge>
-          <h1 className="text-xl font-black leading-tight flex items-center gap-2 justify-end">
-            استوديو الويدجت
-            <Palette className="size-5 text-primary" />
-          </h1>
-          <p className="text-muted-foreground font-bold text-[9px] max-w-xl opacity-70">
-            صمّم مظهر ويدجت التجربة الافتراضية وطريقة ظهوره في متجرك
-          </p>
-        </div>
+    <div className="h-[calc(100vh-3.5rem-1px)] -mx-3 -mt-3 flex overflow-hidden bg-background rtl select-none relative" dir="rtl">
+      {/* ── 1. Studio Settings Sidebar (Flex-based, Non-floating) ───────── */}
+      <aside 
+        className={cn(
+          "h-full bg-card border-l border-border/40 transition-[width] duration-300 ease-in-out flex flex-col shrink-0 relative z-30 shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.05)]",
+          showSettings ? "w-[440px]" : "w-0"
+        )}
+      >
+        <div className={cn(
+          "w-[440px] h-full flex flex-col transition-opacity duration-300",
+          showSettings ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}>
+          {/* Header */}
+          <div className="p-4 border-b border-border/40 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform">
+                  <Settings2 className="size-4.5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-foreground tracking-tight">إعدادات التصميم</h2>
+                  <p className="text-[10px] font-bold text-muted-foreground opacity-60">تخصيص كامل للتجربة</p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[9px] font-black bg-emerald-500/5 text-emerald-600 border-emerald-500/20 rounded-lg h-5 px-1.5 flex items-center gap-1">
+                <div className="size-1 rounded-full bg-emerald-500 animate-pulse" />
+                وضع الاستوديو
+              </Badge>
+            </div>
 
-        <WidgetSettingsActions
-          isDirty={studio.isDirty}
-          saveStatus={studio.saveStatus}
-          onSave={() => void studio.save()}
-          onReset={studio.resetToDefaults}
-          onDiscard={studio.discardChanges}
-        />
-      </div>
+            <WidgetSettingsActions
+              isDirty={studio.isDirty}
+              saveStatus={studio.saveStatus}
+              onSave={() => void studio.save()}
+              onReset={studio.resetToDefaults}
+              onDiscard={studio.discardChanges}
+            />
 
-      {/* ── Unsaved Indicator ─────────────────────────────────────────────── */}
-      {studio.isDirty && (
-        <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50/80 border border-amber-200/50 text-right justify-end">
-          <span className="text-[9px] font-black text-amber-700">لديك تغييرات غير محفوظة</span>
-          <div className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
-        </div>
-      )}
+            {studio.isDirty && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 animate-in slide-in-from-top-1 duration-300">
+                <div className="size-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse" />
+                <span className="text-[10px] font-black text-amber-600">لديك تغييرات لم يتم حفظها</span>
+              </div>
+            )}
+          </div>
 
-      {/* ── Main Layout: Settings + Preview ───────────────────────────────── */}
-      <div className="grid gap-3 lg:grid-cols-5 relative">
-        {/* Left: Settings Panels (RTL → actually right visually) */}
-        <div className="lg:col-span-3 space-y-3">
-          {/* Templates */}
-          <WidgetTemplateCarousel
-            config={studio.config}
-            onApplyTemplate={studio.setFullConfig}
-          />
+          {/* Settings Content (Scrollable Area) */}
+          <div className="flex-1 min-h-0">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-6 pb-24">
+              {/* القوالب */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-foreground/80 px-1">
+                  <LayoutTemplate className="size-4 text-primary/70" />
+                  <span className="text-xs font-black">القوالب الجاهزة للمتجر</span>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <WidgetTemplateCarousel
+                    config={studio.config}
+                    onApplyTemplate={studio.setFullConfig}
+                  />
+                  <DialogTemplateCarousel
+                    config={studio.config}
+                    onApplyTemplate={studio.setFullConfig}
+                  />
+                </div>
+              </div>
 
-          <DialogTemplateCarousel
-            config={studio.config}
-            onApplyTemplate={studio.setFullConfig}
-          />
+              <Separator className="bg-border/40 opacity-50" />
 
-          {/* Core Sections */}
-          <WidgetLaunchSection
-            config={studio.config}
-            onUpdate={(patch) => studio.updateConfig('launch', patch)}
-          />
+              {/* تخصيص الخصائص (Accordion) */}
+              <Accordion type="multiple" defaultValue={["launch", "appearance"]} className="w-full">
+                {/* 1. التشغيل والظهور */}
+                <AccordionItem value="launch" className="border-b-0 mb-2 bg-muted/20 rounded-2xl overflow-hidden border border-border/5">
+                  <AccordionTrigger className="hover:no-underline py-4 px-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Settings className="size-4 text-primary" />
+                      </div>
+                      <div className="flex flex-col items-start text-right">
+                        <span className="text-sm font-black tracking-tight">قواعد التشغيل</span>
+                        <span className="text-[10px] font-medium text-muted-foreground opacity-70">متى وأين يظهر الويدجت</span>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-5 pt-2">
+                    <WidgetLaunchSection
+                      config={studio.config}
+                      onUpdate={(patch) => studio.updateConfig('launch', patch)}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
 
-          <WidgetPlacementSection
-            config={studio.config}
-            onUpdate={(patch) => studio.updateConfig('placement', patch)}
-          />
+                {/* 2. التصميم والهوية */}
+                <AccordionItem value="appearance" className="border-b-0 mb-2 bg-muted/20 rounded-2xl overflow-hidden border border-border/5">
+                  <AccordionTrigger className="hover:no-underline py-4 px-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Palette className="size-4 text-primary" />
+                      </div>
+                      <div className="flex flex-col items-start text-right">
+                        <span className="text-sm font-black tracking-tight">التصميم والهوية</span>
+                        <span className="text-[10px] font-medium text-muted-foreground opacity-70">الألوان، الأيقونات والخطوط</span>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-5 pt-2">
+                    <WidgetAppearanceSection
+                      config={studio.config}
+                      onUpdateAppearance={(patch) => studio.updateConfig('appearance', patch)}
+                      onUpdateDialog={(patch) => studio.updateConfig('dialog', patch)}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
 
-          <WidgetAccessSection
-            config={studio.config}
-            onUpdate={(patch) => studio.updateConfig('access', patch)}
-          />
+                {/* 3. المكان والتموضع */}
+                <AccordionItem value="placement" className="border-b-0 mb-2 bg-muted/20 rounded-2xl overflow-hidden border border-border/5">
+                  <AccordionTrigger className="hover:no-underline py-4 px-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <LayoutPanelTop className="size-4 text-primary" />
+                      </div>
+                      <div className="flex flex-col items-start text-right">
+                        <span className="text-sm font-black tracking-tight">مكان الظهور</span>
+                        <span className="text-[10px] font-medium text-muted-foreground opacity-70">تحكم في موقع العنصر بالشاشة</span>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-5 pt-2">
+                    <WidgetPlacementSection
+                      config={studio.config}
+                      onUpdate={(patch) => studio.updateConfig('placement', patch)}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
 
-          <WidgetAppearanceSection
-            config={studio.config}
-            onUpdateAppearance={(patch) => studio.updateConfig('appearance', patch)}
-            onUpdateDialog={(patch) => studio.updateConfig('dialog', patch)}
-          />
-        </div>
-
-        {/* Right: Live Preview (sticky) */}
-        <div className="lg:col-span-2 relative">
-          <div className="sticky top-10 space-y-3 h-fit z-20">
-             <WidgetLivePreview config={studio.config} />
+                {/* 4. صلاحيات الوصول */}
+                <AccordionItem value="access" className="border-b-0 mb-2 bg-muted/20 rounded-2xl overflow-hidden border border-border/5">
+                  <AccordionTrigger className="hover:no-underline py-4 px-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <LockIcon className="size-4 text-primary" />
+                      </div>
+                      <div className="flex flex-col items-start text-right">
+                        <span className="text-sm font-black tracking-tight">صلاحيات الوصول</span>
+                        <span className="text-[10px] font-medium text-muted-foreground opacity-70">من يمكنه رؤية هذه الميزة</span>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-5 pt-2">
+                    <WidgetAccessSection
+                      config={studio.config}
+                      onUpdate={(patch) => studio.updateConfig('access', patch)}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+            </ScrollArea>
           </div>
         </div>
-      </div>
+      </aside>
+
+      {/* ── 2. Studio Stage (Main Workspace Area) ───────────────────── */}
+      <main className="flex-1 min-w-0 bg-linear-to-br from-muted/30 via-background to-muted/20 relative flex flex-col items-stretch">
+        {/* Stage Grid Overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[32px_32px] mask-[radial-gradient(ellipse_70%_70%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
+        
+        <nav className="h-12 border-b border-border/10 bg-background/50 backdrop-blur-xl flex items-center justify-between px-4 z-40 relative">
+          <div className="flex items-center gap-3">
+             <TooltipProvider delayDuration={100}>
+               <div className="flex items-center gap-1.5 p-1 bg-muted/30 rounded-xl border border-border/5">
+                 {/* Studio Sidebar Trigger (Design Settings Only) */}
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className={cn(
+                         "size-8 rounded-lg transition-all duration-200",
+                         showSettings ? "text-primary bg-primary/10 shadow-xs" : "text-muted-foreground hover:bg-muted"
+                       )}
+                       onClick={() => setShowSettings(!showSettings)}
+                     >
+                       <Settings2 className="size-4" />
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent className="text-[10px] font-bold">إعدادات التصميم</TooltipContent>
+                 </Tooltip>
+               </div>
+             </TooltipProvider>
+
+             <div className="h-4 w-px bg-border/20 mx-1" />
+             
+             <div className="flex items-center gap-2">
+                <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] animate-pulse-slow" />
+                <span className="text-[10px] font-bold text-muted-foreground tracking-tight">معاينة المتجر المباشرة</span>
+             </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+              <PreviewDeviceToggle device={device} onChange={setDevice} />
+              
+              <div className="h-8 w-px bg-border/10" />
+
+              <div className="hidden sm:flex flex-col items-end gap-0.5">
+                <span className="text-[9px] font-black text-foreground opacity-80 leading-none">متصل بنظام سلة</span>
+                <span className="text-[7px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest font-mono">Synced V2</span>
+             </div>
+             
+             <Button variant="ghost" size="icon" className="size-8 rounded-xl opacity-40 hover:opacity-100 transition-opacity">
+                <X className="size-4" />
+             </Button>
+          </div>
+        </nav>
+
+        {/* Stage Content */}
+        <div className="flex-1 w-full h-full flex flex-col items-stretch relative z-10 overflow-hidden isolate">
+          <div className="w-full h-full flex flex-col animate-in fade-in duration-700">
+            <WidgetLivePreview config={studio.config} device={device} />
+          </div>
+        </div>
+
+        {/* Studio Status Footer */}
+        <footer className="p-3 border-t border-border/10 bg-background/20 backdrop-blur-sm flex items-center justify-center gap-10 z-20">
+          <div className="flex items-center gap-2">
+             <ArrowRightLeft className="size-3.5 text-muted-foreground opacity-40" />
+             <span className="text-[8px] font-black text-muted-foreground/50 tracking-widest uppercase">مزامنة نشطة</span>
+          </div>
+          <div className="flex items-center gap-2">
+             <MousePointer2 className="size-3.5 text-muted-foreground opacity-40" />
+             <span className="text-[8px] font-black text-muted-foreground/50 tracking-widest uppercase">معاينة تفاعلية</span>
+          </div>
+        </footer>
+      </main>
     </div>
   )
 }

@@ -1,7 +1,14 @@
+import { randomUUID } from 'node:crypto'
+
 import { AppError } from '../utils/app-error.js'
+import {
+  analyzeGarmentImage,
+  analyzeHumanImage,
+} from './image-analysis.service.js'
 import { getMerchantProductDetail } from './products.service.js'
 import {
   createMerchantTryOnJob,
+  findMerchantJobByRequestId,
   getMerchantJobById,
   type TryOnCategory,
 } from './jobs.service.js'
@@ -26,7 +33,7 @@ interface WidgetConfigPayload {
   mode: 'all' | 'selected'
   products: number[]
   enabled: boolean
-  
+
   widget_mode: 'all' | 'selected'
   widget_products: number[]
   button_text: string
@@ -75,31 +82,30 @@ function extractProductName(product: unknown) {
   return typeof candidate.name === 'string' ? candidate.name : null
 }
 
-
 function detectCategory(name: string): TryOnCategory {
   const n = name.toLowerCase()
   if (
-    n.includes('pant') || 
-    n.includes('trouser') || 
-    n.includes('jean') || 
-    n.includes('short') || 
-    n.includes('skirt') || 
+    n.includes('pant') ||
+    n.includes('trouser') ||
+    n.includes('jean') ||
+    n.includes('short') ||
+    n.includes('skirt') ||
     n.includes('legging') ||
     n.includes('بنطلون') ||
     n.includes('تنورة') ||
     n.includes('شورت')
   ) return 'lower_body'
-  
+
   if (
-    n.includes('dress') || 
-    n.includes('gown') || 
-    n.includes('jumpsuit') || 
+    n.includes('dress') ||
+    n.includes('gown') ||
+    n.includes('jumpsuit') ||
     n.includes('abaya') ||
     n.includes('فستان') ||
     n.includes('عباية') ||
     n.includes('جمبسوت')
   ) return 'dresses'
-  
+
   return 'upper_body'
 }
 
@@ -166,7 +172,7 @@ export async function getWidgetConfig(
     current_product_enabled: finalProductEnabled,
     widget_mode: settings.widget_mode,
     widget_products: widgetProducts,
-    
+
     mode: settings.widget_mode,
     products: widgetProducts,
     enabled: finalProductEnabled,
@@ -188,17 +194,54 @@ export async function getWidgetConfig(
   return config
 }
 
+function formatQualityRejection(label: string, report: any): string {
+  const reasons = report?.reasons ?? []
+  const warnings = report?.warnings ?? []
+  const issues = [...reasons, ...warnings]
+  return `${label}: ${issues.length > 0 ? issues.join(' ') : 'Quality check failed.'}`
+}
+
+async function validateImagesBeforeJobCreation(
+  productImageUrl: string,
+  userImageUrl: string,
+): Promise<void> {
+  const [garmentReport, humanReport] = await Promise.all([
+    analyzeGarmentImage(productImageUrl),
+    analyzeHumanImage(userImageUrl),
+  ])
+
+  if (garmentReport.verdict === 'reject') {
+    const message = formatQualityRejection('Product image rejected', garmentReport)
+    console.log(`[widget] quality_gate=reject reason=garment: "${message}"`)
+    throw new AppError(message, 422, 'IMAGE_QUALITY_REJECTED', { failure_code: 'GARMENT_QUALITY_REJECT' })
+  }
+
+  if (humanReport.verdict === 'reject') {
+    const message = formatQualityRejection('Customer image rejected', humanReport)
+    console.log(`[widget] quality_gate=reject reason=human: "${message}"`)
+    throw new AppError(message, 422, 'IMAGE_QUALITY_REJECTED', { failure_code: 'HUMAN_QUALITY_REJECT' })
+  }
+}
+
 export async function createWidgetTryOnJob(options: {
   token: string
   shopperImageBuffer: Buffer
-  category?: TryOnCategory
   productImageUrl?: string | null
+  requestId?: string | null
 }) {
   const widgetContext = readWidgetToken(options.token)
   const merchant = await findMerchantById(widgetContext.merchant_uuid)
 
   if (!merchant || merchant.is_active !== true || merchant.plan_status !== 'active') {
     throw new AppError('This merchant is not active for widget jobs.', 403, 'WIDGET_DISABLED')
+  }
+
+  if (options.requestId) {
+    const existingJob = await findMerchantJobByRequestId(widgetContext.merchant_uuid, options.requestId)
+    if (existingJob) {
+      console.log(`[widget] idempotency: returning existing job ${existingJob.id} for request_id ${options.requestId}`)
+      return { job: existingJob, upload: null }
+    }
   }
 
   const settings = await getMerchantWidgetSettings(widgetContext.merchant_uuid)
@@ -241,18 +284,26 @@ export async function createWidgetTryOnJob(options: {
     )
   }
 
+  await validateImagesBeforeJobCreation(productImageUrl, upload.url)
+
+  const metadata: Record<string, unknown> = {
+    source: 'widget',
+    product_name: extractProductName(productPayload?.data ?? null),
+    product_thumbnail: productImageUrl,
+    upload_storage_path: upload.storage_path,
+  }
+
+  if (options.requestId) {
+    metadata.request_id = options.requestId
+  }
+
   const job = await createMerchantTryOnJob({
     merchantId: widgetContext.merchant_uuid,
     userImageUrl: upload.url,
     productImageUrl,
     productId: widgetContext.product_id,
-    category: options.category ?? settings.default_category,
-    metadata: {
-      source: 'widget',
-      product_name: extractProductName(productPayload?.data ?? null),
-      product_thumbnail: productImageUrl,
-      upload_storage_path: upload.storage_path,
-    },
+    category: settings.default_category,
+    metadata,
   })
 
   return {

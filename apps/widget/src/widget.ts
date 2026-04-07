@@ -2,6 +2,7 @@ import {
   createWidgetJob,
   fetchWidgetConfig,
   fetchWidgetJob,
+  getPollInterval,
   type WidgetCategory,
   type WidgetConfigResponse,
 } from './api.js'
@@ -60,6 +61,10 @@ interface WidgetElements {
   retryButton: HTMLButtonElement
 }
 
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+}
+
 function getBootstrapScript(): HTMLScriptElement | null {
   if (BOOTSTRAP_SCRIPT_ELEMENT) {
     return BOOTSTRAP_SCRIPT_ELEMENT
@@ -110,7 +115,6 @@ function readSallaMerchantId(): string | null {
     }
   }
 
-  // Check meta tag: <meta name="merchant-id" content="123">
   const metaTag = document.querySelector<HTMLMetaElement>(
     'meta[name="merchant-id"], meta[name="store-id"], meta[property="store:id"]',
   )
@@ -118,7 +122,6 @@ function readSallaMerchantId(): string | null {
     return metaTag.content.trim()
   }
 
-  // Check common Salla global objects set by themes
   for (const key of ['sallaConfig', 'SallaConfig', 'SALLA_CONFIG']) {
     const obj = (window as unknown as Record<string, unknown>)[key]
     if (obj && typeof obj === 'object') {
@@ -147,7 +150,6 @@ function readSallaProductId(): string | null {
     }
   }
 
-  // Meta tag: <meta name="product-id" content="...">
   const metaTag = document.querySelector<HTMLMetaElement>(
     'meta[name="product-id"], meta[name="entity-id"]',
   )
@@ -563,7 +565,6 @@ async function initWidget() {
     elements.shell.hidden = true
     let widgetConfig: WidgetConfigResponse | null = null
     let configPromise: Promise<WidgetConfigResponse | null> | null = null
-    let selectedCategory: WidgetCategory = 'upper_body'
     let selectedFile: File | null = null
     let previewUrl: string | null = null
     let disposed = false
@@ -578,7 +579,6 @@ async function initWidget() {
       }
 
       elements.launchButton.textContent = config.button_text || DEFAULT_BUTTON_TEXT
-      selectedCategory = config.default_category
 
       if (!config.overall_enabled || !config.current_product_enabled || !config.widget_token) {
         elements.shell.hidden = true
@@ -724,9 +724,15 @@ async function initWidget() {
 
         if (job.status === 'processing' && elements.processingText) {
           const step = job.metadata?.current_step
+          const cacheHit = job.metadata?.cache_hit
+          const cacheStatus = cacheHit ? ' (من ذاكرة التخزين المؤقت)' : ''
+
           switch (step) {
+            case 'ANALYZING_IMAGES':
+              elements.processingText.textContent = 'جاري تحليل جودة الصور...'
+              break
             case 'PREPARING_GARMENT':
-              elements.processingText.textContent = 'جاري تجهيز الملابس وفصل الخلفية...'
+              elements.processingText.textContent = `جاري تجهيز الملابس${cacheStatus}...`
               break
             case 'GENERATING_RESULT':
               elements.processingText.textContent = 'جاري تطبيق الذكاء الاصطناعي للقياس...'
@@ -755,7 +761,8 @@ async function initWidget() {
           return
         }
 
-        await delay(3000)
+        const pollInterval = getPollInterval(job)
+        await delay(pollInterval)
       }
     }
 
@@ -848,6 +855,7 @@ async function initWidget() {
       }
 
       const sliderImageUrl = readProductImageFromSlider()
+      const requestId = generateRequestId()
 
       elements.submitButton.disabled = true
       setStatus(elements, 'info', null)
@@ -859,8 +867,8 @@ async function initWidget() {
           bootstrapConfig.apiBaseUrl,
           currentConfig.widget_token,
           selectedFile as File,
-          selectedCategory,
           sliderImageUrl,
+          requestId,
         )
 
         await pollJob(jobResponse.data.id)

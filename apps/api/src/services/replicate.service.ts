@@ -3,13 +3,12 @@ import type { Prediction } from 'replicate'
 import { replicate } from '../config/clients.js'
 import { env } from '../config/env.js'
 import { AppError } from '../utils/app-error.js'
-import type { TryOnCategory } from './jobs.service.js'
 
 export interface CreateTryOnPredictionInput {
   humanImageUrl: string
   garmentImageUrl: string
-  category: TryOnCategory
   garmentDescription?: string | null
+  jobId?: string
 }
 
 const TERMINAL_STATUSES = new Set(['succeeded', 'failed', 'canceled', 'aborted'])
@@ -39,7 +38,6 @@ class ReplicatePool {
     await this.acquire()
     try {
       const result = await fn()
-      // Add a small cool-down to prevent aggressive burst triggers
       await new Promise(r => setTimeout(r, 500))
       return result
     } finally {
@@ -73,75 +71,71 @@ function getModelFamily(): 'nano-banana' | 'idm-vton' | 'flux' {
   return 'flux'
 }
 
-const CATEGORY_FALLBACK: Record<TryOnCategory, string> = {
-  upper_body: 'Short sleeve round neck t-shirt',
-  lower_body: 'Casual straight-leg trousers',
-  dresses: 'Full-length one-piece dress',
-}
+const UNIVERSAL_TRYON_PROMPT = `You are an expert virtual try-on AI system. Your task is to seamlessly integrate the garment from the second image onto the person in the first image.
 
-function buildSmartGarmentDescription(category: TryOnCategory, rawName?: string | null): string {
-  if (!rawName?.trim()) return CATEGORY_FALLBACK[category]
-  const name = rawName.trim()
-  const isEnglish = /^[\x20-\x7E]+$/.test(name)
-  if (isEnglish && name.length <= 80) return name
-  return CATEGORY_FALLBACK[category]
-}
+ANALYSIS PHASE:
+1. Examine the person (first image) thoroughly:
+   - Body shape and proportions
+   - Pose and posture
+   - Camera angle and perspective
+   - Visible body areas and occlusions
+   - Lighting conditions and shadows
+   - Skin tone and facial features
 
-function buildNanoBananaInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
-  const garmentType = input.category.replace('_', ' ')
-  const prompt = [
-    'Task: Professional virtual try-on and garment synthesis.',
-    `Target: Drape the exact ${garmentType} from the second image onto the person in the first image.`,
-    'Constraints:',
-    '- Preserve the exact texture, pattern, and color of the garment.',
-    '- Maintain the person\'s pose, facial features, hair, and original background.',
-    '- Align clothing naturally with body shape and perspective.',
-    '- Professional high-resolution fashion editorial quality.',
-  ].join('\n')
+2. Examine the garment (second image) thoroughly:
+   - Product type (shirt, dress, pants, thobe, abaya, suit, etc.)
+   - Texture, fabric, and material properties
+   - Colors and patterns
+   - Fitting style (loose, fitted, oversized)
+   - Edges, sleeves, length, layers, and any accessories
 
-  return {
-    prompt,
-    image_input: [input.humanImageUrl, input.garmentImageUrl],
-    aspect_ratio: 'match_input_image',
-    output_format: 'jpg',
+GENERATION PHASE:
+Apply the garment to the person following these rules:
+- Preserve the EXACT texture, pattern, and color of the garment
+- Maintain the person's original pose, facial features, hair, and background
+- Align the clothing naturally with body shape and perspective
+- Respect all occlusions - fabric should drape correctly over visible body parts
+- Match lighting and shadows to the person's environment
+- Ensure proper fit based on the garment's intended style
+
+OUTPUT REQUIREMENTS:
+- Photorealistic fashion editorial quality
+- Sharp fabric detail
+- Seamless integration without visible seams
+- Format: JPG
+- Resolution: High quality`
+
+function buildUniversalTryOnInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
+  const family = getModelFamily()
+
+  if (family === 'idm-vton') {
+    return {
+      human_img: input.humanImageUrl,
+      garm_img: input.garmentImageUrl,
+      garment_des: input.garmentDescription?.trim() || 'A garment for virtual try-on',
+      category: 'upper_body',
+      crop: true,
+      denoise_steps: 40,
+      force_dc: false,
+      seed: Math.floor(Math.random() * 2147483647),
+    }
   }
-}
 
-function buildIdmVtonInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
-  const garmentDescription = buildSmartGarmentDescription(input.category, input.garmentDescription)
-  return {
-    human_img: input.humanImageUrl,
-    garm_img: input.garmentImageUrl,
-    garment_des: garmentDescription,
-    category: input.category,
-    crop: true,
-    denoise_steps: 40,
-    force_dc: input.category === 'dresses',
-    seed: Math.floor(Math.random() * 2147483647),
+  if (family === 'nano-banana') {
+    return {
+      prompt: UNIVERSAL_TRYON_PROMPT,
+      image_input: [input.humanImageUrl, input.garmentImageUrl],
+      aspect_ratio: 'match_input_image',
+      output_format: 'jpg',
+    }
   }
-}
-
-function buildFluxInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
-  const garmentPart = input.garmentDescription?.trim() ? `The garment is "${input.garmentDescription.trim()}".` : `A single ${input.category.replace('_', ' ')} garment.`
-  const prompt = [
-    'Professional fashion editorial photograph.',
-    garmentPart,
-    'Photorealistic, sharp fabric detail, clean studio background, target fashion quality.',
-  ].join(' ')
 
   return {
-    prompt,
+    prompt: `${UNIVERSAL_TRYON_PROMPT}\n\n${input.garmentDescription?.trim() || ''}`,
     aspect_ratio: '2:3',
     output_format: 'jpg',
     output_quality: 90,
   }
-}
-
-function buildTryOnInput(input: CreateTryOnPredictionInput): Record<string, unknown> {
-  const family = getModelFamily()
-  if (family === 'nano-banana') return buildNanoBananaInput(input)
-  if (family === 'idm-vton') return buildIdmVtonInput(input)
-  return buildFluxInput(input)
 }
 
 function getReplicateClient() {
@@ -149,32 +143,66 @@ function getReplicateClient() {
   return replicate
 }
 
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function executeWithRetry<T>(
+  jobId: string,
+  fn: () => Promise<T>,
+  maxRetries = 3
+): Promise<T> {
+  const BASE_DELAY_MS = 15000 // 15 seconds
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      const isRateLimit = error?.status === 429 || error?.code === 'REPLICATE_RATE_LIMIT'
+
+      if (!isRateLimit || attempt === maxRetries) {
+        throw error
+      }
+
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * 5000
+      const retryNum = attempt + 1
+      console.log(`[replicate] job=${jobId} 429 caught, retry ${retryNum}/${maxRetries} after ${Math.round(delay)}ms`)
+      await sleep(delay)
+    }
+  }
+
+  throw new AppError('Max retries exceeded for Replicate API', 504, 'REPLICATE_MAX_RETRIES')
+}
+
 export async function createTryOnPrediction(input: CreateTryOnPredictionInput) {
   const client = getReplicateClient()
   const identifier = getPredictionIdentifier()
   const family = getModelFamily()
-  const tryOnInput = buildTryOnInput(input)
+  const modelName = env.REPLICATE_MODEL || DEFAULT_MODEL
+  const tryOnInput = buildUniversalTryOnInput(input)
 
-  console.log(`[replicate] Creating prediction. family=${family}`)
+  console.log(`[replicate] job=${input.jobId || 'unknown'} Creating prediction. family=${family} model=${modelName}`)
 
-  try {
-    return await pool.run(() =>
-      client.predictions.create({
-        ...identifier,
-        input: tryOnInput,
-      })
-    )
-  } catch (error: any) {
-    const status = error?.status || error?.response?.status
-    const details = error?.response?.data || error?.message
+  return executeWithRetry(input.jobId || 'unknown', async () => {
+    try {
+      return await pool.run(() =>
+        client.predictions.create({
+          ...identifier,
+          input: tryOnInput,
+        })
+      )
+    } catch (error: any) {
+      const status = error?.status || error?.response?.status
+      const details = error?.response?.data || error?.message
 
-    console.error(`[replicate] Prediction creation failed (Status: ${status}):`, details)
+      console.error(`[replicate] job=${input.jobId || 'unknown'} Prediction creation failed (Status: ${status}):`, details)
 
-    if (status === 401) throw new AppError('Auth failed.', 401, 'REPLICATE_AUTH_FAILED')
-    if (status === 429) throw new AppError('Replicate capacity reached.', 429, 'REPLICATE_RATE_LIMIT')
+      if (status === 401) throw new AppError('Auth failed.', 401, 'REPLICATE_AUTH_FAILED')
+      if (status === 429) throw new AppError('Replicate capacity reached.', 429, 'REPLICATE_RATE_LIMIT')
 
-    throw error
-  }
+      throw error
+    }
+  })
 }
 
 export async function getPrediction(predictionId: string) {

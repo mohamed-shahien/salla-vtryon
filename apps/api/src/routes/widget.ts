@@ -49,9 +49,11 @@ const widgetSettingsSchema = z.object({
   widget_config: z.record(z.unknown()).optional(),
 })
 
+type WidgetSettingsInput = z.infer<typeof widgetSettingsSchema>
+
 const widgetJobBodySchema = z.object({
-  category: z.enum(TRYON_CATEGORIES).optional(),
   product_image_url: z.string().url().optional(),
+  request_id: z.string().trim().min(1).max(100).optional(),
 })
 
 function getWidgetTokenFromRequest(request: DashboardAuthenticatedRequest) {
@@ -112,7 +114,7 @@ widgetRouter.put(
         throw new AppError('Dashboard session context is missing.', 401, 'DASHBOARD_AUTH_REQUIRED')
       }
 
-      const body = widgetSettingsSchema.parse(request.body)
+      const body = widgetSettingsSchema.parse(request.body) as WidgetSettingsInput
       const settings = await updateMerchantWidgetSettings(
         request.dashboardSession.merchant_uuid,
         body,
@@ -184,8 +186,8 @@ widgetRouter.post(
       const result = await createWidgetTryOnJob({
         token,
         shopperImageBuffer: request.file.buffer,
-        category: body.category,
         productImageUrl: body.product_image_url,
+        requestId: body.request_id,
       })
 
       response.status(201).json({

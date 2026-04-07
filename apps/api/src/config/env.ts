@@ -40,6 +40,7 @@ const envSchema = z.object({
   REPLICATE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1500),
   REPLICATE_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
   REPLICATE_MAX_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  JOB_TIMEOUT_MS: z.coerce.number().int().positive().default(150000),
   BUNNY_STORAGE_ZONE: z.string().optional(),
   BUNNY_API_KEY: z.string().optional(),
   BUNNY_CDN_URL: z.string().optional(),
