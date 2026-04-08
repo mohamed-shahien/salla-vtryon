@@ -9,6 +9,7 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 
 import { env } from './config/env.js'
+import { startCacheCleanup } from './lib/cache.js'
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js'
 import { apiLimiter } from './middleware/rate-limit.js'
 import { authRouter } from './routes/auth.js'
@@ -42,6 +43,9 @@ const widgetCors = cors({
 
 export function createApp() {
   const app = express()
+
+  // Initialize cache cleanup
+  startCacheCleanup(60 * 1000) // Run every minute
 
   app.disable('x-powered-by')
   app.set('trust proxy', 1)

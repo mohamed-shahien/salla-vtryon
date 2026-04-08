@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import {
    Monitor,
@@ -63,6 +63,20 @@ const MODE_OPTIONS: Array<{ value: WidgetMode; label: string; description: strin
 const item = {
    hidden: { opacity: 0, y: 10 },
    show: { opacity: 1, y: 0 }
+}
+
+/**
+ * Efficient shallow equality check for settings objects
+ */
+function settingsEqual(a: MerchantWidgetSettings | null, b: MerchantWidgetSettings | null): boolean {
+   if (a === b) return true
+   if (!a || !b) return false
+   return (
+      a.widget_enabled === b.widget_enabled &&
+      a.widget_mode === b.widget_mode &&
+      a.widget_button_text === b.widget_button_text &&
+      a.default_category === b.default_category
+   )
 }
 
 export function SettingsPage() {
@@ -138,7 +152,7 @@ export function SettingsPage() {
       )
    }
 
-   const draftChanged = JSON.stringify(draft) !== JSON.stringify(settings)
+   const draftChanged = useMemo(() => !settingsEqual(draft, settings), [draft, settings])
 
    return (
       <TooltipProvider>

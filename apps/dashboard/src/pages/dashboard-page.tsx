@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
+import { useMemo } from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -47,23 +48,44 @@ export function DashboardPage() {
   const { jobs, loading: jobsLoading } = useMerchantJobs(5)
   const { products } = useSallaProducts()
 
-  const merchantName = identity?.salla_profile?.merchant?.name || "عزيزي التاجر"
-  const credits = identity?.credits?.remaining_credits ?? 0
-  const usedCredits = identity?.credits?.used_credits ?? 0
-  const totalCredits = identity?.credits?.total_credits ?? (credits + usedCredits)
-  const creditUsagePercent = totalCredits > 0 ? (usedCredits / totalCredits) * 100 : 0
+  // Memoize computed values to prevent unnecessary recalculations
+  const merchantName = useMemo(
+    () => identity?.salla_profile?.merchant?.name || "عزيزي التاجر",
+    [identity?.salla_profile?.merchant?.name]
+  )
 
-  // Create products lookup map
-  const productMap = (products || []).reduce((acc: Record<string, any>, p) => {
-    acc[p.id.toString()] = p
-    return acc
-  }, {})
+  const credits = useMemo(
+    () => identity?.credits?.remaining_credits ?? 0,
+    [identity?.credits?.remaining_credits]
+  )
+
+  const usedCredits = useMemo(
+    () => identity?.credits?.used_credits ?? 0,
+    [identity?.credits?.used_credits]
+  )
+
+  const totalCredits = useMemo(
+    () => identity?.credits?.total_credits ?? (credits + usedCredits),
+    [identity?.credits?.total_credits, credits, usedCredits]
+  )
+
+  const creditUsagePercent = useMemo(
+    () => totalCredits > 0 ? (usedCredits / totalCredits) * 100 : 0,
+    [totalCredits, usedCredits]
+  )
+
+  // Memoize product map - only recreate when products change
+  const productMap = useMemo(() => {
+    return (products || []).reduce((acc: Record<string, any>, p) => {
+      acc[p.id.toString()] = p
+      return acc
+    }, {})
+  }, [products])
 
   const container = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.05 }
     }
   }
 

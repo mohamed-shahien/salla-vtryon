@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
 
 import { fetchWidgetSettings, updateWidgetSettings } from '@/lib/api'
@@ -8,6 +8,23 @@ import { mapServerToStudioConfig, mapStudioConfigToPayload } from '../schema/wid
 
 export type StudioStatus = 'idle' | 'loading' | 'ready' | 'error'
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+/**
+ * Efficient shallow equality check for nested objects
+ * Only checks top-level keys, which is sufficient for detecting config changes
+ */
+function shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const keysA = Object.keys(a)
+  const keysB = Object.keys(b)
+
+  if (keysA.length !== keysB.length) return false
+
+  for (const key of keysA) {
+    if (a[key] !== b[key]) return false
+  }
+
+  return true
+}
 
 export function useWidgetStudio() {
   const [status, setStatus] = useState<StudioStatus>('idle')
@@ -41,8 +58,11 @@ export function useWidgetStudio() {
   }, [load])
 
   // ── Dirty Detection ──────────────────────────────────────────────────────
-
-  const isDirty = serverConfig !== null && JSON.stringify(config) !== JSON.stringify(serverConfig)
+  // Use efficient shallow comparison instead of expensive JSON.stringify
+  const isDirty = useMemo(() => {
+    if (serverConfig === null) return false
+    return !shallowEqual(config, serverConfig)
+  }, [config, serverConfig])
 
   // ── Update (local only) ──────────────────────────────────────────────────
 

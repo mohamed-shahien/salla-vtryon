@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { AppError } from '../utils/app-error.js'
+import { widgetConfigCache, productRulesCache, productDetailsCache } from '../lib/cache.js'
 import {
   analyzeGarmentImage,
   analyzeHumanImage,
@@ -113,35 +114,52 @@ export async function getWidgetConfig(
   sallaMerchantId: number,
   currentProductId?: string | null,
 ) {
-  let merchant = await findMerchantBySallaMerchantId(sallaMerchantId)
+  // Use cache for widget config - only cache when no current product to avoid stale per-product state
+  const cacheKey = `widget:${sallaMerchantId}:${currentProductId || 'no-product'}`
 
-  if (!merchant) {
-    merchant = await ensureMerchantRecord({ sallaMerchantId })
+  const cached = widgetConfigCache.get(cacheKey)
+  if (cached && !currentProductId) {
+    return cached
   }
+
+  // Parallel queries where possible
+  const [merchant, productRule, productDetail, rules] = await Promise.all([
+    (async () => {
+      let m = await findMerchantBySallaMerchantId(sallaMerchantId)
+      if (!m) {
+        m = await ensureMerchantRecord({ sallaMerchantId })
+      }
+      return m
+    })(),
+    currentProductId ? getMerchantProductRule(sallaMerchantId, currentProductId).catch(() => null) : Promise.resolve(null),
+    currentProductId
+      ? productDetailsCache.getOrSet(
+          `product:${sallaMerchantId}:${currentProductId}`,
+          () => getMerchantProductDetail(sallaMerchantId, currentProductId).catch(() => null),
+          2 * 60 * 1000 // 2 minutes
+        )
+      : Promise.resolve(null),
+    // Pre-fetch rules if we'll need them
+    (async () => {
+      const m = await findMerchantBySallaMerchantId(sallaMerchantId) || await ensureMerchantRecord({ sallaMerchantId })
+      const settings = normalizeWidgetSettings(m.settings)
+      return settings.widget_mode === 'selected' ? getMerchantProductRules(m.id).catch(() => []) : []
+    })(),
+  ])
 
   const settings = normalizeWidgetSettings(merchant.settings)
   const overallEnabled =
     merchant.is_active === true && merchant.plan_status === 'active' && settings.widget_enabled
 
-  let currentProductRule: { enabled: boolean } | null = null
-  let productName = ''
-
-  if (currentProductId) {
-    currentProductRule = await getMerchantProductRule(merchant.id, currentProductId)
-    try {
-      const productDetail = await getMerchantProductDetail(sallaMerchantId, currentProductId)
-      productName = extractProductName(productDetail?.data) || ''
-    } catch { }
-  }
+  const productName = extractProductName(productDetail?.data) || ''
 
   const currentProductEnabled =
     overallEnabled && currentProductId
-      ? isWidgetEnabledForProduct(settings, currentProductId, currentProductRule)
+      ? isWidgetEnabledForProduct(settings, currentProductId, productRule)
       : overallEnabled && settings.widget_mode === 'all'
 
   let widgetProducts = settings.widget_products
-  if (settings.widget_mode === 'selected') {
-    const rules = await getMerchantProductRules(merchant.id)
+  if (settings.widget_mode === 'selected' && rules) {
     const enabledFromRules = rules.filter((r) => r.enabled).map((r) => r.product_id)
     const disabledFromRules = new Set(rules.filter((r) => !r.enabled).map((r) => r.product_id))
 
@@ -191,6 +209,9 @@ export async function getWidgetConfig(
     widget_config: settings.widget_config ?? null,
   } satisfies WidgetConfigPayload
 
+  // Cache the config (shorter TTL when there's a product context)
+  widgetConfigCache.set(cacheKey, config, currentProductId ? 1 * 60 * 1000 : 5 * 60 * 1000)
+
   return config
 }
 
@@ -230,22 +251,25 @@ export async function createWidgetTryOnJob(options: {
   requestId?: string | null
 }) {
   const widgetContext = readWidgetToken(options.token)
-  const merchant = await findMerchantById(widgetContext.merchant_uuid)
+
+  // Parallel queries for better performance
+  const [merchant, existingJob, settings, rule] = await Promise.all([
+    findMerchantById(widgetContext.merchant_uuid),
+    options.requestId
+      ? findMerchantJobByRequestId(widgetContext.merchant_uuid, options.requestId).catch(() => null)
+      : Promise.resolve(null),
+    getMerchantWidgetSettings(widgetContext.merchant_uuid),
+    getMerchantProductRule(widgetContext.merchant_uuid, widgetContext.product_id).catch(() => null),
+  ])
 
   if (!merchant || merchant.is_active !== true || merchant.plan_status !== 'active') {
     throw new AppError('This merchant is not active for widget jobs.', 403, 'WIDGET_DISABLED')
   }
 
-  if (options.requestId) {
-    const existingJob = await findMerchantJobByRequestId(widgetContext.merchant_uuid, options.requestId)
-    if (existingJob) {
-      console.log(`[widget] idempotency: returning existing job ${existingJob.id} for request_id ${options.requestId}`)
-      return { job: existingJob, upload: null }
-    }
+  if (existingJob) {
+    console.log(`[widget] idempotency: returning existing job ${existingJob.id} for request_id ${options.requestId}`)
+    return { job: existingJob, upload: null }
   }
-
-  const settings = await getMerchantWidgetSettings(widgetContext.merchant_uuid)
-  const rule = await getMerchantProductRule(widgetContext.merchant_uuid, widgetContext.product_id)
 
   if (!isWidgetEnabledForProduct(settings, widgetContext.product_id, rule)) {
     throw new AppError('This product is not enabled for widget try-on.', 403, 'PRODUCT_NOT_ENABLED')
@@ -258,11 +282,13 @@ export async function createWidgetTryOnJob(options: {
 
   const clientProductImageUrl = options.productImageUrl?.trim() || null
 
+  // Get product detail (cached)
   let productPayload: Awaited<ReturnType<typeof getMerchantProductDetail>> | null = null
   try {
-    productPayload = await getMerchantProductDetail(
-      widgetContext.merchant_id,
-      widgetContext.product_id,
+    productPayload = await productDetailsCache.getOrSet(
+      `product:${widgetContext.merchant_id}:${widgetContext.product_id}`,
+      () => getMerchantProductDetail(widgetContext.merchant_id, widgetContext.product_id),
+      2 * 60 * 1000 // 2 minutes
     )
   } catch (fetchError) {
     if (!clientProductImageUrl) {
