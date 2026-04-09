@@ -17,6 +17,11 @@ import {
 import { TRYON_CATEGORIES } from '../services/jobs.service.js'
 import { createWidgetTryOnJob, getWidgetConfig, getWidgetJob } from '../services/widget.service.js'
 import { AppError } from '../utils/app-error.js'
+import {
+  widgetSettingsSchema,
+  createDefaultWidgetSettings,
+  type WidgetSettings,
+} from '@virtual-tryon/shared-types'
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -38,16 +43,7 @@ const widgetJobParamsSchema = z.object({
   id: z.string().uuid('id must be a valid UUID'),
 })
 
-const widgetSettingsSchema = z.object({
-  widget_enabled: z.boolean().optional(),
-  widget_mode: z.enum(['all', 'selected']).optional(),
-  widget_products: z.array(z.coerce.number().int().positive()).max(500).optional(),
-  widget_button_text: z.string().trim().min(1).max(40).optional(),
-  default_category: z.enum(TRYON_CATEGORIES).optional(),
-  onboarding_completed: z.boolean().optional(),
-  // Widget Studio extended config — stored as nested JSONB under settings
-  widget_config: z.record(z.unknown()).optional(),
-})
+const widgetSettingsUpdateSchema = widgetSettingsSchema.partial()
 
 type WidgetSettingsInput = z.infer<typeof widgetSettingsSchema>
 
@@ -114,10 +110,12 @@ widgetRouter.put(
         throw new AppError('Dashboard session context is missing.', 401, 'DASHBOARD_AUTH_REQUIRED')
       }
 
-      const body = widgetSettingsSchema.parse(request.body) as WidgetSettingsInput
+      // Validate full settings object
+      const settingsInput = widgetSettingsSchema.parse(request.body) as WidgetSettings
+
       const settings = await updateMerchantWidgetSettings(
         request.dashboardSession.merchant_uuid,
-        body,
+        settingsInput,
       )
 
       response.status(200).json({

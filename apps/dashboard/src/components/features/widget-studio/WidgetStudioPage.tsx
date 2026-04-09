@@ -3,14 +3,12 @@ import {
   AlertCircle,
   RefreshCw,
   Settings2,
-  LayoutTemplate,
-  MousePointer2,
-  ArrowRightLeft,
   Settings,
   X,
   Palette,
   LayoutPanelTop,
-  Lock as LockIcon
+  MousePointer2,
+  ArrowRightLeft
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -30,12 +28,12 @@ import {
 
 import { useWidgetStudio } from './hooks/use-widget-studio'
 import { WidgetSettingsActions } from './WidgetSettingsActions'
-import { WidgetTemplateCarousel } from './sections/WidgetTemplateCarousel'
-import { DialogTemplateCarousel } from './sections/DialogTemplateCarousel'
-import { WidgetLaunchSection } from './sections/WidgetLaunchSection'
-import { WidgetAppearanceSection } from './sections/WidgetAppearanceSection'
-import { WidgetPlacementSection } from './sections/WidgetPlacementSection'
-import { WidgetAccessSection } from './sections/WidgetAccessSection'
+import { VisualIdentitySection } from './sections/VisualIdentitySection'
+import { ButtonPresetsSection } from './sections/ButtonPresetsSection'
+import { WindowPresetsSection } from './sections/WindowPresetsSection'
+import { DisplayRulesSection } from './sections/DisplayRulesSection'
+import { DiagnosticsSection } from './sections/DiagnosticsSection'
+import { RuntimeSafeguardsSection } from './sections/RuntimeSafeguardsSection'
 import { WidgetLivePreview } from './preview/WidgetLivePreview'
 import { PreviewDeviceToggle, type PreviewDevice } from './preview/PreviewDeviceToggle'
 
@@ -80,7 +78,10 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 export function WidgetStudioPage() {
-  const studio = useWidgetStudio()
+  const bootstrapConfig = (window as any).__VTRYON_CONFIG__ || { apiBaseUrl: '' }
+  const studio = useWidgetStudio({
+    apiUrl: bootstrapConfig.apiBaseUrl,
+  })
   const dashboardSidebar = useSidebar()
   const [device, setDevice] = React.useState<PreviewDevice>('desktop')
   const [showSettings, setShowSettings] = React.useState(true)
@@ -150,106 +151,86 @@ export function WidgetStudioPage() {
 
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-foreground/80 px-1">
-                    <LayoutTemplate className="size-4 text-primary/70" />
-                    <span className="text-[10px] font-black">القوالب الجاهزة للمتجر</span>
+                    <Palette className="size-4 text-primary/70" />
+                    <span className="text-[10px] font-black">الهوية والتصميم (Visual Tokens)</span>
                   </div>
-                  <div className="grid grid-cols-1 gap-4">
-                    <WidgetTemplateCarousel
-                      config={studio.config}
-                      onApplyTemplate={studio.setFullConfig}
-                    />
-                    <DialogTemplateCarousel
-                      config={studio.config}
-                      onApplyTemplate={studio.setFullConfig}
-                    />
-                  </div>
+                  <VisualIdentitySection
+                    settings={studio.config.visual_identity}
+                    onUpdate={studio.updateVisualIdentity}
+                  />
                 </div>
 
                 <Separator className="bg-border/40 opacity-50" />
 
 
-                <Accordion type="multiple" defaultValue={["launch", "appearance"]} className="w-full">
+                <Accordion type="multiple" defaultValue={["presets", "rules"]} className="w-full">
 
-                  <AccordionItem value="launch" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
+                  <AccordionItem value="presets" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
+                    <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                          <MousePointer2 className="size-4.5 text-primary" />
+                        </div>
+                        <div className="flex flex-col items-start text-right">
+                          <span className="text-[11px] font-black tracking-tight">القوالب والأزرار</span>
+                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">اختر من القوالب المعدة مسبقاً لمشغل الويدجت</span>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-3 pb-3 pt-1 space-y-4">
+                      <ButtonPresetsSection
+                        settings={studio.config.button}
+                        onUpdate={studio.updateButtonSettings}
+                        onApplyPreset={studio.applyButtonPreset}
+                      />
+                      <WindowPresetsSection
+                        settings={studio.config.window}
+                        onUpdate={studio.updateWindowSettings}
+                        onApplyPreset={studio.applyWindowPreset}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="rules" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
                     <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
                           <Settings className="size-4.5 text-primary" />
                         </div>
                         <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">قواعد التشغيل</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">متى وأين يظهر الويدجت</span>
+                          <span className="text-[11px] font-black tracking-tight">قواعد الظهور والذكاء</span>
+                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">متى وأين يظهر الويدجت وتجربة المستخدم</span>
                         </div>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-3 pb-3 pt-1">
-                      <WidgetLaunchSection
-                        config={studio.config}
-                        onUpdate={(patch) => studio.updateConfig('launch', patch)}
+                      <DisplayRulesSection
+                        rules={studio.config.display_rules}
+                        onUpdate={studio.updateDisplayRules}
                       />
                     </AccordionContent>
                   </AccordionItem>
 
-
-                  <AccordionItem value="appearance" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
-                    <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                          <Palette className="size-4.5 text-primary" />
-                        </div>
-                        <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">التصميم والهوية</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">الألوان، الأيقونات والخطوط</span>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-3 pt-1">
-                      <WidgetAppearanceSection
-                        config={studio.config}
-                        onUpdateAppearance={(patch) => studio.updateConfig('appearance', patch)}
-                        onUpdateDialog={(patch) => studio.updateConfig('dialog', patch)}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-
-
-                  <AccordionItem value="placement" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
+                  <AccordionItem value="diagnostics" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
                     <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
                           <LayoutPanelTop className="size-4.5 text-primary" />
                         </div>
                         <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">مكان الظهور</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">تحكم في موقع العنصر بالشاشة</span>
+                          <span className="text-[11px] font-black tracking-tight">التشخيص والأمان</span>
+                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">أدوات المطورين وقيود التشغيل</span>
                         </div>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-3 pt-1">
-                      <WidgetPlacementSection
-                        config={studio.config}
-                        onUpdate={(patch) => studio.updateConfig('placement', patch)}
+                    <AccordionContent className="px-3 pb-3 pt-1 space-y-4">
+                      <RuntimeSafeguardsSection
+                        settings={studio.config.runtime_safeguards}
+                        onUpdate={studio.updateRuntimeSafeguards}
                       />
-                    </AccordionContent>
-                  </AccordionItem>
-
-
-                  <AccordionItem value="access" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
-                    <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                          <LockIcon className="size-4.5 text-primary" />
-                        </div>
-                        <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">صلاحيات الوصول</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">من يمكنه رؤية هذه الميزة</span>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-3 pt-1">
-                      <WidgetAccessSection
-                        config={studio.config}
-                        onUpdate={(patch) => studio.updateConfig('access', patch)}
+                      <Separator className="bg-border/40 opacity-50" />
+                      <DiagnosticsSection
+                        apiUrl={bootstrapConfig.apiBaseUrl}
                       />
                     </AccordionContent>
                   </AccordionItem>
@@ -316,7 +297,7 @@ export function WidgetStudioPage() {
 
         <div className="flex-1 w-full h-full flex flex-col items-stretch relative z-10 overflow-hidden isolate">
           <div className="w-full h-full flex flex-col animate-in fade-in duration-700">
-            <WidgetLivePreview config={studio.config} device={device} />
+            <WidgetLivePreview config={studio.config as any} device={device} />
           </div>
         </div>
 

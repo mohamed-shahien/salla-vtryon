@@ -2,36 +2,19 @@ import { supabase } from '../config/clients.js'
 import { AppError } from '../utils/app-error.js'
 import { decryptText, encryptText } from '../utils/crypto.js'
 
+import {
+  type WidgetSettings,
+  createDefaultWidgetSettings,
+  parseWidgetSettings,
+} from '@virtual-tryon/shared-types'
+
 const MERCHANT_SELECT =
   'id,salla_merchant_id,store_name,access_token_encrypted,refresh_token_encrypted,token_expires_at,plan,plan_status,is_active,settings,installed_at,uninstalled_at,created_at,updated_at'
 
 const CREDITS_SELECT =
   'id,merchant_id,total_credits,used_credits,reset_at,created_at,updated_at'
 
-const WIDGET_SETTING_CATEGORIES = ['upper_body', 'lower_body', 'dresses'] as const
-
-export type WidgetCategory = (typeof WIDGET_SETTING_CATEGORIES)[number]
-export type WidgetMode = 'all' | 'selected'
-
-export interface WidgetSettings {
-  widget_enabled: boolean
-  widget_mode: WidgetMode
-  widget_products: number[] // FALLBACK: legacy list stored in JSONB
-  widget_button_text: string
-  default_category: WidgetCategory
-  onboarding_completed: boolean
-  widget_config?: Record<string, unknown> | null
-}
-
-const DEFAULT_SETTINGS: WidgetSettings = {
-  widget_enabled: true,
-  widget_mode: 'selected', // widget invisible until merchant picks products
-  widget_products: [],
-  widget_button_text: 'جرّب الآن',
-  default_category: 'upper_body',
-  onboarding_completed: false,
-  widget_config: null,
-}
+const DEFAULT_SETTINGS = createDefaultWidgetSettings()
 
 export const PLAN_CREDIT_ALLOCATIONS = {
   free: 10,
@@ -111,100 +94,9 @@ function getPlanCredits(plan: string | null | undefined) {
   return PLAN_CREDIT_ALLOCATIONS.free
 }
 
-function normalizeBoolean(value: unknown, fallback: boolean) {
-  if (typeof value === 'boolean') {
-    return value
-  }
-
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase()
-
-    if (normalized === 'true' || normalized === '1') {
-      return true
-    }
-
-    if (normalized === 'false' || normalized === '0') {
-      return false
-    }
-  }
-
-  return fallback
-}
-
-function normalizeWidgetMode(value: unknown): WidgetMode {
-  if (typeof value === 'string' && value.trim().toLowerCase() === 'selected') {
-    return 'selected'
-  }
-
-  return 'all'
-}
-
-function normalizeWidgetCategory(value: unknown): WidgetCategory {
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase()
-
-    if (WIDGET_SETTING_CATEGORIES.includes(normalized as WidgetCategory)) {
-      return normalized as WidgetCategory
-    }
-  }
-
-  return DEFAULT_SETTINGS.default_category
-}
-
-function normalizeWidgetProducts(value: unknown) {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .map((item) => {
-          if (typeof item === 'number') {
-            return Number.isInteger(item) && item > 0 ? item : null
-          }
-
-          if (typeof item === 'string' && item.trim().length > 0) {
-            const parsed = Number(item)
-            return Number.isInteger(parsed) && parsed > 0 ? parsed : null
-          }
-
-          return null
-        })
-        .filter((item): item is number => item != null),
-    ),
-  )
-}
-
-export function normalizeWidgetSettings(settings: Record<string, unknown> | null | undefined) {
-  const source = settings ?? {}
-  const rawMode = source.widget_mode ?? source.mode
-  const rawProducts = source.widget_products ?? source.products
-  const rawButtonText = source.widget_button_text ?? source.button_text
-  const rawEnabled = source.widget_enabled ?? source.enabled
-  const rawDefaultCategory = source.default_category ?? source.category
-
-  const buttonText =
-    typeof rawButtonText === 'string' && rawButtonText.trim().length > 0
-      ? rawButtonText.trim()
-      : DEFAULT_SETTINGS.widget_button_text
-
-  const rawOnboardingCompleted = source.onboarding_completed
-
-  const rawWidgetConfig = source.widget_config
-
-  return {
-    widget_enabled: normalizeBoolean(rawEnabled, DEFAULT_SETTINGS.widget_enabled),
-    widget_mode: normalizeWidgetMode(rawMode),
-    widget_products: normalizeWidgetProducts(rawProducts),
-    widget_button_text: buttonText,
-    default_category: normalizeWidgetCategory(rawDefaultCategory),
-    onboarding_completed: normalizeBoolean(rawOnboardingCompleted, false),
-    // Preserve widget_config as-is — it's an opaque bag for Widget Studio
-    widget_config: rawWidgetConfig != null && typeof rawWidgetConfig === 'object'
-      ? rawWidgetConfig as Record<string, unknown>
-      : null,
-  } satisfies WidgetSettings
+export function normalizeWidgetSettings(settings: Record<string, unknown> | null | undefined): WidgetSettings {
+  if (!settings) return DEFAULT_SETTINGS
+  return parseWidgetSettings(settings)
 }
 
 export function isWidgetEnabledForProduct(
@@ -212,11 +104,10 @@ export function isWidgetEnabledForProduct(
   productId: string | number,
   rule?: { enabled: boolean } | null,
 ) {
-  if (!settings.widget_enabled) {
-    return false
-  }
+  // Use display_rules from unified schema
+  const { eligibility_mode, selected_product_ids } = settings.display_rules
 
-  if (settings.widget_mode === 'all') {
+  if (eligibility_mode === 'all') {
     return true
   }
 
@@ -233,8 +124,8 @@ export function isWidgetEnabledForProduct(
     return rule.enabled
   }
 
-  // 2) fallback to legacy settings.widget_products
-  return settings.widget_products.includes(normalizedProductId)
+  // 2) check selected_product_ids from settings
+  return selected_product_ids.includes(normalizedProductId)
 }
 
 function getSupabaseClient() {

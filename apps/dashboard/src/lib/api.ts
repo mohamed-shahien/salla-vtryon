@@ -1,3 +1,5 @@
+import type { WidgetSettings } from '@virtual-tryon/shared-types'
+
 export interface DashboardMerchantIdentity {
   merchant_uuid: string
   merchant_id: number
@@ -81,7 +83,7 @@ export interface MerchantWidgetSettings {
   widget_button_text: string
   default_category: TryOnCategory
   onboarding_completed: boolean
-  widget_config?: Record<string, unknown> | null
+  widget_config: WidgetSettings | null
 }
 
 export interface TryOnJob {

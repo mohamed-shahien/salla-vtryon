@@ -49,6 +49,12 @@ The dashboard UI is now premium and supports batch operations and optimistic upd
 - completed granular product-based widget visibility rules with legacy fallback
 - completed premium products dashboard with search, filters, and batch enablement
 - completed widget safety contract and verification script
+- completed Merchant Dashboard V2 migration:
+  - type-safe `useWidgetStudioV2` hook
+  - synchronized visual identity, button, and window presets
+  - atomic settings patching with dirty state detection
+  - dedicated runtime safeguards configuration
+- resolved widespread `as any` type issues in dashboard primitives
 
 ## Verified
 

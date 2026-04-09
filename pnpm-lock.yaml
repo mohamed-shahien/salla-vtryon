@@ -45,6 +45,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.0.0
         version: 2.101.1
+      '@virtual-tryon/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -139,6 +142,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.2.4
         version: 1.2.4(@types/react@19.2.14)(react@19.2.4)
+      '@virtual-tryon/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -230,6 +236,9 @@ importers:
 
   apps/widget:
     devDependencies:
+      '@virtual-tryon/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
@@ -238,6 +247,10 @@ importers:
         version: 5.9.3
 
   packages/shared-types:
+    dependencies:
+      zod:
+        specifier: ^3.24.2
+        version: 3.25.76
     devDependencies:
       typescript:
         specifier: ~5.9.3

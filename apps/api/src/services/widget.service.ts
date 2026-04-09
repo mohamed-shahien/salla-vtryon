@@ -31,17 +31,12 @@ interface WidgetConfigPayload {
   current_product_id: string | null
   overall_enabled: boolean
   current_product_enabled: boolean
-  mode: 'all' | 'selected'
-  products: number[]
   enabled: boolean
-
-  widget_mode: 'all' | 'selected'
-  widget_products: number[]
-  button_text: string
-  default_category: TryOnCategory
+  
   widget_token: string | null
   reason: string | null
-  widget_config: Record<string, unknown> | null
+  settings: Record<string, unknown>
+  schema_version: number
 }
 
 function extractProductImage(product: unknown) {
@@ -122,16 +117,15 @@ export async function getWidgetConfig(
     return cached
   }
 
+  // Get merchant first (needed for product rule query)
+  let merchant = await findMerchantBySallaMerchantId(sallaMerchantId)
+  if (!merchant) {
+    merchant = await ensureMerchantRecord({ sallaMerchantId })
+  }
+
   // Parallel queries where possible
-  const [merchant, productRule, productDetail, rules] = await Promise.all([
-    (async () => {
-      let m = await findMerchantBySallaMerchantId(sallaMerchantId)
-      if (!m) {
-        m = await ensureMerchantRecord({ sallaMerchantId })
-      }
-      return m
-    })(),
-    currentProductId ? getMerchantProductRule(sallaMerchantId, currentProductId).catch(() => null) : Promise.resolve(null),
+  const [productRule, productDetail, rules] = await Promise.all([
+    currentProductId ? getMerchantProductRule(merchant.id, currentProductId).catch(() => null) : Promise.resolve(null),
     currentProductId
       ? productDetailsCache.getOrSet(
           `product:${sallaMerchantId}:${currentProductId}`,
@@ -141,9 +135,8 @@ export async function getWidgetConfig(
       : Promise.resolve(null),
     // Pre-fetch rules if we'll need them
     (async () => {
-      const m = await findMerchantBySallaMerchantId(sallaMerchantId) || await ensureMerchantRecord({ sallaMerchantId })
-      const settings = normalizeWidgetSettings(m.settings)
-      return settings.widget_mode === 'selected' ? getMerchantProductRules(m.id).catch(() => []) : []
+      const settings = normalizeWidgetSettings(merchant.settings)
+      return settings.display_rules.eligibility_mode === 'selected' ? getMerchantProductRules(merchant.id).catch(() => []) : []
     })(),
   ])
 
@@ -156,24 +149,24 @@ export async function getWidgetConfig(
   const currentProductEnabled =
     overallEnabled && currentProductId
       ? isWidgetEnabledForProduct(settings, currentProductId, productRule)
-      : overallEnabled && settings.widget_mode === 'all'
+      : overallEnabled && settings.display_rules.eligibility_mode === 'all'
 
-  let widgetProducts = settings.widget_products
-  if (settings.widget_mode === 'selected' && rules) {
+  let widgetProducts = settings.display_rules.selected_product_ids
+  if (settings.display_rules.eligibility_mode === 'selected' && rules) {
     const enabledFromRules = rules.filter((r) => r.enabled).map((r) => r.product_id)
     const disabledFromRules = new Set(rules.filter((r) => !r.enabled).map((r) => r.product_id))
 
     widgetProducts = Array.from(
       new Set([
         ...enabledFromRules,
-        ...settings.widget_products.filter((id) => !disabledFromRules.has(id)),
+        ...settings.display_rules.selected_product_ids.filter((id: number) => !disabledFromRules.has(id)),
       ]),
     )
   }
 
   const finalProductEnabled =
     currentProductEnabled &&
-    (settings.widget_mode === 'all' || widgetProducts.length > 0)
+    (settings.display_rules.eligibility_mode === 'all' || widgetProducts.length > 0)
 
   const reason = !overallEnabled
     ? 'Widget is disabled for this merchant.'
@@ -188,15 +181,8 @@ export async function getWidgetConfig(
     current_product_id: currentProductId ?? null,
     overall_enabled: overallEnabled,
     current_product_enabled: finalProductEnabled,
-    widget_mode: settings.widget_mode,
-    widget_products: widgetProducts,
-
-    mode: settings.widget_mode,
-    products: widgetProducts,
     enabled: finalProductEnabled,
 
-    button_text: settings.widget_button_text,
-    default_category: productName ? detectCategory(productName) : settings.default_category,
     widget_token:
       currentProductId && finalProductEnabled
         ? createWidgetToken({
@@ -206,7 +192,8 @@ export async function getWidgetConfig(
           })
         : null,
     reason,
-    widget_config: settings.widget_config ?? null,
+    settings: settings as unknown as Record<string, unknown>,
+    schema_version: settings.schema_version,
   } satisfies WidgetConfigPayload
 
   // Cache the config (shorter TTL when there's a product context)
@@ -328,7 +315,7 @@ export async function createWidgetTryOnJob(options: {
     userImageUrl: upload.url,
     productImageUrl,
     productId: widgetContext.product_id,
-    category: settings.default_category,
+    category: settings.window.preset === 'progressive-wizard' ? 'upper_body' : 'upper_body', // Simple default for now, can be improved
     metadata,
   })
 

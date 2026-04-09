@@ -1,43 +1,9 @@
-import type { WidgetStudioConfig, AppearanceConfig, LaunchConfig, PlacementConfig, DialogConfig } from './widget-studio.schema'
+import { createDefaultWidgetSettings, type WidgetSettings } from '@virtual-tryon/shared-types'
 
 // ── Default Config ───────────────────────────────────────────────────────────
 
-export function createDefaultWidgetStudioConfig(): WidgetStudioConfig {
-  return {
-    launch: {
-      mode: 'button',
-      auto_open_delay: 0,
-      auto_open_once_per_session: true,
-      button_label: 'جرّب الآن',
-      button_icon: true,
-      button_size: 'md',
-    },
-    placement: {
-      type: 'below_gallery',
-      side: 'right',
-      image_anchor: 'bottom-right',
-      vertical_offset: 0,
-      mobile_placement: 'same',
-    },
-    access: {
-      require_login: false,
-      login_helper_text: 'يرجى تسجيل الدخول أولاً لتجربة القياس الافتراضي',
-      device_visibility: 'all',
-    },
-    appearance: {
-      accent_color: '#34a853',
-      corner_style: 'medium',
-      spacing_density: 'comfortable',
-      button_style: 'filled',
-      shadow_intensity: 'subtle',
-    },
-    dialog: {
-      template: 'clean_modal',
-      width: 'md',
-    },
-    active_widget_template: null,
-    active_dialog_template: null,
-  }
+export function createDefaultWidgetStudioConfig(): WidgetSettings {
+  return createDefaultWidgetSettings()
 }
 
 // ── Widget Templates ─────────────────────────────────────────────────────────
@@ -48,9 +14,10 @@ export interface WidgetTemplate {
   nameAr: string
   description: string
   overrides: {
-    launch?: Partial<LaunchConfig>
-    placement?: Partial<PlacementConfig>
-    appearance?: Partial<AppearanceConfig>
+    button?: Partial<WidgetSettings['button']>
+    window?: Partial<WidgetSettings['window']>
+    visual_identity?: Partial<WidgetSettings['visual_identity']>
+    display_rules?: Partial<WidgetSettings['display_rules']>
   }
 }
 
@@ -61,8 +28,8 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
     nameAr: 'بسيط',
     description: 'تصميم نظيف وبسيط',
     overrides: {
-      launch: { button_size: 'sm', button_icon: false },
-      appearance: { corner_style: 'compact', shadow_intensity: 'none', button_style: 'outline' },
+      button: { size: 'sm', icon: { enabled: false, position: 'start' } },
+      visual_identity: { corner_radius: 'compact', visual_intensity: 'quiet', surface_style: 'outline' },
     },
   },
   {
@@ -71,8 +38,8 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
     nameAr: 'زر بارز',
     description: 'زر كبير يلفت الانتباه',
     overrides: {
-      launch: { button_size: 'lg', button_icon: true },
-      appearance: { corner_style: 'medium', shadow_intensity: 'strong', button_style: 'filled' },
+      button: { size: 'lg', icon: { enabled: true, name: 'sparkles', position: 'start' } },
+      visual_identity: { corner_radius: 'balanced', visual_intensity: 'bold', surface_style: 'solid' },
     },
   },
   {
@@ -81,40 +48,8 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
     nameAr: 'فاخر',
     description: 'مظهر أنيق وراقي',
     overrides: {
-      launch: { button_size: 'md', button_icon: true },
-      appearance: { accent_color: '#1a1a2e', corner_style: 'soft', shadow_intensity: 'medium', button_style: 'filled' },
-    },
-  },
-  {
-    id: 'soft_rounded',
-    name: 'Soft Rounded',
-    nameAr: 'ناعم مستدير',
-    description: 'حواف ناعمة ومريحة',
-    overrides: {
-      launch: { button_size: 'md', button_icon: true },
-      appearance: { corner_style: 'soft', shadow_intensity: 'subtle', button_style: 'filled', spacing_density: 'spacious' },
-    },
-  },
-  {
-    id: 'clean_floating',
-    name: 'Clean Floating',
-    nameAr: 'عائم نظيف',
-    description: 'زر عائم في زاوية الشاشة',
-    overrides: {
-      launch: { mode: 'floating', button_size: 'md', button_icon: true },
-      placement: { type: 'sticky_side', side: 'left' },
-      appearance: { corner_style: 'soft', shadow_intensity: 'medium', button_style: 'filled' },
-    },
-  },
-  {
-    id: 'compact_corner',
-    name: 'Compact Corner',
-    nameAr: 'مضغوط في الزاوية',
-    description: 'علامة صغيرة فوق الصورة',
-    overrides: {
-      launch: { button_size: 'sm', button_icon: true, button_label: 'جرّب' },
-      placement: { type: 'over_image', image_anchor: 'top-left' },
-      appearance: { corner_style: 'compact', shadow_intensity: 'subtle', button_style: 'filled', spacing_density: 'compact' },
+      button: { size: 'md', icon: { enabled: true, name: 'sparkles', position: 'start' } },
+      visual_identity: { brand_color: '#1a1a2e', corner_radius: 'rounded', visual_intensity: 'expressive', surface_style: 'elevated' },
     },
   },
 ]
@@ -127,8 +62,8 @@ export interface DialogTemplate {
   nameAr: string
   description: string
   overrides: {
-    dialog?: Partial<DialogConfig>
-    appearance?: Partial<AppearanceConfig>
+    window?: Partial<WidgetSettings['window']>
+    visual_identity?: Partial<WidgetSettings['visual_identity']>
   }
 }
 
@@ -139,8 +74,8 @@ export const DIALOG_TEMPLATES: DialogTemplate[] = [
     nameAr: 'نافذة نظيفة',
     description: 'نافذة حوار بسيطة ومركزة',
     overrides: {
-      dialog: { width: 'md' },
-      appearance: { corner_style: 'medium', shadow_intensity: 'subtle' },
+      window: { preset: 'classic-center-modal' },
+      visual_identity: { corner_radius: 'balanced', backdrop_style: 'blur-dark' },
     },
   },
   {
@@ -149,49 +84,8 @@ export const DIALOG_TEMPLATES: DialogTemplate[] = [
     nameAr: 'ورقة سفلية',
     description: 'تنبثق من أسفل الشاشة',
     overrides: {
-      dialog: { width: 'full' },
-      appearance: { corner_style: 'soft', shadow_intensity: 'strong' },
-    },
-  },
-  {
-    id: 'premium_card',
-    name: 'Premium Card',
-    nameAr: 'بطاقة فاخرة',
-    description: 'تصميم بطاقة متميز',
-    overrides: {
-      dialog: { width: 'md' },
-      appearance: { corner_style: 'soft', shadow_intensity: 'medium', spacing_density: 'spacious' },
-    },
-  },
-  {
-    id: 'soft_glass',
-    name: 'Soft Glass',
-    nameAr: 'زجاج ناعم',
-    description: 'تأثير شفافية زجاجية',
-    overrides: {
-      dialog: { width: 'lg' },
-      appearance: { corner_style: 'soft', shadow_intensity: 'subtle', spacing_density: 'comfortable' },
-    },
-  },
-  {
-    id: 'compact_mobile',
-    name: 'Compact Mobile',
-    nameAr: 'مضغوط للجوال',
-    description: 'محسّن لشاشات الجوال',
-    overrides: {
-      dialog: { width: 'sm' },
-      appearance: { corner_style: 'medium', shadow_intensity: 'none', spacing_density: 'compact' },
-    },
-  },
-  {
-    id: 'focused_studio',
-    name: 'Focused Studio',
-    nameAr: 'استوديو مركّز',
-    description: 'تجربة استوديو متكاملة',
-    overrides: {
-      dialog: { width: 'lg' },
-      appearance: { corner_style: 'medium', shadow_intensity: 'strong', spacing_density: 'spacious' },
+      window: { preset: 'slide-up-sheet' },
+      visual_identity: { corner_radius: 'rounded', backdrop_style: 'blur-dark' },
     },
   },
 ]
-

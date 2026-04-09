@@ -6,6 +6,16 @@ import {
   type WidgetCategory,
   type WidgetConfigResponse,
 } from './api.js'
+import {
+  parseWidgetConfigResponse,
+  isWidgetEnabled,
+  getWidgetToken,
+  generateAllCSSVariables,
+  createDisplayRulesEngine,
+  type WidgetSettings,
+  ANIMATION_DURATIONS,
+  getWindowPreset,
+} from './config.js'
 
 declare const __WIDGET_CSS__: string
 
@@ -59,6 +69,9 @@ interface WidgetElements {
   resultImage: HTMLImageElement
   downloadLink: HTMLAnchorElement
   retryButton: HTMLButtonElement
+  modalSvg: SVGSVGElement
+  cyberElements: HTMLDivElement
+  processingText: HTMLParagraphElement
 }
 
 function generateRequestId(): string {
@@ -367,7 +380,12 @@ function createWidgetElements() {
   shell.className = 'vtryon-widget'
   shell.innerHTML = `
     <button class="vtryon-widget__launch" type="button" aria-label="جرّب الآن">
-      ${DEFAULT_BUTTON_TEXT}
+      <span class="vtryon-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        </svg>
+      </span>
+      <span class="vtryon-label">${DEFAULT_BUTTON_TEXT}</span>
     </button>
     <div class="vtryon-widget__backdrop" hidden></div>
     <div class="vtryon-widget__panel" hidden role="dialog" aria-modal="true" aria-label="Virtual try-on">
@@ -429,6 +447,15 @@ function createWidgetElements() {
           <button class="vtryon-widget__retry" type="button">جرّب صورة أخرى</button>
         </div>
       </div>
+
+      <!-- Extra Animation Elements -->
+      <svg class="vtryon-modal-svg" viewBox="0 0 430 600" preserveAspectRatio="none" hidden>
+        <rect x="2" y="2" width="426" height="596" rx="28" ry="28"></rect>
+      </svg>
+      <div class="vtryon-cyber-elements" hidden>
+        <div class="vtryon-cyber-scanline"></div>
+        <div class="vtryon-cyber-corners"><span></span><span></span><span></span><span></span></div>
+      </div>
     </div>
   `
 
@@ -457,6 +484,9 @@ function createWidgetElements() {
   const resultImage = shadowRoot.querySelector('.vtryon-widget__result-image')
   const downloadLink = shadowRoot.querySelector('.vtryon-widget__download')
   const retryButton = shadowRoot.querySelector('.vtryon-widget__retry')
+  const modalSvg = shadowRoot.querySelector('.vtryon-modal-svg')
+  const cyberElements = shadowRoot.querySelector('.vtryon-cyber-elements')
+  const processingText = shadowRoot.querySelector('.vtryon-widget__processing-text')
 
   if (
     !(launchButton instanceof HTMLButtonElement) ||
@@ -479,7 +509,10 @@ function createWidgetElements() {
     resultUserImages.some((image) => !(image instanceof HTMLImageElement)) ||
     !(resultImage instanceof HTMLImageElement) ||
     !(downloadLink instanceof HTMLAnchorElement) ||
-    !(retryButton instanceof HTMLButtonElement)
+    !(retryButton instanceof HTMLButtonElement) ||
+    !(modalSvg instanceof SVGSVGElement) ||
+    !(cyberElements instanceof HTMLDivElement) ||
+    !(processingText instanceof HTMLParagraphElement)
   ) {
     throw new Error('Widget DOM failed to initialize.')
   }
@@ -506,13 +539,66 @@ function createWidgetElements() {
     resultImage,
     downloadLink,
     retryButton,
-    processingText: shadowRoot.querySelector('.vtryon-widget__processing-text') as HTMLParagraphElement,
-  } satisfies WidgetElements & { processingText: HTMLParagraphElement }
+    modalSvg,
+    cyberElements,
+    processingText,
+  }
 }
 
-function setOpen(elements: WidgetElements, open: boolean) {
-  elements.backdrop.hidden = !open
-  elements.panel.hidden = !open
+function setOpen(elements: WidgetElements, open: boolean, currentConfig: WidgetConfigResponse | null) {
+  const v2Settings = currentConfig ? parseWidgetConfigResponse(currentConfig) : null
+  const preset = v2Settings ? getWindowPreset(v2Settings.window.preset) : null
+  const animationRef = preset?.animationRef || 'two'
+  const duration = ANIMATION_DURATIONS[animationRef] || 500
+
+  if (open) {
+    // Body lock
+    document.body.classList.add('vtryon-modal-active')
+
+    // Handle Extra elements
+    if (animationRef === 'one' || animationRef === 'six') {
+      elements.modalSvg.removeAttribute('hidden')
+    } else {
+      elements.modalSvg.setAttribute('hidden', '')
+    }
+    elements.cyberElements.hidden = animationRef !== 'nine'
+
+    // Reset classes
+    elements.panel.classList.remove('is-out')
+    elements.panel.classList.forEach(cls => {
+      if (cls.startsWith('vtryon-anim--')) elements.panel.classList.remove(cls)
+    })
+
+    // Add animation class
+    elements.panel.classList.add(`vtryon-anim--${animationRef}`)
+
+    // Apply v2 backdrop styling
+    if (v2Settings) {
+      const backdropClass = v2Settings.window.backdrop === 'blur-dark'
+        ? 'vtryon-backdrop--blur-dark'
+        : v2Settings.window.backdrop === 'blur-light'
+          ? 'vtryon-backdrop--blur-light'
+          : v2Settings.window.backdrop === 'gradient'
+            ? 'vtryon-backdrop--gradient'
+            : 'vtryon-backdrop--dim'
+
+      elements.backdrop.className = `vtryon-widget__backdrop ${backdropClass}`
+    }
+
+    elements.backdrop.hidden = false
+    elements.panel.hidden = false
+  } else {
+    // Start exit animation
+    elements.panel.classList.add('is-out')
+
+    // Wait for animation to finish
+    setTimeout(() => {
+      elements.backdrop.hidden = true
+      elements.panel.hidden = true
+      elements.panel.classList.remove('is-out')
+      document.body.classList.remove('vtryon-modal-active')
+    }, duration)
+  }
 }
 
 function setStage(elements: WidgetElements, stage: 'upload' | 'processing' | 'result') {
@@ -564,6 +650,7 @@ async function initWidget() {
     const elements = createWidgetElements()
     elements.shell.hidden = true
     let widgetConfig: WidgetConfigResponse | null = null
+    let v2Settings: WidgetSettings | null = null
     let configPromise: Promise<WidgetConfigResponse | null> | null = null
     let selectedFile: File | null = null
     let previewUrl: string | null = null
@@ -571,6 +658,7 @@ async function initWidget() {
 
     function applyWidgetConfig(config: WidgetConfigResponse | null) {
       widgetConfig = config
+      v2Settings = config ? parseWidgetConfigResponse(config) : null
 
       if (!config) {
         elements.shell.hidden = false
@@ -578,15 +666,134 @@ async function initWidget() {
         return
       }
 
-      elements.launchButton.textContent = config.button_text || DEFAULT_BUTTON_TEXT
+      if (v2Settings) {
+        // Apply CSS variables from v2 config
+        const cssVars = generateAllCSSVariables(v2Settings)
 
-      if (!config.overall_enabled || !config.current_product_enabled || !config.widget_token) {
-        elements.shell.hidden = true
-        setOpen(elements, false)
-        return
+        // Apply CSS variables to the shadow root
+        // Apply CSS variables to the shell element
+        Object.entries(cssVars).forEach(([key, value]) => {
+          elements.shell.style.setProperty(key, value)
+        })
+
+        // Apply button label from v2 config
+        elements.launchButton.textContent = v2Settings.button.label || DEFAULT_BUTTON_TEXT
+
+        // Apply button icon
+        const iconContainer = elements.launchButton.querySelector('.vtryon-icon') as HTMLElement
+        if (iconContainer) {
+          iconContainer.style.display = v2Settings.button.icon.enabled ? 'inline-flex' : 'none'
+        }
+
+        // Check widget enabled status
+        if (!isWidgetEnabled(config) || !getWidgetToken(config)) {
+          elements.shell.hidden = true
+          setOpen(elements, false, config)
+          return
+        }
+
+        // Apply display rules
+        const rulesEngine = createDisplayRulesEngine(v2Settings.display_rules)
+        const currentProductId = bootstrapConfig?.initialProductId || resolveCurrentProductId(bootstrapScript, null)
+
+        if (currentProductId) {
+          const eligible = rulesEngine.isEligible(currentProductId)
+          if (!eligible) {
+            elements.shell.hidden = true
+            return
+          }
+        }
+
+        // Apply placement
+        const target = rulesEngine.getPlacementTarget()
+        applyPlacement(elements, target, v2Settings.display_rules.placement_side, {
+          vertical: v2Settings.display_rules.vertical_offset,
+          horizontal: v2Settings.display_rules.horizontal_offset,
+        })
+      } else {
+        // Fallback to legacy config
+        elements.launchButton.textContent = config.button_text || DEFAULT_BUTTON_TEXT
+
+        if (!config.overall_enabled || !config.current_product_enabled || !config.widget_token) {
+          elements.shell.hidden = true
+          setOpen(elements, false, config)
+          return
+        }
       }
 
       elements.shell.hidden = false
+    }
+
+    function applyPlacement(
+      elements: WidgetElements,
+      target: string,
+      side: 'left' | 'right' | 'center',
+      offset: { vertical: number; horizontal: number },
+    ) {
+      const shell = elements.shell
+
+      // Remove existing positioning classes
+      shell.classList.remove('vtryon-widget--floating', 'vtryon-widget--inline')
+
+      if (target === 'floating-corner' || target === 'sticky-mobile-footer') {
+        shell.classList.add('vtryon-widget--floating')
+
+        // Apply positioning
+        const isMobile = window.innerWidth < 768
+        if (isMobile && target === 'sticky-mobile-footer') {
+          shell.style.position = 'fixed'
+          shell.style.bottom = `${offset.vertical}px`
+          shell.style.left = '50%'
+          shell.style.transform = 'translateX(-50%)'
+        } else {
+          shell.style.position = 'fixed'
+          shell.style.top = `${offset.vertical}px`
+          shell.style.bottom = ''
+          shell.style.left = ''
+          shell.style.right = ''
+
+          if (side === 'center') {
+            shell.style.left = '50%'
+            shell.style.transform = 'translateX(-50%)'
+          } else {
+            shell.style[side as 'left' | 'right'] = `${offset.horizontal}px`
+            shell.style.transform = ''
+          }
+        }
+      } else {
+        shell.classList.add('vtryon-widget--inline')
+        shell.style.position = ''
+        shell.style.top = ''
+        shell.style.bottom = ''
+        shell.style.left = ''
+        shell.style.right = ''
+
+        // For inline placement, we might need to move the entire host element
+        const host = (shell.getRootNode() as ShadowRoot).host as HTMLElement
+        if (host && host.dataset.vtryonWidget === 'storefront' && v2Settings) {
+          const rulesEngine = createDisplayRulesEngine(v2Settings.display_rules)
+          const selectors = rulesEngine.getPlacementSelectors()
+          let foundTarget = false
+
+          for (const selector of selectors) {
+            const targetEl = document.querySelector(selector)
+            if (targetEl) {
+              if (target === 'under-add-to-cart') {
+                targetEl.after(host)
+              } else {
+                targetEl.before(host)
+              }
+              foundTarget = true
+              break
+            }
+          }
+
+          if (!foundTarget && v2Settings && v2Settings.display_rules.fallback_strategy !== 'disabled') {
+            // Fallback to floating if target not found
+            applyPlacement(elements, 'floating-corner', side, offset)
+          }
+        }
+      }
     }
 
     async function ensureWidgetConfig(force = false) {
@@ -783,7 +990,7 @@ async function initWidget() {
     }
 
     elements.launchButton.addEventListener('click', async () => {
-      setOpen(elements, true)
+      setOpen(elements, true, widgetConfig)
       setStage(elements, 'upload')
       setStatus(elements, 'info', 'اختر صورتك للبدء. نجهز المنتج في الخلفية الآن.')
 
@@ -807,11 +1014,11 @@ async function initWidget() {
     })
 
     elements.closeButton.addEventListener('click', () => {
-      setOpen(elements, false)
+      setOpen(elements, false, widgetConfig)
     })
 
     elements.backdrop.addEventListener('click', () => {
-      setOpen(elements, false)
+      setOpen(elements, false, widgetConfig)
     })
 
     elements.cameraButton.addEventListener('click', () => {

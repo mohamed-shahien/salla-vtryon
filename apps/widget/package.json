@@ -8,6 +8,7 @@
     "build": "node build.mjs"
   },
   "devDependencies": {
+    "@virtual-tryon/shared-types": "workspace:*",
     "esbuild": "^0.25.0",
     "typescript": "~5.9.3"
   }

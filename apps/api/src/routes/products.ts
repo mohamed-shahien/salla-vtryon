@@ -53,13 +53,13 @@ productsRouter.get(
       ])
 
       const rulesMap = new Map(rules.map((r) => [r.product_id, r.enabled]))
-      const legacyEnabled = new Set(settings.widget_products)
+      const legacyEnabled = new Set(settings.display_rules.selected_product_ids)
 
       const productsWithStatus = payload.data.map((product: SallaProduct) => {
         const productId = product.id
         let enabled = false
 
-        if (settings.widget_mode === 'all') {
+        if (settings.display_rules.eligibility_mode === 'all') {
           enabled = true
         } else {
           // Mode is 'selected'
@@ -132,9 +132,11 @@ productsRouter.post(
 
       // Automatically ensure widget is enabled and in selected mode if merchant is activating products
       const settings = await updateMerchantWidgetSettings(merchantUuid, {
-        widget_mode: 'selected',
         widget_enabled: true,
-      })
+        display_rules: {
+          eligibility_mode: 'selected',
+        },
+      } as any)
 
       response.status(200).json({ ok: true, data: settings })
     } catch (error) {
@@ -161,8 +163,10 @@ productsRouter.post(
 
       // Ensure widget is in selected mode so the disable takes effect for these products
       const settings = await updateMerchantWidgetSettings(merchantUuid, {
-        widget_mode: 'selected',
-      })
+        display_rules: {
+          eligibility_mode: 'selected',
+        },
+      } as any)
 
       response.status(200).json({ ok: true, data: settings })
     } catch (error) {
