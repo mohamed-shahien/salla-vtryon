@@ -669,6 +669,42 @@ async function initWidget() {
     let previewUrl: string | null = null
     let disposed = false
 
+    async function checkAvailability(settings: WidgetSettings, config: WidgetConfigResponse) {
+      const cond = settings.display_rules.availability_conditions
+      
+      // Merchant and App Status
+      if (cond.hide_when_merchant_inactive && !settings.widget_enabled) return false
+      
+      // Credits Check
+      if (cond.hide_when_no_credits && (config.credits_remaining ?? 0) <= 0) return false
+      
+      // Stock check via Salla config
+      if (cond.hide_on_out_of_stock) {
+        const isOutOfStock = window.salla?.config?.get?.('product.is_out_of_stock')
+        if (isOutOfStock === true) return false
+      }
+
+      // Image Check
+      if (cond.hide_on_missing_product_image || settings.runtime_safeguards.require_product_image) {
+        const img = readProductImageFromSlider()
+        if (!img) return false
+      }
+
+      // Daily Rate Limit Check
+      if (settings.runtime_safeguards.max_daily_requests) {
+        const date = new Date().toISOString().split('T')[0]
+        const key = `vtryon_stats_${date}`
+        const statsStr = localStorage.getItem(key)
+        const stats = statsStr ? JSON.parse(statsStr) : { requests: 0 }
+        
+        if (stats.requests >= settings.runtime_safeguards.max_daily_requests) {
+          return false
+        }
+      }
+
+      return true
+    }
+
     function applyWidgetConfig(config: WidgetConfigResponse | null) {
       widgetConfig = config
       v2Settings = config ? parseWidgetConfigResponse(config) : null
@@ -680,61 +716,94 @@ async function initWidget() {
       }
 
       if (v2Settings) {
-        // Apply CSS variables from v2 config
-        const cssVars = generateAllCSSVariables(v2Settings)
-
-        // Apply CSS variables to the shadow root
-        // Apply CSS variables to the shell element
-        Object.entries(cssVars).forEach(([key, value]) => {
-          elements.shell.style.setProperty(key, value)
-        })
-
-        // Apply button label from v2 config
-        elements.launchButton.textContent = v2Settings.button.label || DEFAULT_BUTTON_TEXT
-
-        // Apply button icon
-        const iconContainer = elements.launchButton.querySelector('.vtryon-icon') as HTMLElement
-        if (iconContainer) {
-          iconContainer.style.display = v2Settings.button.icon.enabled ? 'inline-flex' : 'none'
-        }
-
-        // Check widget enabled status
-        if (!isWidgetEnabled(config) || !getWidgetToken(config)) {
-          elements.shell.hidden = true
-          setOpen(elements, false, config)
-          return
-        }
-
-        // Apply display rules
-        const rulesEngine = createDisplayRulesEngine(v2Settings.display_rules)
-        const currentProductId = bootstrapConfig?.initialProductId || resolveCurrentProductId(bootstrapScript, null)
-
-        if (currentProductId) {
-          const eligible = rulesEngine.isEligible(currentProductId)
-          if (!eligible) {
+        // Availability Check
+        checkAvailability(v2Settings, config).then(available => {
+          if (!available) {
             elements.shell.hidden = true
             return
           }
-        }
 
-        // Apply placement
-        const target = rulesEngine.getPlacementTarget()
-        applyPlacement(elements, target, v2Settings.display_rules.placement_side, {
-          vertical: v2Settings.display_rules.vertical_offset,
-          horizontal: v2Settings.display_rules.horizontal_offset,
+          // Zero Credit Behavior - Disable with message
+          if ((config.credits_remaining ?? 0) <= 0 && v2Settings!.runtime_safeguards.zero_credit_behavior === 'disabled-with-message') {
+            elements.shell.hidden = false
+            elements.launchButton.disabled = true
+            elements.launchButton.style.opacity = '0.5'
+            elements.launchButton.title = v2Settings!.runtime_safeguards.zero_credit_message || 'عذراً، نفذ رصيد العمليات لهذا المتجر.'
+            return
+          } else {
+            elements.launchButton.disabled = false
+            elements.launchButton.style.opacity = '1'
+            elements.launchButton.title = ''
+          }
+
+          // Apply CSS variables from v2 config
+          const cssVars = generateAllCSSVariables(v2Settings!)
+          Object.entries(cssVars).forEach(([key, value]) => {
+            elements.shell.style.setProperty(key, value)
+          })
+
+          // Custom Typography and Icon Styles
+          const labelEl = elements.launchButton.querySelector('.vtryon-label') as HTMLElement
+          if (labelEl) {
+            labelEl.style.fontWeight = 'var(--vtryon-typography-weight)'
+          }
+          const iconPath = elements.launchButton.querySelector('.vtryon-icon svg path') as HTMLElement
+          if (iconPath) {
+            iconPath.style.strokeWidth = 'var(--vtryon-icon-stroke)'
+          }
+
+          // Apply button label
+          elements.launchButton.textContent = v2Settings!.button.label || DEFAULT_BUTTON_TEXT
+
+          // Apply button icon
+          const iconContainer = elements.launchButton.querySelector('.vtryon-icon') as HTMLElement
+          if (iconContainer) {
+            iconContainer.style.display = v2Settings!.button.icon.enabled ? 'inline-flex' : 'none'
+          }
+
+          // Check widget tokens
+          if (!isWidgetEnabled(config) || !getWidgetToken(config)) {
+            elements.shell.hidden = true
+            setOpen(elements, false, config)
+            return
+          }
+
+          // Apply display rules
+          const rulesEngine = createDisplayRulesEngine(v2Settings!.display_rules)
+          const currentProductId = bootstrapConfig?.initialProductId || resolveCurrentProductId(bootstrapScript, null)
+
+          if (currentProductId) {
+            const eligible = rulesEngine.isEligible(currentProductId)
+            if (!eligible) {
+              elements.shell.hidden = true
+              return
+            }
+          }
+
+          // Timing Check
+          const timing = v2Settings!.display_rules.display_timing
+          if (timing === 'after-page-stable' && document.readyState !== 'complete') {
+            window.addEventListener('load', () => elements.shell.hidden = false, { once: true })
+          } else {
+            elements.shell.hidden = false
+          }
+
+          // Apply placement
+          applyPlacement(elements, v2Settings!.display_rules.placement_target, v2Settings!.display_rules.placement_side, {
+            vertical: v2Settings!.display_rules.vertical_offset,
+            horizontal: v2Settings!.display_rules.horizontal_offset,
+          })
         })
       } else {
-        // Fallback to legacy config
+        // Fallback to legacy
         elements.launchButton.textContent = config.button_text || DEFAULT_BUTTON_TEXT
-
         if (!config.overall_enabled || !config.current_product_enabled || !config.widget_token) {
           elements.shell.hidden = true
           setOpen(elements, false, config)
           return
         }
+        elements.shell.hidden = false
       }
-
-      elements.shell.hidden = false
     }
 
     function applyPlacement(
@@ -746,66 +815,82 @@ async function initWidget() {
       const shell = elements.shell
       const host = shell.parentElement as HTMLDivElement
 
-      // Reset styling classes
+      // Reset styling
       shell.classList.remove('vtryon-widget--floating', 'vtryon-widget--inline')
       shell.style.cssText = ''
+      host.style.cssText = ''
+
+      const isMobile = window.innerWidth < 768
 
       if (target === 'floating-bottom' || target === 'floating-middle') {
         shell.classList.add('vtryon-widget--floating')
         shell.style.position = 'fixed'
-        shell.style.left = '50%'
-        shell.style.transform = 'translateX(-50%)'
         shell.style.zIndex = '99999'
-
-        if (target === 'floating-bottom') {
-          shell.style.bottom = '20px'
+        shell.style.bottom = target === 'floating-bottom' ? `${20 + offset.vertical}px` : '50%'
+        
+        if (side === 'center') {
+          shell.style.left = '50%'
+          shell.style.transform = target === 'floating-middle' ? 'translate(-50%, 50%)' : 'translateX(-50%)'
         } else {
-          shell.style.bottom = '50%'
-          shell.style.transform = 'translate(-50%, 50%)'
+          shell.style[side] = `${20 + offset.horizontal}px`
+          if (target === 'floating-middle') {
+            shell.style.transform = 'translateY(50%)'
+          }
         }
         
         document.body.appendChild(host)
       } else {
         shell.classList.add('vtryon-widget--inline')
+        const rules = createDisplayRulesEngine(v2Settings!.display_rules)
+        const selectors = rules.getPlacementSelectors()
         
-        let selector = ''
-        let position: 'prepend' | 'before' = 'prepend'
-
-        switch (target) {
-          case 'on-product-image':
-            selector = '.product-single salla-slider.details-slider .s-slider-container'
-            shell.style.position = 'absolute'
-            shell.style.top = '10px'
-            shell.style.right = '10px'
-            shell.style.zIndex = '10'
-            position = 'prepend'
-            break
-          case 'above-product-options':
-            selector = '.product-single form.form.product-form'
-            position = 'prepend'
-            break
-          case 'description-section':
-            selector = '.product-single .product__description'
-            position = 'before'
-            break
+        let targetEl: HTMLElement | null = null
+        for (const selector of selectors) {
+          targetEl = document.querySelector(selector)
+          if (targetEl) break
         }
 
-        if (selector) {
-          const targetEl = document.querySelector(selector)
-          if (targetEl) {
-            if (position === 'prepend') {
+        if (targetEl) {
+          // Special case: Absolute on Image
+          if (target === 'on-product-image') {
+            targetEl.style.position = 'relative' // Ensure parent is relative
+            shell.style.position = 'absolute'
+            shell.style.zIndex = '20'
+            shell.style[side === 'center' ? 'left' : side] = `${10 + offset.horizontal}px`
+            if (side === 'center') {
+              shell.style.left = '50%'
+              shell.style.transform = 'translateX(-50%)'
+            }
+            shell.style.top = `${10 + offset.vertical}px`
+            targetEl.prepend(host)
+          } else {
+            // Standard Inline Docking
+            host.style.marginTop = `${offset.vertical}px`
+            host.style.marginBottom = `${offset.vertical}px`
+            host.style.marginLeft = side === 'left' ? `${offset.horizontal}px` : '0'
+            host.style.marginRight = side === 'right' ? `${offset.horizontal}px` : '0'
+            
+            if (side === 'center') {
+              host.style.textAlign = 'center'
+              shell.style.margin = '0 auto'
+            } else {
+              host.style.textAlign = side
+            }
+
+            if (target === 'above-product-options') {
               targetEl.prepend(host)
             } else {
               targetEl.parentElement?.insertBefore(host, targetEl)
             }
-          } else {
-            // Fallback: Add to body if target not found
-            document.body.appendChild(host)
-            shell.classList.add('vtryon-widget--floating')
-            shell.style.position = 'fixed'
-            shell.style.bottom = '20px'
-            shell.style.right = '20px'
           }
+        } else {
+          // Final Fallback: Floating Right
+          shell.classList.add('vtryon-widget--floating')
+          shell.style.position = 'fixed'
+          shell.style.bottom = '20px'
+          shell.style.right = '20px'
+          shell.style.zIndex = '99999'
+          document.body.appendChild(host)
         }
       }
     }

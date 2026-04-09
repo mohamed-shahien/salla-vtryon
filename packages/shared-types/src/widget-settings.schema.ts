@@ -139,13 +139,13 @@ export type CornerRadius = (typeof CORNER_RADIUS_OPTIONS)[number]
 export const SPACING_DENSITY_OPTIONS = ['compact', 'comfortable', 'spacious'] as const
 export type SpacingDensity = (typeof SPACING_DENSITY_OPTIONS)[number]
 
-export const TYPOGRAPHY_TONE_OPTIONS = ['neutral', 'modern', 'premium', 'bold-commerce'] as const
+export const TYPOGRAPHY_TONE_OPTIONS = ['neutral', 'modern', 'premium', 'bold'] as const
 export type TypographyTone = (typeof TYPOGRAPHY_TONE_OPTIONS)[number]
 
 export const VISUAL_INTENSITY_OPTIONS = ['quiet', 'balanced', 'expressive', 'bold'] as const
 export type VisualIntensity = (typeof VISUAL_INTENSITY_OPTIONS)[number]
 
-export const ICON_STYLE_OPTIONS = ['line', 'duotone', 'filled'] as const
+export const ICON_STYLE_OPTIONS = ['line', 'duotone', 'filled', 'bold'] as const
 export type IconStyle = (typeof ICON_STYLE_OPTIONS)[number]
 
 export const MOTION_ENERGY_OPTIONS = ['minimal', 'smooth', 'lively', 'dynamic'] as const
@@ -182,6 +182,7 @@ export const PLACEMENT_TARGET_OPTIONS = [
   'floating-bottom',
   'floating-middle',
   'description-section',
+  'under-add-to-cart',
 ] as const
 export type PlacementTarget = (typeof PLACEMENT_TARGET_OPTIONS)[number]
 

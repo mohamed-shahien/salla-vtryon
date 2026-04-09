@@ -106,11 +106,11 @@ export function WidgetStudioPage() {
         layout
         className={cn(
           "h-full bg-card border-l border-border/40 transition-[width] duration-300 ease-in-out flex flex-col shrink-0 relative z-30 shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.05)]",
-          showSettings ? "w-[440px]" : "w-0"
+          showSettings ? "w-[500px]" : "w-0"
         )}
       >
         <div className={cn(
-          "w-[440px] h-full flex flex-col transition-opacity duration-300",
+          "w-[500px] h-full flex flex-col transition-opacity duration-300",
           showSettings ? "opacity-100" : "opacity-0 pointer-events-none"
         )}>
 
@@ -145,96 +145,101 @@ export function WidgetStudioPage() {
           </div>
 
 
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 relative">
             <ScrollArea className="h-full">
-              <div className="p-1 space-y-5 pb-24">
+              {/* Fix for Radix ScrollArea + Carousel conflict: ensure block layout */}
+              <div className="block">
 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-foreground/80 px-1">
-                    <Palette className="size-4 text-primary/70" />
-                    <span className="text-[10px] font-black">الألوان والخطوط الأساسية</span>
+                <div className="p-4 space-y-6 pb-32 ">
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-foreground/80 px-1">
+                      <Palette className="size-4 text-primary/70" />
+                      <span className="text-[10px] font-black">الألوان والخطوط الأساسية</span>
+                    </div>
+                    <VisualIdentitySection
+                      settings={studio.config.visual_identity}
+                      onUpdate={studio.updateVisualIdentity}
+                    />
                   </div>
-                  <VisualIdentitySection
-                    settings={studio.config.visual_identity}
-                    onUpdate={studio.updateVisualIdentity}
-                  />
+
+                  <Separator className="bg-border/40 opacity-50" />
+
+
+                  <Accordion type="multiple" defaultValue={["presets", "rules"]} className="w-full">
+
+                    <AccordionItem value="presets" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
+                      <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <MousePointer2 className="size-4.5 text-primary" />
+                          </div>
+                          <div className="flex flex-col items-start text-right">
+                            <span className="text-[11px] font-black tracking-tight">شكل الأزرار والنوافذ</span>
+                            <span className="text-[9px] font-medium text-muted-foreground opacity-70">اختر التصميم المناسب لزر التشغيل ونافذة العرض</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-3 pb-3 pt-1 space-y-4">
+                        <ButtonPresetsSection
+                          settings={studio.config.button}
+                          onUpdate={studio.updateButtonSettings}
+                          onApplyPreset={studio.applyButtonPreset}
+                        />
+                        <WindowPresetsSection
+                          settings={studio.config.window}
+                          onUpdate={studio.updateWindowSettings}
+                          onApplyPreset={studio.applyWindowPreset}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="rules" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
+                      <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <Settings className="size-4.5 text-primary" />
+                          </div>
+                          <div className="flex flex-col items-start text-right">
+                            <span className="text-[11px] font-black tracking-tight">التحكم في مكان ووقت الظهور</span>
+                            <span className="text-[9px] font-medium text-muted-foreground opacity-70">حدد المنتجات التي يظهر عليها الزر وموعد ظهوره للعملاء</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-3 pb-3 pt-1">
+                        <DisplayRulesSection
+                          rules={studio.config.display_rules}
+                          onUpdate={studio.updateDisplayRules}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="diagnostics" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
+                      <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <LayoutPanelTop className="size-4.5 text-primary" />
+                          </div>
+                          <div className="flex flex-col items-start text-right">
+                            <span className="text-[11px] font-black tracking-tight">إعدادات متقدمة وفحص الحالة</span>
+                            <span className="text-[9px] font-medium text-muted-foreground opacity-70">أدوات تقنية للتأكد من سلامة عمل الخدمة في متجرك</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-3 pb-3 pt-1 space-y-4">
+                        <RuntimeSafeguardsSection
+                          settings={studio.config.runtime_safeguards}
+                          onUpdate={studio.updateRuntimeSafeguards}
+                        />
+                        <Separator className="bg-border/40 opacity-50" />
+                        <DiagnosticsSection
+                          apiUrl={bootstrapConfig.apiBaseUrl}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </div>
 
-                <Separator className="bg-border/40 opacity-50" />
-
-
-                <Accordion type="multiple" defaultValue={["presets", "rules"]} className="w-full">
-
-                  <AccordionItem value="presets" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
-                    <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                          <MousePointer2 className="size-4.5 text-primary" />
-                        </div>
-                        <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">شكل الأزرار والنوافذ</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">اختر التصميم المناسب لزر التشغيل ونافذة العرض</span>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-3 pt-1 space-y-4">
-                      <ButtonPresetsSection
-                        settings={studio.config.button}
-                        onUpdate={studio.updateButtonSettings}
-                        onApplyPreset={studio.applyButtonPreset}
-                      />
-                      <WindowPresetsSection
-                        settings={studio.config.window}
-                        onUpdate={studio.updateWindowSettings}
-                        onApplyPreset={studio.applyWindowPreset}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="rules" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
-                    <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                          <Settings className="size-4.5 text-primary" />
-                        </div>
-                        <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">التحكم في مكان ووقت الظهور</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">حدد المنتجات التي يظهر عليها الزر وموعد ظهوره للعملاء</span>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-3 pt-1">
-                      <DisplayRulesSection
-                        rules={studio.config.display_rules}
-                        onUpdate={studio.updateDisplayRules}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="diagnostics" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
-                    <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                          <LayoutPanelTop className="size-4.5 text-primary" />
-                        </div>
-                        <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">إعدادات متقدمة وفحص الحالة</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">أدوات تقنية للتأكد من سلامة عمل الخدمة في متجرك</span>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-3 pt-1 space-y-4">
-                      <RuntimeSafeguardsSection
-                        settings={studio.config.runtime_safeguards}
-                        onUpdate={studio.updateRuntimeSafeguards}
-                      />
-                      <Separator className="bg-border/40 opacity-50" />
-                      <DiagnosticsSection
-                        apiUrl={bootstrapConfig.apiBaseUrl}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
               </div>
             </ScrollArea>
           </div>

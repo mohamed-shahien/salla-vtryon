@@ -192,7 +192,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             <Toggle value="premium" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               فاخر واحترافي
             </Toggle>
-            <Toggle value="bold-commerce" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
+            <Toggle value="bold" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               تجاري جريء
             </Toggle>
           </ToggleGroup>
@@ -230,7 +230,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Icon Style */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            سرعة حركات الأنيميشن
+            شكل الأيقونات بداخل الويدجت
             <Sparkles className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -242,13 +242,13 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="line" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              هادئة
+              خطوط نحيفة
             </Toggle>
             <Toggle value="duotone" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              ناعمة
+              لونين (ثنائي)
             </Toggle>
             <Toggle value="filled" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              سريعة وتفاعلية
+              ممتلئ (بارز)
             </Toggle>
           </ToggleGroup>
         </div>
@@ -270,7 +270,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             <Toggle value="dim" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               تعتيم هادئ
             </Toggle>
-            <Toggle value="blur" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
+            <Toggle value="blur-dark" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               تغبيش ضبابي
             </Toggle>
             <Toggle value="gradient" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">

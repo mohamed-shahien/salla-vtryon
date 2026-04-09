@@ -17,6 +17,7 @@ import {
   ensureMerchantRecord,
   findMerchantById,
   findMerchantBySallaMerchantId,
+  getCreditsForMerchant,
   getMerchantProductRule,
   getMerchantProductRules,
   getMerchantWidgetSettings,
@@ -34,6 +35,7 @@ interface WidgetConfigPayload {
   enabled: boolean
   
   widget_token: string | null
+  credits_remaining: number
   reason: string | null
   settings: Record<string, unknown>
   schema_version: number
@@ -124,7 +126,7 @@ export async function getWidgetConfig(
   }
 
   // Parallel queries where possible
-  const [productRule, productDetail, rules] = await Promise.all([
+  const [productRule, productDetail, productRules, creditsRecord] = await Promise.all([
     currentProductId ? getMerchantProductRule(merchant.id, currentProductId).catch(() => null) : Promise.resolve(null),
     currentProductId
       ? productDetailsCache.getOrSet(
@@ -138,9 +140,11 @@ export async function getWidgetConfig(
       const settings = normalizeWidgetSettings(merchant.settings)
       return settings.display_rules.eligibility_mode === 'selected' ? getMerchantProductRules(merchant.id).catch(() => []) : []
     })(),
+    getCreditsForMerchant(merchant.id),
   ])
 
   const settings = normalizeWidgetSettings(merchant.settings)
+  const remainingCredits = creditsRecord ? Math.max(creditsRecord.total_credits - creditsRecord.used_credits, 0) : 0
   const overallEnabled =
     merchant.is_active === true && merchant.plan_status === 'active' && settings.widget_enabled
 
@@ -152,9 +156,9 @@ export async function getWidgetConfig(
       : overallEnabled && settings.display_rules.eligibility_mode === 'all'
 
   let widgetProducts = settings.display_rules.selected_product_ids
-  if (settings.display_rules.eligibility_mode === 'selected' && rules) {
-    const enabledFromRules = rules.filter((r) => r.enabled).map((r) => r.product_id)
-    const disabledFromRules = new Set(rules.filter((r) => !r.enabled).map((r) => r.product_id))
+  if (settings.display_rules.eligibility_mode === 'selected' && productRules) {
+    const enabledFromRules = (productRules as any[]).filter((r) => r.enabled).map((r) => r.product_id)
+    const disabledFromRules = new Set((productRules as any[]).filter((r) => !r.enabled).map((r) => r.product_id))
 
     widgetProducts = Array.from(
       new Set([
@@ -191,6 +195,7 @@ export async function getWidgetConfig(
             productId: currentProductId,
           })
         : null,
+    credits_remaining: remainingCredits,
     reason,
     settings: settings as unknown as Record<string, unknown>,
     schema_version: settings.schema_version,

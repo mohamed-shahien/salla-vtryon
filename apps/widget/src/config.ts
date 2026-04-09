@@ -596,6 +596,34 @@ export interface WindowPreset {
 }
 
 const WINDOW_PRESETS: Record<WindowPresetId, WindowPreset> = {
+  'one': {
+    id: 'one',
+    nameAr: 'قالب داخلي 1',
+    description: 'قالب افتراضي للنظام',
+    animationRef: 'one',
+    animationClasses: { enter: 'vtryon-anim--one', enterActive: '', exit: 'is-out', exitActive: '' },
+  },
+  'two': {
+    id: 'two',
+    nameAr: 'قالب داخلي 2',
+    description: 'قالب افتراضي للنظام',
+    animationRef: 'two',
+    animationClasses: { enter: 'vtryon-anim--two', enterActive: '', exit: 'is-out', exitActive: '' },
+  },
+  'three': {
+    id: 'three',
+    nameAr: 'قالب داخلي 3',
+    description: 'قالب افتراضي للنظام',
+    animationRef: 'three',
+    animationClasses: { enter: 'vtryon-anim--three', enterActive: '', exit: 'is-out', exitActive: '' },
+  },
+  'four': {
+    id: 'four',
+    nameAr: 'قالب داخلي 4',
+    description: 'قالب افتراضي للنظام',
+    animationRef: 'four',
+    animationClasses: { enter: 'vtryon-anim--four', enterActive: '', exit: 'is-out', exitActive: '' },
+  },
   'classic-center-modal': {
     id: 'classic-center-modal',
     nameAr: 'نافذة مركزية كلاسيكية',
@@ -696,12 +724,21 @@ export const generateVisualIdentityCSSVariables = (settings: VisualIdentity): Re
   const backdropFilterMap: Record<BackdropStyle, string> = { dim: 'none', 'blur-dark': 'blur(12px)', 'blur-light': 'blur(8px)', gradient: 'none', none: 'none' }
   const backdropBgMap: Record<BackdropStyle, string> = { dim: 'rgba(0, 0, 0, 0.6)', 'blur-dark': 'rgba(0, 0, 0, 0.4)', 'blur-light': 'rgba(255, 255, 255, 0.4)', gradient: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8))', none: 'transparent' }
 
+  const surfaceBgMap: Record<SurfaceStyle, string> = { solid: '#ffffff', soft: '#f9fafb', elevated: '#ffffff', glass: 'rgba(255, 255, 255, 0.8)', outline: '#ffffff' }
+  const surfaceBorderMap: Record<SurfaceStyle, string> = { solid: '1px solid #e5e7eb', soft: '1px solid #f3f4f6', elevated: 'none', glass: '1px solid rgba(255, 255, 255, 0.2)', outline: '1px solid #d1d5db' }
+  const surfaceShadowMap: Record<SurfaceStyle, string> = { solid: 'none', soft: 'none', elevated: '0 4px 12px rgba(0, 0, 0, 0.1)', glass: '0 8px 32px rgba(0, 0, 0, 0.08)', outline: 'none' }
+
   return {
     '--vtryon-brand-color': settings.brand_color,
     '--vtryon-radius': radiusMap[settings.corner_radius],
     '--vtryon-spacing': spacingMap[settings.spacing_density],
     '--vtryon-backdrop-filter': backdropFilterMap[settings.backdrop_style],
     '--vtryon-backdrop-bg': backdropBgMap[settings.backdrop_style],
+    '--vtryon-surface-bg': surfaceBgMap[settings.surface_style],
+    '--vtryon-surface-border': surfaceBorderMap[settings.surface_style],
+    '--vtryon-surface-shadow': surfaceShadowMap[settings.surface_style],
+    '--vtryon-typography-weight': settings.typography_tone === 'bold' ? '900' : settings.typography_tone === 'modern' ? '700' : '400',
+    '--vtryon-icon-stroke': settings.icon_style === 'bold' ? '3' : '2',
   }
 }
 
@@ -714,31 +751,29 @@ export function createDisplayRulesEngine(rules: DisplayRules) {
   const target = isMobile && rules.mobile_placement_target ? rules.mobile_placement_target : rules.placement_target
 
   const placementSelectors: Record<PlacementTarget, string[]> = {
+    'on-product-image': [
+      '.product-single salla-slider.details-slider .s-slider-container',
+      '.details-slider',
+      'salla-slider',
+    ],
+    'above-product-options': [
+      '.s-product-options-wrapper',
+      '.product-single form.form.product-form',
+      '.product-options',
+    ],
+    'description-section': [
+      '.s-product-description',
+      '.product__description',
+      '#product-description',
+    ],
     'under-add-to-cart': [
-      '.btn--add-to-cart',
-      'button[data-test="add-to-cart"]',
-      '[onclick*="cart.add"]',
-      'form[action*="cart"] button[type="submit"]',
-      'button:has(.fa-cart-plus)',
+      '.s-product-options-wrapper-add-to-cart',
+      '.s-add-to-cart-container',
+      '[data-add-to-cart-button]',
+      'button[type="submit"].s-button-primary',
     ],
-    'above-add-to-cart': [
-      '.btn--add-to-cart',
-      'button[data-test="add-to-cart"]',
-    ],
-    'inside-product-actions': [
-      '.product-actions',
-      '.product__actions',
-      '[data-test="product-actions"]',
-      '.s-product-actions',
-    ],
-    'floating-corner': ['body'],
-    'sticky-mobile-footer': ['body'],
-    'auto-best-fit': [
-      '.btn--add-to-cart',
-      'button[data-test="add-to-cart"]',
-      '[onclick*="cart.add"]',
-      'form[action*="cart"] button[type="submit"]',
-    ],
+    'floating-bottom': ['body'],
+    'floating-middle': ['body'],
   }
 
   return {

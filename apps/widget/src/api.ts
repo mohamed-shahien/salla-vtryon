@@ -11,7 +11,9 @@ export interface WidgetConfigResponse {
   button_text: string
   default_category: WidgetCategory
   widget_token: string | null
+  credits_remaining: number
   reason: string | null
+  settings: Record<string, any>
 }
 
 export interface WidgetJobResponse {

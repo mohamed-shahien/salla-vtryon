@@ -72,7 +72,8 @@ export const WidgetLivePreview = React.memo(function WidgetLivePreview({
           data-placement={config.display_rules.placement_target}
           className={cn(
             "relative overflow-hidden bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl transition-all duration-500 ease-in-out",
-            "border border-border/40"
+            "border border-border/40",
+            device === 'desktop' && "w-full h-full"
           )}
           style={device !== 'desktop' ? { width: deviceDimensions.width, height: deviceDimensions.height } : undefined}
         >
@@ -137,10 +138,12 @@ export const WidgetLivePreview = React.memo(function WidgetLivePreview({
                 )}
                 style={{
                   marginTop: config.display_rules.placement_target === 'above-product-options' ? '0' : '12px',
-                  position: config.display_rules.placement_target === 'on-product-image' ? 'absolute' : undefined,
-                  top: config.display_rules.placement_target === 'on-product-image' ? '20px' : undefined,
-                  right: config.display_rules.placement_target === 'on-product-image' ? '20px' : undefined,
+                  position: (config.display_rules.placement_target === 'on-product-image' || config.display_rules.placement_target === 'floating-middle' || config.display_rules.placement_target === 'floating-bottom') ? 'absolute' : undefined,
+                  top: config.display_rules.placement_target === 'on-product-image' ? `${10 + (config.display_rules.vertical_offset ?? 0)}px` : undefined,
                   zIndex: config.display_rules.placement_target === 'on-product-image' ? 20 : undefined,
+                  left: (config.display_rules.placement_side === 'left' || config.display_rules.placement_side === 'center') ? (config.display_rules.placement_side === 'center' ? '50%' : `${10 + (config.display_rules.horizontal_offset ?? 0)}px`) : 'auto',
+                  right: config.display_rules.placement_side === 'right' ? `${10 + (config.display_rules.horizontal_offset ?? 0)}px` : 'auto',
+                  transform: config.display_rules.placement_side === 'center' ? 'translateX(-50%)' : undefined,
                 }}
               >
                 {/* Widget Launch Button */}

@@ -111,6 +111,61 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
           </ToggleGroup>
         </div>
 
+        {/* Placement Side & Offsets */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-primary/5 border border-primary/10">
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
+              جهة الظهور (يمين/يسار)
+              <ArrowRightLeft className="size-3.5" />
+            </Label>
+            <ToggleGroup
+              multiple={false}
+              value={[rules.placement_side]}
+              onValueChange={(v: string[]) => v[0] && onUpdate({ placement_side: v[0] as any })}
+              className="w-full bg-background/50 p-1 rounded-lg gap-1 border border-border/5"
+              variant="default"
+              size="sm"
+            >
+              <Toggle value="right" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg transition-all">
+                يمين
+              </Toggle>
+              <Toggle value="center" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg transition-all">
+                منتصف
+              </Toggle>
+              <Toggle value="left" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg transition-all">
+                يسار
+              </Toggle>
+            </ToggleGroup>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
+              هوامش وإزاحة الموضع (بكسل)
+              <Layout className="size-3.5" />
+            </Label>
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 space-y-1">
+                <p className="text-[8px] font-bold text-muted-foreground/60 text-right">رأسي</p>
+                <input
+                  type="number"
+                  value={rules.vertical_offset}
+                  onChange={(e) => onUpdate({ vertical_offset: Number(e.target.value) })}
+                  className="w-full h-8 bg-background border border-border/40 rounded-md text-[10px] font-black text-center"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-[8px] font-bold text-muted-foreground/60 text-right">أفقي</p>
+                <input
+                  type="number"
+                  value={rules.horizontal_offset}
+                  onChange={(e) => onUpdate({ horizontal_offset: Number(e.target.value) })}
+                  className="w-full h-8 bg-background border border-border/40 rounded-md text-[10px] font-black text-center"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Display Timing */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">

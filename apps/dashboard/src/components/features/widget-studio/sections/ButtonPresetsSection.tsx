@@ -19,6 +19,13 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, Toggle } from '@/components/animate-ui/components/base/toggle-group'
 
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel'
 import { cn } from '@/lib/utils'
 
 import { BUTTON_PRESETS, type ButtonPreset } from '@/lib/presets/button-preset-registry'
@@ -53,42 +60,53 @@ export function ButtonPresetsSection({ settings, onUpdate, onApplyPreset }: Butt
       </CardHeader>
 
       <CardContent className="p-3 space-y-4">
-        {/* Preset Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {BUTTON_PRESETS.map((preset) => {
-            const isSelected = settings.preset === preset.id
-            return (
-              <button
-                key={preset.id}
-                onClick={() => onApplyPreset(preset.id)}
-                className={cn(
-                  "relative p-3 rounded-lg border-2 transition-all duration-300 text-right group overflow-hidden",
-                  isSelected
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/10"
-                    : "border-border/40 hover:border-border/60 hover:bg-muted/20"
-                )}
-              >
-                {/* Preset Preview */}
-                <div className="h-8 rounded-md mb-2 flex items-center justify-center transition-all duration-300"
-                  style={getPresetPreviewStyles(preset, isSelected)}>
-                  {settings.icon.enabled && (
-                    <Sparkles className={cn("size-4", isSelected ? "text-white" : "text-primary")} />
-                  )}
-                </div>
+        <div className="w-full overflow-hidden">
+          <Carousel
+            opts={{
+              direction: 'rtl',
+              align: 'start',
+              dragFree: true,
+            }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-3">
+              {BUTTON_PRESETS.map((preset) => {
+                const isSelected = settings.preset === preset.id
+                return (
+                  <CarouselItem key={preset.id} className="pl-3 basis-1/3 min-w-0 shrink-0">
+                    <button
+                      onClick={() => onApplyPreset(preset.id)}
+                      className={cn(
+                        "relative w-full p-2.5 rounded-xl border-2 transition-all duration-300 text-right group overflow-hidden h-full flex flex-col",
+                        isSelected
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/10 shadow-sm"
+                          : "border-border/40 hover:border-border/60 hover:bg-muted/30"
+                      )}
+                    >
+                      {/* Preset Preview */}
+                      <div className="h-7 rounded-lg mb-2 flex items-center justify-center transition-all duration-300"
+                        style={getPresetPreviewStyles(preset, isSelected)}>
+                        {settings.icon.enabled && (
+                          <Sparkles className={cn("size-3.5", isSelected ? "text-white" : "text-primary")} />
+                        )}
+                      </div>
 
-                {/* Preset Name */}
-                <p className="text-[9px] font-black truncate">{preset.nameAr}</p>
-                <p className="text-[8px] text-muted-foreground leading-tight">{preset.description}</p>
+                      {/* Preset Name */}
+                      <p className="text-[10px] font-black truncate mb-0.5">{preset.nameAr}</p>
+                      <p className="text-[8px] text-muted-foreground leading-tight line-clamp-1 opacity-70">{preset.description}</p>
 
-                {/* Selection Indicator */}
-                {isSelected && (
-                  <div className="absolute top-1 left-1 p-0.5 bg-primary rounded-full">
-                    <div className="size-1.5 rounded-full bg-white" />
-                  </div>
-                )}
-              </button>
-            )
-          })}
+                      {/* Selection Indicator */}
+                      {isSelected && (
+                        <div className="absolute top-1 left-1 p-0.5 bg-primary rounded-full ring-2 ring-background">
+                          <div className="size-1 rounded-full bg-white" />
+                        </div>
+                      )}
+                    </button>
+                  </CarouselItem>
+                )
+              })}
+            </CarouselContent>
+          </Carousel>
         </div>
 
         {/* Customization Options */}

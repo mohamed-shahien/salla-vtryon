@@ -172,3 +172,7 @@ body {
 .animate-blow-up-in {
   animation: blow-up-in 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
 }
+
+[data-radix-scroll-area-viewport] > div {
+  display: block !important;
+}

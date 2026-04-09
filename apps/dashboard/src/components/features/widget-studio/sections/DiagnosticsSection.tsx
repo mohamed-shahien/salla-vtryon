@@ -42,24 +42,28 @@ export function DiagnosticsSection({ apiUrl }: DiagnosticsSectionProps) {
   const runDiagnostics = async () => {
     setLoading(true)
     try {
+      // Refresh identity to get latest credits/plan status
+      await useAuthStore.getState().checkAuth()
+      const latestIdentity = useAuthStore.getState().identity
+
       const diagnostics = await runFullDiagnostics({
         apiUrl,
         configVersion: 1, // Unified System
-        configLastPublished: identity?.merchant?.installed_at ? new Date(identity.merchant.installed_at) : null,
+        configLastPublished: latestIdentity?.merchant?.installed_at ? new Date(latestIdentity.merchant.installed_at) : null,
         tokenData: {
-          valid: identity?.exp ? new Date(identity.exp) > new Date() : false,
-          expiresAt: identity?.exp || null,
+          valid: latestIdentity?.exp ? new Date(latestIdentity.exp) > new Date() : false,
+          expiresAt: latestIdentity?.exp || null,
           scopes: ['read', 'write'],
         },
         credits: {
-          remaining_credits: identity?.credits?.remaining_credits ?? 0,
-          used_credits: identity?.credits?.used_credits ?? 0,
-          total_credits: identity?.credits?.total_credits ?? null,
-          reset_at: identity?.credits?.reset_at || null,
+          remaining_credits: latestIdentity?.credits?.remaining_credits ?? 0,
+          used_credits: latestIdentity?.credits?.used_credits ?? 0,
+          total_credits: latestIdentity?.credits?.total_credits ?? null,
+          reset_at: latestIdentity?.credits?.reset_at || null,
         },
         plan: {
-          plan: identity?.merchant?.plan || null,
-          plan_status: identity?.merchant?.plan_status || null,
+          plan: latestIdentity?.merchant?.plan || null,
+          plan_status: latestIdentity?.merchant?.plan_status || null,
         },
       })
 
