@@ -46,10 +46,10 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
       <CardHeader className="p-3 border-b border-border/10">
         <div className="flex items-center gap-2 text-foreground/80">
           <Palette className="size-4 text-primary/70" />
-          <CardTitle className="text-sm font-black">الهوية البصرية</CardTitle>
+          <CardTitle className="text-sm font-black">طريقة العرض والألوان</CardTitle>
         </div>
         <CardDescription className="text-[9px] font-bold opacity-60 mt-1">
-          الألوان، الزوايا، المسافات، والخطوط
+          تحكم في الألوان والخطوط لتناسب هوية متجرك
         </CardDescription>
       </CardHeader>
 
@@ -57,7 +57,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Brand Color */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            اللون الأساسي
+            لون علامتك التجارية الأساسي
             <Palette className="size-3.5" />
           </Label>
           <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Surface Style */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            نمط السطح
+            شكل خلفية العناصر
             <Layers className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -97,19 +97,19 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="solid" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              صلب
+              لون كامل
             </Toggle>
             <Toggle value="soft" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               ناعم
             </Toggle>
             <Toggle value="elevated" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              مرتفع
+              بارز قليلاً
             </Toggle>
             <Toggle value="glass" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               زجاجي
             </Toggle>
             <Toggle value="outline" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              حدود
+              إطار فقط
             </Toggle>
           </ToggleGroup>
         </div>
@@ -117,7 +117,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Corner Radius */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            الزوايا
+            درجة انحناء الزوايا
             <SquareRoundCorner  className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -129,16 +129,16 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="compact" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              مضغوط
+              حادة (مربعة)
             </Toggle>
             <Toggle value="balanced" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              متوازن
+              متوازنة
             </Toggle>
             <Toggle value="rounded" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              مستدير
+              دائرية
             </Toggle>
             <Toggle value="pill-heavy" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              حبة
+              مستديرة جداً
             </Toggle>
           </ToggleGroup>
         </div>
@@ -146,7 +146,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Spacing Density */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            كثافة المسافات
+            توزيع المسافات بين العناصر
             <Grid3x3 className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -158,13 +158,13 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="compact" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              مضغوط
+              متراص (ضيق)
             </Toggle>
             <Toggle value="comfortable" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              مريح
+              مريح (عادي)
             </Toggle>
             <Toggle value="spacious" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              واسع
+              واسع وفضفاض
             </Toggle>
           </ToggleGroup>
         </div>
@@ -172,7 +172,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Typography Tone */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            نبرة الخط
+            ستايل الخط المستخدم
             <Type className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -184,13 +184,13 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="neutral" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              محايد
+              رسمي بسيط
             </Toggle>
             <Toggle value="modern" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              حديث
+              عصري وجذاب
             </Toggle>
             <Toggle value="premium" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              فاخر
+              فاخر واحترافي
             </Toggle>
             <Toggle value="bold-commerce" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               تجاري جريء
@@ -201,7 +201,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Visual Intensity */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            الشدة البصرية
+            قوة وبروز التصميم
             <Zap className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -213,16 +213,16 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="quiet" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              هادئ
+              هادئ جداً
             </Toggle>
             <Toggle value="balanced" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               متوازن
             </Toggle>
             <Toggle value="expressive" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              معبر
+              ملفت للعين
             </Toggle>
             <Toggle value="bold" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              جريء
+              قوي وجريء
             </Toggle>
           </ToggleGroup>
         </div>
@@ -230,7 +230,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Icon Style */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            نمط الأيقونات
+            سرعة حركات الأنيميشن
             <Sparkles className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -242,13 +242,13 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="line" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              خطي
+              هادئة
             </Toggle>
             <Toggle value="duotone" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              ثنائي
+              ناعمة
             </Toggle>
             <Toggle value="filled" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              ممتلئ
+              سريعة وتفاعلية
             </Toggle>
           </ToggleGroup>
         </div>
@@ -268,16 +268,16 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="dim" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              معتم
+              تعتيم هادئ
             </Toggle>
             <Toggle value="blur" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              ضبابي
+              تغبيش ضبابي
             </Toggle>
             <Toggle value="gradient" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              متدرج
+              تدرج لوني
             </Toggle>
             <Toggle value="none" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              بدون
+              بدون تأثير
             </Toggle>
           </ToggleGroup>
         </div>
@@ -285,7 +285,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* Motion Energy */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            طاقة الحركة
+            توقيت وحالة العرض الافتراضية
             <RefreshCw className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -297,13 +297,13 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
             size="sm"
           >
             <Toggle value="minimal" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              بسيط
+              النتيجة أولاً
             </Toggle>
             <Toggle value="smooth" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              ناعم
+              الرفع أولاً
             </Toggle>
             <Toggle value="lively" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              حيوي
+              مخصص
             </Toggle>
             <Toggle value="dynamic" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
               ديناميكي
@@ -314,7 +314,7 @@ export function VisualIdentitySection({ settings, onUpdate }: VisualIdentitySect
         {/* State Emphasis */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            التركيز على الحالة
+            أول ما يراه العميل عند البدء
             <FileText className="size-3.5" />
           </Label>
           <ToggleGroup

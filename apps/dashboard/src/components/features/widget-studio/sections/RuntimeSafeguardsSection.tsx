@@ -33,10 +33,10 @@ export function RuntimeSafeguardsSection({ settings, onUpdate }: RuntimeSafeguar
       <CardHeader className="p-3 border-b border-border/10">
         <div className="flex items-center gap-2 text-foreground/80">
           <Shield className="size-4 text-primary/70" />
-          <CardTitle className="text-sm font-black">ضمانات التشغيل</CardTitle>
+          <CardTitle className="text-sm font-black">إجراءات الأمان والحماية</CardTitle>
         </div>
         <CardDescription className="text-[9px] font-bold opacity-60 mt-1">
-          إدارة سلوك الويدجت في الحالات الخاصة والأخطاء
+          حدد كيف تتعامل الخدمة مع الحالات الخارجة عن الإرادة
         </CardDescription>
       </CardHeader>
 
@@ -44,7 +44,7 @@ export function RuntimeSafeguardsSection({ settings, onUpdate }: RuntimeSafeguar
         {/* Zero Credit Behavior */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            سلوك نفاذ الرصيد
+            ماذا نفعل إذا انتهى رصيد العمليات؟
             <AlertTriangle className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -56,13 +56,13 @@ export function RuntimeSafeguardsSection({ settings, onUpdate }: RuntimeSafeguar
             size="sm"
           >
             <Toggle value="hide" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              إخفاء
+              إخفاء الخدمة تماماً
             </Toggle>
             <Toggle value="disabled-with-message" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              تعطيل مع رسالة
+              عرض رسالة تنبيه
             </Toggle>
             <Toggle value="show-with-limit" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              إظهار مع حد
+              محاولة العرض بحد محدود
             </Toggle>
           </ToggleGroup>
         </div>
@@ -71,7 +71,7 @@ export function RuntimeSafeguardsSection({ settings, onUpdate }: RuntimeSafeguar
         {settings.zero_credit_behavior === 'disabled-with-message' && (
           <div className="space-y-2">
             <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-              رسالة نفاذ الرصيد
+              اكتب النص الذي سيظهر للعميل عند نفاذ الرصيد
               <MessageSquare className="size-3.5" />
             </Label>
             <Input
@@ -86,7 +86,7 @@ export function RuntimeSafeguardsSection({ settings, onUpdate }: RuntimeSafeguar
         {/* Max Daily Requests */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            أقصى عدد طلبات يومياً (اختياري)
+            الحد الأقصى للتجربة لكل عميل يومياً
             <Zap className="size-3.5" />
           </Label>
           <Input
@@ -94,7 +94,7 @@ export function RuntimeSafeguardsSection({ settings, onUpdate }: RuntimeSafeguar
             value={settings.max_daily_requests || ''}
             onChange={(e) => onUpdate({ max_daily_requests: e.target.value ? parseInt(e.target.value) : undefined })}
             className="h-9 rounded-lg bg-background border-border/60 font-bold text-[10px] text-right"
-            placeholder="مثال: 100"
+            placeholder="اتركه فارغاً لعدم التقييد"
           />
         </div>
 
@@ -107,8 +107,8 @@ export function RuntimeSafeguardsSection({ settings, onUpdate }: RuntimeSafeguar
               className="scale-90"
             />
             <div className="text-right">
-              <Label className="text-[10px] font-black text-foreground/80 block">طلب صورة المنتج</Label>
-              <p className="text-[8px] text-muted-foreground">عدم تفعيل الويدجت إذا لم تتوفر صورة للمنتج</p>
+              <Label className="text-[10px] font-black text-foreground/80 block">التأكد من وجود صورة للمنتج</Label>
+              <p className="text-[8px] text-muted-foreground">لن يظهر الزر إذا لم يرفع التاجر صورة واضحة للملابس</p>
             </div>
             <ImageIcon className="size-3.5 text-muted-foreground/60 mr-2" />
           </div>
@@ -120,8 +120,8 @@ export function RuntimeSafeguardsSection({ settings, onUpdate }: RuntimeSafeguar
               className="scale-90"
             />
             <div className="text-right">
-              <Label className="text-[10px] font-black text-foreground/80 block">تفعيل التشخيص</Label>
-              <p className="text-[8px] text-muted-foreground">تسجيل معلومات تقنية للمساعدة في حل المشكلات</p>
+              <Label className="text-[10px] font-black text-foreground/80 block">تفعيل سجل الفحص الفني</Label>
+              <p className="text-[8px] text-muted-foreground">يساعد فريق الدعم في حل أي مشكلة تظهر في متجرك بسرعة</p>
             </div>
             <Activity className="size-3.5 text-muted-foreground/60 mr-2" />
           </div>

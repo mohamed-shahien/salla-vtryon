@@ -83,3 +83,12 @@ npx.cmd shadcn@latest add [component] -c apps/dashboard
 
 # run ngrok
 /c/Users/ITS/Downloads/ngrok-v3-stable-windows-amd64/ngrok.exe http 3001
+
+
+pnpm dev:api
+
+
+pnpm dev:dashboard
+
+
+pnpm dev:widget

@@ -1,5 +1,9 @@
 import type { MerchantWidgetSettings } from '@/lib/api'
-import type { WidgetStudioConfig } from './widget-studio.schema'
+import type {
+  WidgetSettings,
+} from './widget-studio.schema'
+
+export type WidgetStudioConfig = WidgetSettings
 import { createDefaultWidgetStudioConfig } from './widget-studio.defaults'
 
 /**
@@ -52,11 +56,11 @@ export function mapServerToStudioConfig(
     : {
         ...defaults,
         // Seed from legacy flat fields
-        launch: {
-          ...defaults.launch,
-          button_label: settings.widget_button_text || defaults.launch.button_label,
-          mode: settings.widget_enabled ? defaults.launch.mode : ('disabled' as const),
+        button: {
+          ...defaults.button,
+          label: settings.widget_button_text || defaults.button.label,
         },
+        widget_enabled: settings.widget_enabled,
       }
 
   return {
@@ -73,8 +77,8 @@ export function mapStudioConfigToPayload(
   config: WidgetStudioConfig,
 ): Partial<MerchantWidgetSettings> & { widget_config: WidgetStudioConfig } {
   return {
-    widget_enabled: config.launch.mode !== 'disabled',
-    widget_button_text: config.launch.button_label,
+    widget_enabled: config.widget_enabled,
+    widget_button_text: config.button.label,
     widget_config: config,
   }
 }

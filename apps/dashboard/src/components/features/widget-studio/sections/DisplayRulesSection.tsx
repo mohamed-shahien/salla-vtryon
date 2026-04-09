@@ -45,7 +45,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
       <CardHeader className="p-3 border-b border-border/10">
         <div className="flex items-center gap-2 text-foreground/80">
           <Target className="size-4 text-primary/70" />
-          <CardTitle className="text-sm font-black">قواعد العرض</CardTitle>
+          <CardTitle className="text-sm font-black">أين وكيف تظهر الخدمة</CardTitle>
         </div>
         <CardDescription className="text-[9px] font-bold opacity-60 mt-1">
           متى وأين يظهر الويدجت في المتجر
@@ -56,7 +56,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* Eligibility Mode */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            طريقة الأهلية
+            اختيار المنتجات المدعومة لتجربة الملابس
             <Users className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -68,13 +68,13 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
             size="sm"
           >
             <Toggle value="all" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              كل المنتجات
+              جميع منتجات المتجر
             </Toggle>
             <Toggle value="selected" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              محددة
+              منتجات أختارها بنفسي
             </Toggle>
             <Toggle value="selected-categories" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              فئات محددة
+              تصنيفات محددة فقط
             </Toggle>
           </ToggleGroup>
         </div>
@@ -82,7 +82,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* Placement Target */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            مكان الظهور
+            موضع زر "تجربة القياس" في صفحة المنتج
             <Layout className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -93,23 +93,20 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
             variant="default"
             size="sm"
           >
-            <Toggle value="under-add-to-cart" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-              أسفل "أضف للسلة"
+            <Toggle value="on-product-image" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
+              على صورة المنتج
             </Toggle>
-            <Toggle value="above-add-to-cart" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-              أعلى "أضف للسلة"
+            <Toggle value="above-product-options" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
+              فوق خيارات المنتج
             </Toggle>
-            <Toggle value="inside-product-actions" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-              داخل أزرار المنتج
+            <Toggle value="description-section" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
+              سيكشن تعريفي بداخل بيانات المنتج
             </Toggle>
-            <Toggle value="floating-corner" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-              زاوية عائمة
+            <Toggle value="floating-bottom" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
+              عائم أسفل الصفحة
             </Toggle>
-            <Toggle value="sticky-mobile-footer" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-              شريط ثابت
-            </Toggle>
-            <Toggle value="auto-best-fit" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-              تلقائي
+            <Toggle value="floating-middle" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
+              عائم في منتصف الصفحة
             </Toggle>
           </ToggleGroup>
         </div>
@@ -117,7 +114,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* Display Timing */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            توقيت العرض
+            متى يظهر الزر للعميل
             <Clock className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -129,16 +126,16 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
             size="sm"
           >
             <Toggle value="immediate" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              فوري
+              عرض فوري سريع
             </Toggle>
             <Toggle value="after-page-stable" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              بعد استقرار الصفحة
+              بعد اكتمال تحميل الصفحة
             </Toggle>
             <Toggle value="after-image-gallery-ready" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              بعد جاهزية الصور
+              بعد ظهور صور المنتج
             </Toggle>
             <Toggle value="after-cta-block-detected" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              بعد اكتشاف CTA
+              بجانب زر الإضافة للسلة
             </Toggle>
           </ToggleGroup>
         </div>
@@ -146,7 +143,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* Trigger Behavior */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            سلوك التشغيل
+            ذكاء تشغيل الخدمة
             <MousePointer2 className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -158,10 +155,10 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
             size="sm"
           >
             <Toggle value="auto-render" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              تلقائي
+              عرض الزر تلقائياً
             </Toggle>
             <Toggle value="user-intent-only" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              عند التفاعل
+              دعه يظهر عند الحاجة فقط
             </Toggle>
           </ToggleGroup>
         </div>
@@ -169,7 +166,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* Availability Conditions */}
         <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/10">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            شروط التوفر
+            شروط ذكية لإخفاء الزر
             <Shield className="size-3.5" />
           </Label>
           <div className="grid grid-cols-1 gap-2">
@@ -211,7 +208,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
                 })}
                 className="scale-85"
               />
-              <Label className="text-[9px] font-bold text-muted-foreground">إخفاء عند تعطل التاجر</Label>
+              <Label className="text-[9px] font-bold text-muted-foreground">إخفاء إذا توقف الاشتراك أو الخدمة</Label>
             </div>
             <div className="flex items-center justify-between">
               <Switch
@@ -221,7 +218,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
                 })}
                 className="scale-85"
               />
-              <Label className="text-[9px] font-bold text-muted-foreground">إخفاء عند نفاذ الرصيد</Label>
+              <Label className="text-[9px] font-bold text-muted-foreground">إخفاء عندما ينتهي رصيد العمليات</Label>
             </div>
           </div>
         </div>
@@ -229,7 +226,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* Fallback Strategy */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            استراتيجية البديل
+            خطة بديلة في حال تعذر الظهور
             <ArrowRightLeft className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -241,13 +238,13 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
             size="sm"
           >
             <Toggle value="chained" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              متسلسل
+              تغيير المكان تلقائياً
             </Toggle>
             <Toggle value="floating-only" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              عائم فقط
+              عرضه كزر عائم فقط
             </Toggle>
             <Toggle value="disabled" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              معطل
+              عدم الإظهار نهائياً
             </Toggle>
           </ToggleGroup>
         </div>
@@ -255,7 +252,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* Device Variant */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            متغيرات الأجهزة
+            التوافق مع أجهزة العملاء
             <Smartphone className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -267,13 +264,13 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
             size="sm"
           >
             <Toggle value="same" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              نفسه
+              نفس الشكل للكل
             </Toggle>
             <Toggle value="dedicated-mobile" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              جوال مخصص
+              شكل خاص للجوال
             </Toggle>
             <Toggle value="dedicated-desktop" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              سطح مكتبي مخصص
+              شكل خاص للكمبيوتر
             </Toggle>
           </ToggleGroup>
         </div>
@@ -281,7 +278,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* Localization Mode */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            وضع الترجمة
+            لغة واجهة الخدمة
             <Globe className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -293,13 +290,13 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
             size="sm"
           >
             <Toggle value="arabic-only" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              عربي فقط
+              اللغة العربية
             </Toggle>
             <Toggle value="english-only" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              إنجليزي فقط
+              اللغة الإنجليزية
             </Toggle>
             <Toggle value="auto-by-storefront" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              حسب المتجر
+              حسب لغة متجرك
             </Toggle>
           </ToggleGroup>
         </div>
@@ -307,7 +304,7 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
         {/* State Messaging Policy */}
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
-            سياسة رسائل الحالة
+            أسلوب التواصل مع العميل
             <MessageSquare className="size-3.5" />
           </Label>
           <ToggleGroup
@@ -319,13 +316,13 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
             size="sm"
           >
             <Toggle value="concise" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              موجز
+              رسائل قصيرة ومختصرة
             </Toggle>
             <Toggle value="guided" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              موجه
+              رسائل إرشادية مفصلة
             </Toggle>
             <Toggle value="conversion-focused" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-              للتحويل
+              رسائل تشجيعية للطلب
             </Toggle>
           </ToggleGroup>
         </div>

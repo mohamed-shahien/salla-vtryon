@@ -66,8 +66,11 @@ export type ButtonSettings = z.infer<typeof buttonSettingsSchema>
 // ============================================================================
 // Window/Modal Preset System
 // ============================================================================
-
 export const WINDOW_PRESET_IDS = [
+  'one',
+  'two',
+  'three',
+  'four',
   'classic-center-modal',
   'soft-scale-dialog',
   'slide-up-sheet',
@@ -174,12 +177,11 @@ export const ELIGIBILITY_MODE_OPTIONS = ['all', 'selected', 'selected-categories
 export type EligibilityMode = (typeof ELIGIBILITY_MODE_OPTIONS)[number]
 
 export const PLACEMENT_TARGET_OPTIONS = [
-  'under-add-to-cart',
-  'above-add-to-cart',
-  'inside-product-actions',
-  'floating-corner',
-  'sticky-mobile-footer',
-  'auto-best-fit',
+  'on-product-image',
+  'above-product-options',
+  'floating-bottom',
+  'floating-middle',
+  'description-section',
 ] as const
 export type PlacementTarget = (typeof PLACEMENT_TARGET_OPTIONS)[number]
 
@@ -316,7 +318,7 @@ export function createDefaultWidgetSettings(): WidgetSettings {
       eligibility_mode: 'all',
       selected_product_ids: [],
       selected_category_ids: [],
-      placement_target: 'under-add-to-cart',
+      placement_target: 'above-product-options',
       placement_side: 'center',
       vertical_offset: 0,
       horizontal_offset: 0,

@@ -20,10 +20,10 @@ const SAVE_ICON_MAP: Record<SaveStatus, React.ReactNode> = {
 }
 
 const SAVE_LABEL_MAP: Record<SaveStatus, string> = {
-  idle: 'حفظ ونشر',
-  saving: 'جاري الحفظ...',
-  saved: 'تم الحفظ',
-  error: 'فشل الحفظ',
+  idle: 'حفظ وتطبيق التعديلات',
+  saving: 'جاري الحفظ، لحظة من فضلك...',
+  saved: 'تم حفظ التعديلات بنجاح',
+  error: 'عذراً، لم نتمكن من الحفظ',
 }
 
 export const WidgetSettingsActions = React.memo(function WidgetSettingsActions({
@@ -42,7 +42,7 @@ export const WidgetSettingsActions = React.memo(function WidgetSettingsActions({
           className="rounded-lg font-bold text-[10px] h-8 px-3 text-muted-foreground hover:text-foreground"
         >
           <Undo2 className="me-1.5 size-3" />
-          تراجع
+          إلغاء التعديلات
         </Button>
       )}
 
@@ -52,7 +52,7 @@ export const WidgetSettingsActions = React.memo(function WidgetSettingsActions({
         className="rounded-lg font-bold text-[10px] h-8 px-3 border-border/60 bg-card/50"
       >
         <RotateCcw className="me-1.5 size-3" />
-        افتراضي
+        إعادة الضبط للأصلي
       </Button>
 
       <Button

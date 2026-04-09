@@ -45,8 +45,8 @@ export async function checkStoreConnection(apiUrl: string): Promise<DiagnosticCh
       return {
         name: 'store_connection',
         status: 'pass',
-        message: 'متصل بنظام سلة',
-        details: `Latency: ${latency}ms`,
+        message: 'الاتصال بنظام متجرك يعمل بنجاح',
+        details: `سرعة الاستجابة ممتازة (${latency}ms)`,
         lastUpdated: new Date(),
       }
     }
@@ -105,8 +105,8 @@ export function checkWidgetRuntime(): DiagnosticCheck {
   return {
     name: 'widget_runtime',
     status: errors.length === 0 ? 'pass' : 'fail',
-    message: errors.length === 0 ? 'الويدجت يعمل بشكل طبيعي' : 'مشاكل في الويدجت',
-    details: errors.join(', ') || 'No errors',
+    message: errors.length === 0 ? 'نظام تجربة القياس جاهز للعمل تماماً' : 'تنبيه: توجد صعوبة في تشغيل الخدمة حالياً',
+    details: errors.length === 0 ? 'لا توجد أي مشكلات تقنية مكتشفة' : `الأسباب المكتشفة: ${errors.join(', ')}`,
     lastUpdated: new Date(),
   }
 }
@@ -131,7 +131,7 @@ export function checkConfigStatus(configVersion: number, lastPublished: Date | n
   return {
     name: 'config_status',
     status: isStale ? 'warn' : 'pass',
-    message: isStale ? 'التكوين قديم قد يحتاج تحديث' : 'التكوين محدث',
+    message: isStale ? 'الإعدادات الحالية قديمة، ننصح بحفظ التعديلات مجدداً' : 'جميع إعداداتك محدثة ومنشورة في المتجر',
     details: lastPublished
       ? `Version: ${configVersion}, Published: ${lastPublished.toLocaleTimeString('ar-SA')}`
       : `Version: ${configVersion}, Never published`,
@@ -445,7 +445,7 @@ export function getDiagnosticStatusCards(diagnostics: FullDiagnostics): Diagnost
   cards.push({
     id: 'store_connection',
     label: 'Store Connection',
-    labelAr: 'اتصال المتجر',
+    labelAr: 'جاهزية الاتصال',
     status: diagnostics.overall.checks[0].status === 'pass' ? 'healthy' : 'error',
     icon: 'store',
     message: diagnostics.overall.checks[0].message,
@@ -458,7 +458,7 @@ export function getDiagnosticStatusCards(diagnostics: FullDiagnostics): Diagnost
   cards.push({
     id: 'widget_runtime',
     label: 'Widget Runtime',
-    labelAr: 'تشغيل الويدجت',
+    labelAr: 'عمل الخدمة بالمتجر',
     status: diagnostics.overall.checks[1].status === 'pass' ? 'healthy' : 'error',
     icon: 'widget',
     message: diagnostics.overall.checks[1].message,
@@ -471,7 +471,7 @@ export function getDiagnosticStatusCards(diagnostics: FullDiagnostics): Diagnost
   cards.push({
     id: 'config_status',
     label: 'Config Status',
-    labelAr: 'حالة التكوين',
+    labelAr: 'تحديث الإعدادات',
     status: diagnostics.overall.checks[2].status === 'pass' ? 'healthy' : diagnostics.overall.checks[2].status === 'warn' ? 'warning' : 'error',
     icon: 'settings',
     message: diagnostics.overall.checks[2].message,
@@ -484,7 +484,7 @@ export function getDiagnosticStatusCards(diagnostics: FullDiagnostics): Diagnost
   cards.push({
     id: 'storefront_render',
     label: 'Storefront Render',
-    labelAr: 'عرض المتجر',
+    labelAr: 'ظهور الزر للعملاء',
     status: diagnostics.overall.checks[3].status === 'pass' ? 'healthy' : diagnostics.overall.checks[3].status === 'warn' ? 'warning' : 'error',
     icon: 'eye',
     message: diagnostics.overall.checks[3].message,
@@ -497,7 +497,7 @@ export function getDiagnosticStatusCards(diagnostics: FullDiagnostics): Diagnost
   cards.push({
     id: 'salla_token',
     label: 'Salla Token',
-    labelAr: 'رمز سلة',
+    labelAr: 'الربط الأمني',
     status: diagnostics.overall.checks[4].status === 'pass' ? 'healthy' : diagnostics.overall.checks[4].status === 'warn' ? 'warning' : 'error',
     icon: 'key',
     message: diagnostics.overall.checks[4].message,
@@ -510,7 +510,7 @@ export function getDiagnosticStatusCards(diagnostics: FullDiagnostics): Diagnost
   cards.push({
     id: 'credits',
     label: 'Credits',
-    labelAr: 'الرصيد',
+    labelAr: 'رصيد العمليات المتاح',
     status: diagnostics.overall.checks[5].status === 'pass' ? 'healthy' : diagnostics.overall.checks[5].status === 'warn' ? 'warning' : 'error',
     icon: 'credit-card',
     message: diagnostics.overall.checks[5].message,

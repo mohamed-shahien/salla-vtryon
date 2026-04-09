@@ -65,7 +65,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <div className="size-12 rounded-lg bg-destructive/10 flex items-center justify-center">
         <AlertCircle className="size-5 text-destructive" />
       </div>
-      <h3 className="text-sm font-black">تعذر تحميل الإعدادات</h3>
+      <h3 className="text-sm font-black">عذراً، لم نتمكن من عرض الإعدادات</h3>
       <p className="text-[9px] text-muted-foreground max-w-xs font-bold">
         حدث خطأ أثناء تحميل إعدادات الويدجت. تأكد من اتصالك بالإنترنت وحاول مجدداً.
       </p>
@@ -120,11 +120,11 @@ export function WidgetStudioPage() {
                 <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center transition-transform hover:rotate-3">
                   <Settings2 className="size-5 text-primary" />
                 </div>
-                <h2 className="text-xs font-black text-foreground tracking-tight">إعدادات التصميم</h2>
+                <h2 className="text-xs font-black text-foreground tracking-tight">تصميم شكل الخدمة</h2>
               </div>
               <Badge variant="outline" className="text-[9px] mx-2 font-black bg-emerald-500/5 text-emerald-600 border-emerald-500/20 rounded-lg h-5 px-1.5 flex items-center gap-1">
                 <div className="size-1 rounded-full bg-emerald-500 animate-pulse" />
-                وضع الاستوديو
+                تعديل مباشر
               </Badge>
             </div>
 
@@ -139,7 +139,7 @@ export function WidgetStudioPage() {
             {studio.isDirty && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 animate-in slide-in-from-top-1 duration-300">
                 <div className="size-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse" />
-                <span className="text-[10px] font-black text-amber-600">لديك تغييرات لم يتم حفظها</span>
+                <span className="text-[10px] font-black text-amber-600">تنبيه: قمت بتعديلات لم يتم حفظها بعد</span>
               </div>
             )}
           </div>
@@ -147,12 +147,12 @@ export function WidgetStudioPage() {
 
           <div className="flex-1 min-h-0">
             <ScrollArea className="h-full">
-              <div className="p-3 space-y-5 pb-24">
+              <div className="p-1 space-y-5 pb-24">
 
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-foreground/80 px-1">
                     <Palette className="size-4 text-primary/70" />
-                    <span className="text-[10px] font-black">الهوية والتصميم (Visual Tokens)</span>
+                    <span className="text-[10px] font-black">الألوان والخطوط الأساسية</span>
                   </div>
                   <VisualIdentitySection
                     settings={studio.config.visual_identity}
@@ -172,8 +172,8 @@ export function WidgetStudioPage() {
                           <MousePointer2 className="size-4.5 text-primary" />
                         </div>
                         <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">القوالب والأزرار</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">اختر من القوالب المعدة مسبقاً لمشغل الويدجت</span>
+                          <span className="text-[11px] font-black tracking-tight">شكل الأزرار والنوافذ</span>
+                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">اختر التصميم المناسب لزر التشغيل ونافذة العرض</span>
                         </div>
                       </div>
                     </AccordionTrigger>
@@ -198,8 +198,8 @@ export function WidgetStudioPage() {
                           <Settings className="size-4.5 text-primary" />
                         </div>
                         <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">قواعد الظهور والذكاء</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">متى وأين يظهر الويدجت وتجربة المستخدم</span>
+                          <span className="text-[11px] font-black tracking-tight">التحكم في مكان ووقت الظهور</span>
+                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">حدد المنتجات التي يظهر عليها الزر وموعد ظهوره للعملاء</span>
                         </div>
                       </div>
                     </AccordionTrigger>
@@ -218,8 +218,8 @@ export function WidgetStudioPage() {
                           <LayoutPanelTop className="size-4.5 text-primary" />
                         </div>
                         <div className="flex flex-col items-start text-right">
-                          <span className="text-[11px] font-black tracking-tight">التشخيص والأمان</span>
-                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">أدوات المطورين وقيود التشغيل</span>
+                          <span className="text-[11px] font-black tracking-tight">إعدادات متقدمة وفحص الحالة</span>
+                          <span className="text-[9px] font-medium text-muted-foreground opacity-70">أدوات تقنية للتأكد من سلامة عمل الخدمة في متجرك</span>
                         </div>
                       </div>
                     </AccordionTrigger>
@@ -274,7 +274,7 @@ export function WidgetStudioPage() {
 
             <div className="flex items-center gap-2">
               <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] animate-pulse-slow" />
-              <span className="text-[10px] font-bold text-muted-foreground tracking-tight">معاينة المتجر المباشرة</span>
+              <span className="text-[10px] font-bold text-muted-foreground tracking-tight">معاينة مباشرة لشكل متجرك الآن</span>
             </div>
           </div>
 
@@ -284,8 +284,8 @@ export function WidgetStudioPage() {
             <div className="h-8 w-px bg-border/10" />
 
             <div className="hidden sm:flex flex-col items-end gap-0.5">
-              <span className="text-[9px] font-black text-foreground opacity-80 leading-none">متصل بنظام سلة</span>
-              <span className="text-[7px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest font-mono">Synced V2</span>
+              <span className="text-[9px] font-black text-foreground opacity-80 leading-none">مرتبط بمتجر سلة بنجاح</span>
+              <span className="text-[7px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest font-mono">نظام متزامن ومحدث</span>
             </div>
 
             <Button variant="ghost" size="icon" className="size-8 rounded-lg opacity-40 hover:opacity-100 transition-opacity">
@@ -305,11 +305,11 @@ export function WidgetStudioPage() {
         <footer className="p-3 border-t border-border/10 bg-background/20 backdrop-blur-sm flex items-center justify-center gap-10 z-20">
           <div className="flex items-center gap-2">
             <ArrowRightLeft className="size-3.5 text-muted-foreground opacity-40" />
-            <span className="text-[8px] font-black text-muted-foreground/50 tracking-widest uppercase">مزامنة نشطة</span>
+            <span className="text-[8px] font-black text-muted-foreground/50 tracking-widest uppercase">الربط فعال الآن</span>
           </div>
           <div className="flex items-center gap-2">
             <MousePointer2 className="size-3.5 text-muted-foreground opacity-40" />
-            <span className="text-[8px] font-black text-muted-foreground/50 tracking-widest uppercase">معاينة تفاعلية</span>
+            <span className="text-[8px] font-black text-muted-foreground/50 tracking-widest uppercase">تفاعل مع المعاينة للتجربة</span>
           </div>
         </footer>
       </main>

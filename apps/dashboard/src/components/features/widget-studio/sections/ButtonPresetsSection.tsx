@@ -45,10 +45,10 @@ export function ButtonPresetsSection({ settings, onUpdate, onApplyPreset }: Butt
       <CardHeader className="p-3 border-b border-border/10">
         <div className="flex items-center gap-2 text-foreground/80">
           <LayoutTemplate className="size-4 text-primary/70" />
-          <CardTitle className="text-sm font-black">قوالب الزر</CardTitle>
+          <CardTitle className="text-sm font-black">أشكال أزرار تجربة القياس</CardTitle>
         </div>
         <CardDescription className="text-[9px] font-bold opacity-60 mt-1">
-          اختر نمط الزر الذي سيظهر في المتجر
+          اختر التصميم الذي يظهر لعملائك لبدء التجربة الافتراضية
         </CardDescription>
       </CardHeader>
 
@@ -133,10 +133,10 @@ export function ButtonPresetsSection({ settings, onUpdate, onApplyPreset }: Butt
                   size="sm"
                 >
                   <Toggle value="start" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                    بداية
+                    الجهة اليمنى (أول النص)
                   </Toggle>
                   <Toggle value="end" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                    نهاية
+                    الجهة اليسرى (آخر النص)
                   </Toggle>
                 </ToggleGroup>
               </div>
@@ -157,13 +157,13 @@ export function ButtonPresetsSection({ settings, onUpdate, onApplyPreset }: Butt
                 size="sm"
               >
                 <Toggle value="sm" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  صغير
+                  صغير وأنيق
                 </Toggle>
                 <Toggle value="md" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  متوسط
+                  متوسط (مناسب للكل)
                 </Toggle>
                 <Toggle value="lg" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  كبير
+                  كبير وواضح
                 </Toggle>
               </ToggleGroup>
             </div>
@@ -171,7 +171,7 @@ export function ButtonPresetsSection({ settings, onUpdate, onApplyPreset }: Butt
             {/* Placement Mode */}
             <div className="space-y-2">
               <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
-                وضع العرض
+                طريقة التثبيت في الصفحة
                 <Settings2 className="size-3" />
               </Label>
               <ToggleGroup
@@ -183,10 +183,10 @@ export function ButtonPresetsSection({ settings, onUpdate, onApplyPreset }: Butt
                 size="sm"
               >
                 <Toggle value="inline" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  داخلي
+                  دمج في الصفحة
                 </Toggle>
                 <Toggle value="floating" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  عائم
+                  زر عائم مستقل
                 </Toggle>
               </ToggleGroup>
             </div>
@@ -194,7 +194,7 @@ export function ButtonPresetsSection({ settings, onUpdate, onApplyPreset }: Butt
             {/* Mobile Mode */}
             <div className="space-y-2">
               <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
-                وضع الجوال
+                شكل الظهور لمستخدمي الجوال
                 <Smartphone className="size-3" />
               </Label>
               <ToggleGroup
@@ -206,22 +206,22 @@ export function ButtonPresetsSection({ settings, onUpdate, onApplyPreset }: Butt
                 size="sm"
               >
                 <Toggle value="inline" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  داخلي
+                  نفس ترتيب الموقع
                 </Toggle>
                 <Toggle value="sticky" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  ثابت
+                  شريط ثابت بالأسفل
                 </Toggle>
               </ToggleGroup>
             </div>
 
             {/* Full Width */}
             <div className="flex items-center justify-between">
-              <Switch
+                <Switch
                 checked={settings.full_width}
                 onCheckedChange={(val) => onUpdate({ full_width: val })}
                 className="scale-85"
               />
-              <Label className="text-[9px] font-bold text-muted-foreground">عرض كامل</Label>
+              <Label className="text-[9px] font-bold text-muted-foreground">جعل الزر يأخذ عرض الشاشة بالكامل</Label>
             </div>
           </div>
         )}

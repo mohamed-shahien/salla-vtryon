@@ -7,7 +7,7 @@
 
 import React, { useEffect, useMemo, useRef } from 'react'
 import type { WidgetSettings } from '@virtual-tryon/shared-types'
-import { generateAllCSSVariables } from '@/lib/widget-settings-runtime'
+import { generateAllCSSVariables, getWindowPreset } from '@/lib/widget-settings-runtime'
 import { cn } from '@/lib/utils'
 import type { PreviewDevice } from './PreviewDeviceToggle'
 
@@ -68,12 +68,17 @@ export const WidgetLivePreview = React.memo(function WidgetLivePreview({
       <div className="relative flex-1 w-full h-full flex items-center justify-center p-2">
         <div
           ref={previewRef}
+          data-widget-container="true"
+          data-placement={config.display_rules.placement_target}
           className={cn(
             "relative overflow-hidden bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl transition-all duration-500 ease-in-out",
             "border border-border/40"
           )}
           style={device !== 'desktop' ? { width: deviceDimensions.width, height: deviceDimensions.height } : undefined}
         >
+          {/* Diagnostic Script Anchor (Studio Mode) */}
+          <script data-merchant-id="studio-preview" shadow-ignore="true" />
+
           {/* Simulated Store Content */}
           <div className="absolute inset-0 overflow-auto">
             {/* Store Header */}
@@ -123,14 +128,23 @@ export const WidgetLivePreview = React.memo(function WidgetLivePreview({
                 </div>
               </div>
 
-              {/* Try-On Widget Preview */}
+              {/* Try-On Widget Preview Overlay */}
               <div
-                className="relative group/preview"
+                className={cn(
+                  "relative group/preview transition-all duration-300",
+                  config.display_rules.placement_target === 'floating-middle' && "fixed inset-0 z-50 flex items-center justify-center pointer-events-none",
+                  config.display_rules.placement_target === 'floating-bottom' && "fixed bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+                )}
                 style={{
-                  marginTop: config.display_rules.placement_target === 'under-add-to-cart' ? '12px' : '0',
+                  marginTop: config.display_rules.placement_target === 'above-product-options' ? '0' : '12px',
+                  position: config.display_rules.placement_target === 'on-product-image' ? 'absolute' : undefined,
+                  top: config.display_rules.placement_target === 'on-product-image' ? '20px' : undefined,
+                  right: config.display_rules.placement_target === 'on-product-image' ? '20px' : undefined,
+                  zIndex: config.display_rules.placement_target === 'on-product-image' ? 20 : undefined,
                 }}
               >
                 {/* Widget Launch Button */}
+                {/* Launch button itself */}
                 <button
                   className={cn(
                     "vtryon-widget__launch inline-flex items-center gap-2 rounded-lg transition-all duration-300",
@@ -171,128 +185,6 @@ export const WidgetLivePreview = React.memo(function WidgetLivePreview({
                   )}
                   {config.button.label}
                 </button>
-
-                {/* Widget Panel Preview (always visible in studio mode) */}
-                <div
-                  className={cn(
-                    "fixed inset-0 z-50 flex items-center justify-center",
-                    "opacity-50 pointer-events-none",
-                    "transition-opacity duration-300"
-                  )}
-                  style={{
-                    background: 'var(--vtryon-backdrop-bg)',
-                    backdropFilter: 'var(--vtryon-backdrop-filter)',
-                  }}
-                >
-                  <div
-                    className={cn(
-                      "relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden",
-                      "transform transition-all duration-300"
-                    )}
-                    style={{
-                      borderRadius: 'var(--vtryon-radius)',
-                      borderColor: 'var(--vtryon-surface-border)',
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                    }}
-                  >
-                    {/* Panel Header */}
-                    <div
-                      className="px-6 py-4 border-b"
-                      style={{
-                        background: 'var(--vtryon-surface-bg)',
-                        borderColor: 'var(--vtryon-surface-border)',
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="text-right">
-                          <p
-                            className="text-[10px] font-bold uppercase tracking-wider"
-                            style={{ color: 'var(--vtryon-brand-color)' }}
-                          >
-                            Virtual Try-On
-                          </p>
-                          <h3 className="text-sm font-black text-foreground">
-                            جرّب المنتج على صورتك
-                          </h3>
-                        </div>
-                        <button
-                          className="size-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
-                          style={{ color: 'var(--vtryon-brand-color)' }}
-                        >
-                          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Panel Content */}
-                    <div className="p-6 space-y-4">
-                      {/* Entry Actions */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          className="p-4 rounded-xl border-2 border-dashed transition-all hover:border-primary/50"
-                          style={{
-                            borderColor: 'var(--vtryon-surface-border)',
-                            background: 'var(--vtryon-surface-bg)',
-                          }}
-                        >
-                          <div className="size-12 rounded-full bg-primary/10 mx-auto mb-2 flex items-center justify-center">
-                            <svg className="size-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            </svg>
-                          </div>
-                          <p className="text-xs font-black text-foreground">صور نفسك</p>
-                        </button>
-
-                        <button
-                          className="p-4 rounded-xl border-2 border-dashed transition-all hover:border-primary/50"
-                          style={{
-                            borderColor: 'var(--vtryon-surface-border)',
-                            background: 'var(--vtryon-surface-bg)',
-                          }}
-                        >
-                          <div className="size-12 rounded-full bg-primary/10 mx-auto mb-2 flex items-center justify-center">
-                            <svg className="size-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
-                          </div>
-                          <p className="text-xs font-black text-foreground">ارفع صورة</p>
-                        </button>
-                      </div>
-
-                      {/* Preview Area */}
-                      <div
-                        className="aspect-square rounded-xl bg-muted/30 flex items-center justify-center"
-                        style={{
-                          borderRadius: 'var(--vtryon-radius)',
-                          background: 'var(--vtryon-surface-bg)',
-                        }}
-                      >
-                        <div className="text-center space-y-2">
-                          <div className="size-16 rounded-full bg-muted-foreground/10 mx-auto" />
-                          <p className="text-[10px] text-muted-foreground font-black">
-                            ستظهر صورتك هنا قبل التوليد
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Submit Button */}
-                      <button
-                        disabled
-                        className="w-full h-12 rounded-xl text-sm font-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                          background: 'var(--vtryon-brand-color)',
-                          color: '#ffffff',
-                          borderRadius: 'var(--vtryon-radius)',
-                        }}
-                      >
-                        توليد
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Additional Product Details */}
@@ -310,7 +202,112 @@ export const WidgetLivePreview = React.memo(function WidgetLivePreview({
             </div>
           </div>
 
+          {/* Widget Panel Preview (Always visible over the store in studio mode) */}
+          <div
+            key={config.window.preset}
+            className={cn(
+              "absolute inset-0 z-50 flex items-center justify-center p-4",
+              "opacity-100 pointer-events-none",
+              "transition-opacity duration-300 backdrop-blur-[2px]",
+              getWindowPreset(config.window.preset).animationClasses.enter
+            )}
+            style={{
+              background: 'var(--vtryon-backdrop-bg)',
+              backdropFilter: 'var(--vtryon-backdrop-filter)',
+            }}
+          >
+            <div
+              className={cn(
+                "relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden",
+                "transform transition-all duration-300 border border-border/40"
+              )}
+              style={{
+                borderRadius: 'var(--vtryon-radius)',
+              }}
+            >
+              {/* Panel Header */}
+              <div
+                className="px-4 py-3 border-b flex items-center justify-between"
+                style={{
+                  background: 'var(--vtryon-surface-bg)',
+                  borderColor: 'var(--vtryon-surface-border)',
+                }}
+              >
+                <div className="text-right flex-1">
+                  <p
+                    className="text-[8px] font-black uppercase tracking-widest mb-0.5"
+                    style={{ color: 'var(--vtryon-brand-color)' }}
+                  >
+                    Virtual Try-On
+                  </p>
+                  <h3 className="text-xs font-black text-foreground">
+                    جرّب المنتج على صورتك
+                  </h3>
+                </div>
+                <button
+                  className="size-7 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+                  style={{ color: 'var(--vtryon-brand-color)' }}
+                >
+                  <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Panel Content */}
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <div
+                    className="p-3 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2"
+                    style={{ borderColor: 'var(--vtryon-surface-border)', background: 'var(--vtryon-surface-bg)' }}
+                  >
+                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <svg className="size-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      </svg>
+                    </div>
+                    <span className="text-[9px] font-black">صور نفسك</span>
+                  </div>
+                  <div
+                    className="p-3 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2"
+                    style={{ borderColor: 'var(--vtryon-surface-border)', background: 'var(--vtryon-surface-bg)' }}
+                  >
+                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <svg className="size-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    </div>
+                    <span className="text-[9px] font-black">ارفع صورة</span>
+                  </div>
+                </div>
+
+                <div
+                  className="aspect-square rounded-lg bg-muted/10 flex items-center justify-center border"
+                  style={{ borderRadius: 'var(--vtryon-radius)', borderColor: 'var(--vtryon-surface-border)' }}
+                >
+                  <div className="text-center opacity-40">
+                    <div className="size-10 rounded-full bg-muted mx-auto mb-2" />
+                    <p className="text-[8px] font-black">المعاينة</p>
+                  </div>
+                </div>
+
+                <button
+                  disabled
+                  className="w-full h-10 rounded-lg text-xs font-black"
+                  style={{
+                    background: 'var(--vtryon-brand-color)',
+                    color: '#ffffff',
+                    borderRadius: 'var(--vtryon-radius)',
+                  }}
+                >
+                  توليد
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Device Label */}
+
           {device !== 'desktop' && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/80 text-white text-[10px] font-black backdrop-blur-sm">
               {device === 'mobile' ? 'Mobile Preview' : 'Tablet Preview'}
@@ -321,3 +318,4 @@ export const WidgetLivePreview = React.memo(function WidgetLivePreview({
     </div>
   )
 })
+

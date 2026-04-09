@@ -372,9 +372,10 @@ function createWidgetElements() {
   const host = document.createElement('div')
   host.dataset.vtryonWidget = 'storefront'
 
-  const shadowRoot = host.attachShadow({ mode: 'open' })
+  // Styles are injected into head, but we'll also keep a local style tag for tokens
   const style = document.createElement('style')
-  style.textContent = __WIDGET_CSS__
+  style.id = 'vtryon-dynamic-tokens'
+  host.appendChild(style)
 
   const shell = document.createElement('div')
   shell.className = 'vtryon-widget'
@@ -459,34 +460,43 @@ function createWidgetElements() {
     </div>
   `
 
-  shadowRoot.append(style, shell)
+  host.appendChild(shell)
+  
+  // Also inject the main CSS into the head if not already present
+  if (!document.getElementById('vtryon-main-styles')) {
+    const mainStyle = document.createElement('style')
+    mainStyle.id = 'vtryon-main-styles'
+    mainStyle.textContent = __WIDGET_CSS__
+    document.head.appendChild(mainStyle)
+  }
+
   document.body.appendChild(host)
 
-  const launchButton = shadowRoot.querySelector('.vtryon-widget__launch')
-  const backdrop = shadowRoot.querySelector('.vtryon-widget__backdrop')
-  const panel = shadowRoot.querySelector('.vtryon-widget__panel')
-  const closeButton = shadowRoot.querySelector('.vtryon-widget__close')
-  const statusBox = shadowRoot.querySelector('.vtryon-widget__status')
-  const cameraButton = shadowRoot.querySelector('[data-entry="camera"]')
-  const uploadButton = shadowRoot.querySelector('[data-entry="upload"]')
-  const cameraInput = shadowRoot.querySelector('.vtryon-widget__file-input--camera')
-  const uploadInput = shadowRoot.querySelector('.vtryon-widget__file-input--upload')
-  const previewImage = shadowRoot.querySelector('.vtryon-widget__preview-image')
-  const previewEmpty = shadowRoot.querySelector('.vtryon-widget__preview-empty')
-  const previewFrame = shadowRoot.querySelector('.vtryon-widget__preview-frame')
-  const submitButton = shadowRoot.querySelector('.vtryon-widget__submit')
-  const uploadState = shadowRoot.querySelector('.vtryon-widget__state--upload')
-  const processingState = shadowRoot.querySelector('.vtryon-widget__state--processing')
-  const resultState = shadowRoot.querySelector('.vtryon-widget__state--result')
+  const launchButton = host.querySelector('.vtryon-widget__launch')
+  const backdrop = host.querySelector('.vtryon-widget__backdrop')
+  const panel = host.querySelector('.vtryon-widget__panel')
+  const closeButton = host.querySelector('.vtryon-widget__close')
+  const statusBox = host.querySelector('.vtryon-widget__status')
+  const cameraButton = host.querySelector('[data-entry="camera"]')
+  const uploadButton = host.querySelector('[data-entry="upload"]')
+  const cameraInput = host.querySelector('.vtryon-widget__file-input--camera')
+  const uploadInput = host.querySelector('.vtryon-widget__file-input--upload')
+  const previewImage = host.querySelector('.vtryon-widget__preview-image')
+  const previewEmpty = host.querySelector('.vtryon-widget__preview-empty')
+  const previewFrame = host.querySelector('.vtryon-widget__preview-frame')
+  const submitButton = host.querySelector('.vtryon-widget__submit')
+  const uploadState = host.querySelector('.vtryon-widget__state--upload')
+  const processingState = host.querySelector('.vtryon-widget__state--processing')
+  const resultState = host.querySelector('.vtryon-widget__state--result')
   const resultUserImages = Array.from(
-    shadowRoot.querySelectorAll('.vtryon-widget__result-user'),
+    host.querySelectorAll('.vtryon-widget__result-user'),
   )
-  const resultImage = shadowRoot.querySelector('.vtryon-widget__result-image')
-  const downloadLink = shadowRoot.querySelector('.vtryon-widget__download')
-  const retryButton = shadowRoot.querySelector('.vtryon-widget__retry')
-  const modalSvg = shadowRoot.querySelector('.vtryon-modal-svg')
-  const cyberElements = shadowRoot.querySelector('.vtryon-cyber-elements')
-  const processingText = shadowRoot.querySelector('.vtryon-widget__processing-text')
+  const resultImage = host.querySelector('.vtryon-widget__result-image')
+  const downloadLink = host.querySelector('.vtryon-widget__download')
+  const retryButton = host.querySelector('.vtryon-widget__retry')
+  const modalSvg = host.querySelector('.vtryon-modal-svg')
+  const cyberElements = host.querySelector('.vtryon-cyber-elements')
+  const processingText = host.querySelector('.vtryon-widget__processing-text')
 
   if (
     !(launchButton instanceof HTMLButtonElement) ||
@@ -643,6 +653,9 @@ async function initWidget() {
   if (!bootstrapConfig) {
     return
   }
+  
+  // Wait for 2 seconds after page load for stability as requested by the user
+  await delay(2000)
 
   window.__VTRYON_WIDGET_BOOTED__ = true
 
@@ -731,66 +744,67 @@ async function initWidget() {
       offset: { vertical: number; horizontal: number },
     ) {
       const shell = elements.shell
+      const host = shell.parentElement as HTMLDivElement
 
-      // Remove existing positioning classes
+      // Reset styling classes
       shell.classList.remove('vtryon-widget--floating', 'vtryon-widget--inline')
+      shell.style.cssText = ''
 
-      if (target === 'floating-corner' || target === 'sticky-mobile-footer') {
+      if (target === 'floating-bottom' || target === 'floating-middle') {
         shell.classList.add('vtryon-widget--floating')
+        shell.style.position = 'fixed'
+        shell.style.left = '50%'
+        shell.style.transform = 'translateX(-50%)'
+        shell.style.zIndex = '99999'
 
-        // Apply positioning
-        const isMobile = window.innerWidth < 768
-        if (isMobile && target === 'sticky-mobile-footer') {
-          shell.style.position = 'fixed'
-          shell.style.bottom = `${offset.vertical}px`
-          shell.style.left = '50%'
-          shell.style.transform = 'translateX(-50%)'
+        if (target === 'floating-bottom') {
+          shell.style.bottom = '20px'
         } else {
-          shell.style.position = 'fixed'
-          shell.style.top = `${offset.vertical}px`
-          shell.style.bottom = ''
-          shell.style.left = ''
-          shell.style.right = ''
-
-          if (side === 'center') {
-            shell.style.left = '50%'
-            shell.style.transform = 'translateX(-50%)'
-          } else {
-            shell.style[side as 'left' | 'right'] = `${offset.horizontal}px`
-            shell.style.transform = ''
-          }
+          shell.style.bottom = '50%'
+          shell.style.transform = 'translate(-50%, 50%)'
         }
+        
+        document.body.appendChild(host)
       } else {
         shell.classList.add('vtryon-widget--inline')
-        shell.style.position = ''
-        shell.style.top = ''
-        shell.style.bottom = ''
-        shell.style.left = ''
-        shell.style.right = ''
+        
+        let selector = ''
+        let position: 'prepend' | 'before' = 'prepend'
 
-        // For inline placement, we might need to move the entire host element
-        const host = (shell.getRootNode() as ShadowRoot).host as HTMLElement
-        if (host && host.dataset.vtryonWidget === 'storefront' && v2Settings) {
-          const rulesEngine = createDisplayRulesEngine(v2Settings.display_rules)
-          const selectors = rulesEngine.getPlacementSelectors()
-          let foundTarget = false
+        switch (target) {
+          case 'on-product-image':
+            selector = '.product-single salla-slider.details-slider .s-slider-container'
+            shell.style.position = 'absolute'
+            shell.style.top = '10px'
+            shell.style.right = '10px'
+            shell.style.zIndex = '10'
+            position = 'prepend'
+            break
+          case 'above-product-options':
+            selector = '.product-single form.form.product-form'
+            position = 'prepend'
+            break
+          case 'description-section':
+            selector = '.product-single .product__description'
+            position = 'before'
+            break
+        }
 
-          for (const selector of selectors) {
-            const targetEl = document.querySelector(selector)
-            if (targetEl) {
-              if (target === 'under-add-to-cart') {
-                targetEl.after(host)
-              } else {
-                targetEl.before(host)
-              }
-              foundTarget = true
-              break
+        if (selector) {
+          const targetEl = document.querySelector(selector)
+          if (targetEl) {
+            if (position === 'prepend') {
+              targetEl.prepend(host)
+            } else {
+              targetEl.parentElement?.insertBefore(host, targetEl)
             }
-          }
-
-          if (!foundTarget && v2Settings && v2Settings.display_rules.fallback_strategy !== 'disabled') {
-            // Fallback to floating if target not found
-            applyPlacement(elements, 'floating-corner', side, offset)
+          } else {
+            // Fallback: Add to body if target not found
+            document.body.appendChild(host)
+            shell.classList.add('vtryon-widget--floating')
+            shell.style.position = 'fixed'
+            shell.style.bottom = '20px'
+            shell.style.right = '20px'
           }
         }
       }

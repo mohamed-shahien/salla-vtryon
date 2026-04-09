@@ -124,3 +124,51 @@ body {
   @apply bg-background text-foreground;
   font-feature-settings: "rlig" 1, "calt" 1;
 }
+
+/* ==========================================================================
+   Widget Studio Modal Animations (Modal-imations.md)
+   ========================================================================== */
+
+/* 1. Unfolding */
+@keyframes unfold-in {
+  0% { transform: scaleY(0.005) scaleX(0); }
+  50% { transform: scaleY(0.005) scaleX(1); }
+  100% { transform: scaleY(1) scaleX(1); }
+}
+@keyframes unfold-zoom-in {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+.animate-unfold-in {
+  animation: unfold-in 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}
+.animate-unfold-in > div {
+  animation: unfold-zoom-in 0.4s 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}
+
+/* 2. Revealing */
+@keyframes reveal-in {
+  0% { transform: scale(0.8) translateY(1000px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.animate-reveal-in {
+  animation: reveal-in 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}
+
+/* 3. Uncovering */
+@keyframes uncover-in {
+  0% { transform: translateY(150px); }
+  100% { transform: translateY(0); }
+}
+.animate-uncover-in {
+  animation: uncover-in 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}
+
+/* 4. Blow Up */
+@keyframes blow-up-in {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-blow-up-in {
+  animation: blow-up-in 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}

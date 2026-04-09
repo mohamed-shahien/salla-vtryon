@@ -28,46 +28,35 @@ export interface PlacementSelector {
 }
 
 export const PLACEMENT_SELECTOR_MAP: Record<PlacementTarget, PlacementSelector> = {
-  'under-add-to-cart': {
-    primary: '[data-component="add-to-cart"], .add-to-cart, .product-add-cart, button[type="submit"].add-cart',
-    fallbacks: ['.product-actions', '.product-info', '.product-details'],
-    position: 'after',
+  'on-product-image': {
+    primary: '.product-single salla-slider.details-slider .s-slider-container',
+    fallbacks: [],
+    position: 'prepend',
     container: null,
   },
-
-  'above-add-to-cart': {
-    primary: '[data-component="add-to-cart"], .add-to-cart, .product-add-cart, button[type="submit"].add-cart',
-    fallbacks: ['.product-actions', '.product-info'],
+  'above-product-options': {
+    primary: '.product-single form.form.product-form',
+    fallbacks: [],
+    position: 'prepend',
+    container: null,
+  },
+  'description-section': {
+    primary: '.product-single .product__description',
+    fallbacks: [],
     position: 'before',
     container: null,
   },
-
-  'inside-product-actions': {
-    primary: '.product-actions, .product-actions-wrapper, [data-component="product-actions"]',
-    fallbacks: ['.product-info .actions', '.product-details .actions'],
-    position: 'append',
-    container: '.product-actions, .product-actions-wrapper, [data-component="product-actions"]',
-  },
-
-  'floating-corner': {
+  'floating-bottom': {
     primary: 'body',
     fallbacks: [],
     position: 'append',
     container: 'body',
   },
-
-  'sticky-mobile-footer': {
+  'floating-middle': {
     primary: 'body',
     fallbacks: [],
     position: 'append',
     container: 'body',
-  },
-
-  'auto-best-fit': {
-    primary: '.product-actions, .add-to-cart, button[type="submit"]',
-    fallbacks: ['.product-info', '.product-details', 'body'],
-    position: 'after',
-    container: null,
   },
 }
 

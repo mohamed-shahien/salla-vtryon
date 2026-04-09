@@ -39,10 +39,10 @@ export function WindowPresetsSection({ settings, onUpdate, onApplyPreset }: Wind
       <CardHeader className="p-3 border-b border-border/10">
         <div className="flex items-center gap-2 text-foreground/80">
           <Maximize2 className="size-4 text-primary/70" />
-          <CardTitle className="text-sm font-black">قوالب النافذة</CardTitle>
+          <CardTitle className="text-sm font-black">خيارات نافذة تجربة القياس</CardTitle>
         </div>
         <CardDescription className="text-[9px] font-bold opacity-60 mt-1">
-          اختر نمط نافذة العرض والتأثيرات
+          حدد كيف تظهر النافذة لعملائك ونوع الرسوم المتحركة
         </CardDescription>
       </CardHeader>
 
@@ -93,7 +93,7 @@ export function WindowPresetsSection({ settings, onUpdate, onApplyPreset }: Wind
             {/* Motion Profile */}
             <div className="space-y-2">
               <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
-                ملف الحركة
+                سرعة وانسيابية الحركة
                 <Play className="size-3" />
               </Label>
               <ToggleGroup
@@ -105,16 +105,16 @@ export function WindowPresetsSection({ settings, onUpdate, onApplyPreset }: Wind
                 size="sm"
               >
                 <Toggle value="cinematic" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-                  سينمائي
+                  إخراج سينمائي
                 </Toggle>
                 <Toggle value="soft-scale" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-                  ناعم
+                  تكبير ناعم
                 </Toggle>
                 <Toggle value="slide-up" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-                  انزلاق
+                  ظهور من الأسفل
                 </Toggle>
                 <Toggle value="side-drawer" className="px-2 py-1 h-7 text-[9px] font-black rounded-lg whitespace-nowrap">
-                  جانبي
+                  انسحاب جانبي
                 </Toggle>
               </ToggleGroup>
             </div>
@@ -122,7 +122,7 @@ export function WindowPresetsSection({ settings, onUpdate, onApplyPreset }: Wind
             {/* Backdrop Style */}
             <div className="space-y-2">
               <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
-                الخلفية
+                تأثير خلفية الصفحة عند فتح النافذة
                 <Eye className="size-3" />
               </Label>
               <ToggleGroup
@@ -134,16 +134,16 @@ export function WindowPresetsSection({ settings, onUpdate, onApplyPreset }: Wind
                 size="sm"
               >
                 <Toggle value="dim" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  معتم
+                  تعتيم بسيط
                 </Toggle>
                 <Toggle value="blur-dark" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  ضبابي
+                  ضبابي داكن
                 </Toggle>
                 <Toggle value="blur-light" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
                   ضبابي فاتح
                 </Toggle>
                 <Toggle value="gradient" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  متدرج
+                  ألوان متدرجة
                 </Toggle>
               </ToggleGroup>
             </div>
@@ -151,7 +151,7 @@ export function WindowPresetsSection({ settings, onUpdate, onApplyPreset }: Wind
             {/* Close Style */}
             <div className="space-y-2">
               <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
-                زر الإغلاق
+                شكل وموقع زر الإغلاق
                 <X className="size-3" />
               </Label>
               <ToggleGroup
@@ -180,7 +180,7 @@ export function WindowPresetsSection({ settings, onUpdate, onApplyPreset }: Wind
             {/* Result Layout */}
             <div className="space-y-2">
               <Label className="text-[9px] font-black text-muted-foreground opacity-70 flex items-center gap-1.5 justify-end">
-                عرض النتيجة
+                طريقة عرض صورة النتيجة
                 <Layers className="size-3" />
               </Label>
               <ToggleGroup
@@ -192,16 +192,16 @@ export function WindowPresetsSection({ settings, onUpdate, onApplyPreset }: Wind
                 size="sm"
               >
                 <Toggle value="before-after-prominent" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  قبل/بعد
+                  مقارنة (قبل وبعد)
                 </Toggle>
                 <Toggle value="side-by-side" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  جنباً لجنب
+                  صورتين بجانب بعض
                 </Toggle>
                 <Toggle value="stacked" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  متراكم
+                  صورة فوق الأخرى
                 </Toggle>
                 <Toggle value="result-first" className="flex-1 py-1 h-7 text-[9px] font-black rounded-lg">
-                  النتيجة أولاً
+                  النتيجة فقط أولاً
                 </Toggle>
               </ToggleGroup>
             </div>

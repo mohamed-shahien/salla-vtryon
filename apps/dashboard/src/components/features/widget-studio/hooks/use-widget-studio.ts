@@ -79,8 +79,8 @@ export function useWidgetStudio({
 
       const result = await response.json()
 
-      if (result.ok && result.data && result.data.widget_config) {
-        const settings = result.data.widget_config as WidgetSettings
+      if (result.ok && result.data) {
+        const settings = result.data as WidgetSettings
         setServerConfig(settings)
         setConfig(settings)
       } else {
@@ -151,7 +151,7 @@ export function useWidgetStudio({
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ widget_config: config }),
+        body: JSON.stringify(config),
       })
 
       if (!response.ok) {

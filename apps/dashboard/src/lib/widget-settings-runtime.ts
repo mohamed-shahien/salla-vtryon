@@ -404,6 +404,54 @@ export interface WindowPreset {
 }
 
 const WINDOW_PRESETS: Record<WindowPresetId, WindowPreset> = {
+  'one': {
+    id: 'one',
+    nameAr: 'انفتاح طولي (Unfolding)',
+    description: 'خط أفقي يتوسع ليصبح نافذة كاملة',
+    animationRef: 'one',
+    animationClasses: {
+      enter: 'animate-unfold-in',
+      enterActive: 'animate-unfold-in',
+      exit: 'animate-unfold-out',
+      exitActive: 'animate-unfold-out',
+    },
+  },
+  'two': {
+    id: 'two',
+    nameAr: 'كشف درامي (Revealing)',
+    description: 'صعود من الأسفل مع تكبير',
+    animationRef: 'two',
+    animationClasses: {
+      enter: 'animate-reveal-in',
+      enterActive: 'animate-reveal-in',
+      exit: 'animate-reveal-out',
+      exitActive: 'animate-reveal-out',
+    },
+  },
+  'three': {
+    id: 'three',
+    nameAr: 'إزاحة المحتوى (Uncovering)',
+    description: 'المحتوى يرتفع للأعلى لتظهر النافذة خلفه',
+    animationRef: 'three',
+    animationClasses: {
+      enter: 'animate-uncover-in',
+      enterActive: 'animate-uncover-in',
+      exit: 'animate-uncover-out',
+      exitActive: 'animate-uncover-out',
+    },
+  },
+  'four': {
+    id: 'four',
+    nameAr: 'انفجار مركزي (Blow Up)',
+    description: 'توسع سريع من المركز',
+    animationRef: 'four',
+    animationClasses: {
+      enter: 'animate-blow-up-in',
+      enterActive: 'animate-blow-up-in',
+      exit: 'animate-blow-up-out',
+      exitActive: 'animate-blow-up-out',
+    },
+  },
   'classic-center-modal': {
     id: 'classic-center-modal',
     nameAr: 'نافذة مركزية كلاسيكية',

@@ -115,9 +115,9 @@ export function DiagnosticsSection({ apiUrl }: DiagnosticsSectionProps) {
           <div className="flex items-center gap-2 text-foreground/80">
             <Activity className="size-4 text-primary/70" />
             <div>
-              <CardTitle className="text-sm font-black">التشخيص والحالة</CardTitle>
+              <CardTitle className="text-sm font-black">فحص حالة وسلامة الخدمة</CardTitle>
               <CardDescription className="text-[9px] font-bold opacity-60">
-                حالة الاتصال والتشغيل
+                تقرير مباشر عن جاهزية الخدمة في متجرك
               </CardDescription>
             </div>
           </div>
@@ -175,7 +175,7 @@ export function DiagnosticsSection({ apiUrl }: DiagnosticsSectionProps) {
                             'bg-destructive/10 text-destructive'
                         )}
                       >
-                        {card.status === 'healthy' ? 'سليم' : card.status === 'warning' ? 'تحذير' : 'خطأ'}
+                        {card.status === 'healthy' ? 'منظم وجاهز' : card.status === 'warning' ? 'يحتاج انتباه' : 'يوجد مشكلة'}
                       </Badge>
                     </div>
                     <p className="text-[9px] text-muted-foreground truncate">{card.message}</p>
@@ -209,7 +209,7 @@ export function DiagnosticsSection({ apiUrl }: DiagnosticsSectionProps) {
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <AlertCircle className="size-8 text-muted-foreground/40 mb-2" />
-            <p className="text-[10px] text-muted-foreground">لم يتم تشغيل التشخيص بعد</p>
+            <p className="text-[10px] text-muted-foreground">اضغط على زر التحديث بالأعلى لبدء الفحص</p>
           </div>
         )}
       </CardContent>
