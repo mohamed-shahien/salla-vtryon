@@ -27,8 +27,8 @@ This plan intentionally centers the storefront shopper flow. The dashboard exist
 | 2 | Merchant Runtime APIs | Done | Auth, products, upload, settings, dashboard-facing APIs |
 | 3 | Credits and Async Jobs | Done | Credits, transactions, job creation, refund rules |
 | 4 | AI Worker and Storage | Done with external blocker | Replicate worker, Bunny upload, timeout handling |
-| 5 | Merchant Dashboard | In progress | Merchant admin surfaces only |
-| 6 | Storefront Widget Core | In progress | Widget config, upload, job creation, polling |
+| 5 | Merchant Dashboard | Done | Merchant admin surfaces consolidated into Unified Studio |
+| 6 | Storefront Widget Core | Done | Widget config, upload, job creation, and polling unified |
 | 7 | Storefront UX Hardening and Live Validation | Current | Real shopper UX on real product pages |
 | 8 | Testing and Security Hardening | Pending | Test coverage, limits, audits, resilience |
 | 9 | Launch Preparation | Pending | Production infra, partner setup, go-live readiness |
@@ -194,9 +194,9 @@ Do not treat the dashboard as the canonical shopper try-on experience.
 
 ### Current State
 
-Mostly implemented.
-
-Remaining work is UI polish and consistency, not architecture direction.
+Done (Unified Architecture).
+- All admin surfaces (Overview, Products, Jobs, Credits, Settings) are synchronized with the shared type system.
+- Studio Mode implemented with smooth highlights and consistent spacing.
 
 ---
 
@@ -224,7 +224,9 @@ Ship the real shopper-facing widget runtime.
 
 ### Current State
 
-Implemented, but still being hardened on real storefront markup.
+Done (Unified Architecture).
+- Widget runtime correctly consumes the nested configuration schema.
+- Shopper photo upload and async polling are verified technically.
 
 ---
 

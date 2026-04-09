@@ -48,9 +48,9 @@ The merchant can:
 - install and authorize the app through Salla
 - access an external dashboard
 - review credits and recent jobs
-- control widget enablement
-- choose whether the widget is available on all products or selected products only
-- manage button text and default category
+- control widget enablement through a master toggle
+- choose whether the widget is available on all products or selected products only (via `display_rules`)
+- manage visual identity, button text, and default category
 
 ### Shopper outcome
 
@@ -92,7 +92,7 @@ The shopper can:
 3. Backend receives lifecycle webhooks and stores encrypted tokens.
 4. Merchant opens the external dashboard.
 5. Merchant reviews credits and widget settings.
-6. Merchant keeps widget mode as `all` or switches to `selected`.
+6. Merchant reviews `display_rules` and sets eligibility to `all` or `selected`.
 7. Merchant enables specific products if needed.
 
 ### 5.2 Merchant daily operations
@@ -109,7 +109,7 @@ The shopper can:
 - **Product Management**:
     - List all products from Salla.
     - Toggle Virtual Try-On per product.
-    - **Visibility Logic**: Disabling a product manually forces the widget into `selected` mode for that product, ensuring it remains hidden regardless of global settings.
+    - **Visibility Logic**: Disabling a product manually forces the widget into `selected` mode (Eligibility Mode) for that product and adds it to `selected_product_ids`, ensuring it remains hidden regardless of global defaults.
 
 ### 5.3 Shopper try-on flow
 
@@ -155,8 +155,8 @@ The shopper can:
 |----|-------------|----------|
 | DA-01 | External dashboard shows overview, products, jobs, credits, and widget settings | P0 |
 | DA-02 | Dashboard does not host the canonical shopper try-on flow | P0 |
-| DA-03 | Merchant can enable widget globally or only for selected products | P0 |
-| DA-04 | Merchant can customize widget button text and default category | P0 |
+| DA-03 | Merchant can enable widget globally or only for selected products through `display_rules` | P0 |
+| DA-04 | Merchant can customize visual identity, button text, and default category | P0 |
 | DA-05 | Merchant can review job history and failures | P0 |
 | DA-06 | Merchant can review credits and transactions | P0 |
 

@@ -36,7 +36,8 @@ The repo no longer treats embedded dashboard auth or dashboard-first try-on as t
 - realigned delivery docs and the master plan to the same model
 - updated the decisions log to mark the old direct embedded token auth decision as superseded
 - updated status tracking so the current phase is clearly Phase 7 storefront UX hardening and live validation
-- updated `AGENTS.md` so the canonical route list includes the external OAuth start and callback routes plus merchant widget settings routes
+- **Unification**: Purged all legacy V1/V2 folders the dashboard and API local proxies.
+- **Shared Types**: Centralized all settings validation in `packages/shared-types`.
 
 ## Current Implementation Truth
 
@@ -77,6 +78,8 @@ The backend remains responsible for:
 - keep the widget lightweight and storefront-safe
 - keep AI processing async only
 - keep the locked stack unchanged
+- **NEVER** re-introduce local schema proxies or flat-field settings in the API or Dashboard.
+- **ALWAYS** consume `WidgetSettings` from `@virtual-tryon/shared-types`.
 
 ## Open Blockers
 

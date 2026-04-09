@@ -139,15 +139,39 @@ Source of truth for every installed Salla store.
 | `created_at` | `timestamptz` | NOT NULL | Row creation time |
 | `updated_at` | `timestamptz` | NOT NULL | Row update time |
 
-### Canonical `settings` shape
+### Canonical `settings` shape (Unified)
 
 ```json
 {
   "widget_enabled": true,
-  "widget_mode": "all",
-  "widget_products": [],
-  "widget_button_text": "جرّب الآن",
-  "default_category": "upper_body"
+  "display_rules": {
+    "eligibility_mode": "all",
+    "selected_product_ids": []
+  },
+  "visual_identity": {
+    "brand_color": "#000000",
+    "surface_style": "solid",
+    "corner_radius": "balanced",
+    "spacing_density": "comfortable",
+    "typography_tone": "neutral",
+    "visual_intensity": "balanced",
+    "icon_style": "line",
+    "backdrop_style": "blur-dark",
+    "motion_energy": "smooth",
+    "state_emphasis": "balanced"
+  },
+  "button_settings": {
+    "text": "جرّب الآن",
+    "mobile_mode": "compact",
+    "desktop_mode": "expanded"
+  },
+  "window_settings": {
+    "preset": "standard",
+    "motion_profile": "smooth",
+    "backdrop": "blur-dark",
+    "close_style": "icon-top-inline",
+    "result_layout": "before-after-prominent"
+  }
 }
 ```
 

@@ -11,6 +11,7 @@ Realign the source-of-truth docs and finish the real shopper widget experience s
 
 - merchant dashboard for controls and monitoring
 - storefront widget for shopper try-on
+- **Unified Architecture**: Single Source of Truth in `shared-types`
 
 ## Overall Status
 
@@ -49,12 +50,16 @@ The dashboard UI is now premium and supports batch operations and optimistic upd
 - completed granular product-based widget visibility rules with legacy fallback
 - completed premium products dashboard with search, filters, and batch enablement
 - completed widget safety contract and verification script
-- completed Merchant Dashboard V2 migration:
+- completed Merchant Dashboard Unification:
   - type-safe `useWidgetStudioV2` hook
   - synchronized visual identity, button, and window presets
   - atomic settings patching with dirty state detection
   - dedicated runtime safeguards configuration
 - resolved widespread `as any` type issues in dashboard primitives
+- completed **Full Architecture Unification**:
+  - Combined V1/V2 settings into a single `WidgetSettings` schema.
+  - Purged all legacy local schema proxies and orphaned V1 files.
+  - verified end-to-end `tsc` build for API, Dashboard, and Widget.
 
 ## Verified
 

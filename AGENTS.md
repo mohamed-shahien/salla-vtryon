@@ -49,6 +49,7 @@ Do not replace or drift from this stack unless the user explicitly approves it.
 
 - **Frontend Dashboard:** React 19 + Vite + shadcn/ui + Tailwind CSS 4
 - **Backend API:** Node.js 20 + Express 5
+- **Shared Types:** Centralized in `packages/shared-types` (Single Source of Truth)
 - **Database:** Supabase PostgreSQL with direct Supabase JS client
 - **Realtime:** Supabase Realtime
 - **AI:** Replicate API
@@ -179,9 +180,21 @@ Use these routes as the canonical baseline unless the user explicitly changes th
 - `PUT /api/widget/settings`
 - `POST /api/widget/job`
 - `GET /api/widget/job/:id`
+- `GET /api/widget/script-tag`
 - `GET /health`
 
-If older docs or old code reference `/api/merchants/me`, treat that as legacy and prefer `/api/auth/me`.
+### Schema Governance
+ALL widget settings logic MUST strictly follow the Zod schema in `packages/shared-types`. 
+NEVER re-define `WidgetSettings` or its sub-types locally in the API or Dashboard.
+Migration from Legacy:
+- `widget_mode` -> `display_rules.eligibility_mode`
+- `widget_products` -> `display_rules.selected_product_ids`
+- `widget_enabled` -> Master toggle (Top Level)
+
+### Redundancy & Dev-Drift Policy
+- **NO PROXIES**: Do not create local schema files in `apps/api` or `apps/dashboard` that mirror `shared-types`.
+- **NO VERSIONING DRIFT**: The concept of "V1" and "V2" is retired. There is only the **Unified Schema**.
+- **SYNCED TYPES**: Always use the imported types from `@virtual-tryon/shared-types`. If a type is missing, add it to the shared package, do not fudge it with `any` or local interfaces.
 
 ---
 

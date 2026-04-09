@@ -1,4 +1,10 @@
+# [ARCHIVED - COMPLETED 2026-04-09]
 # Widget Settings Revamp Plan
+
+> [!IMPORTANT]
+> This plan has been **FULLY IMPLEMENTED** and the architecture has been **UNIFIED**. 
+> All logic described here now resides in the centralized `@virtual-tryon/shared-types` package. 
+> Do not use this document for new planning; refer to the current `WidgetSettings` schema instead.
 
 ## الهدف
 إعادة بناء صفحة إعدادات الـ Widget بحيث تصبح منتج فعلي لإدارة شكل الزر، شكل النافذة، الهوية البصرية، قواعد التشغيل، مكان الظهور، وصلاحيات الوصول — مع فصل واضح بين:

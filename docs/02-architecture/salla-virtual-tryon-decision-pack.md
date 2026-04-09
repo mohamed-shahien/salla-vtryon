@@ -244,13 +244,13 @@ The minimum approved MVP domain model is:
 - `tryon_jobs`
 - `webhook_events`
 
-Merchant widget controls may remain stored in merchant settings as long as the backend normalizes and validates:
+Merchant widget controls must remain stored in merchant settings according to the unified schema:
 
-- widget enabled state
-- widget mode
-- selected product ids
-- button text
-- default category
+- `widget_enabled` (Master toggle)
+- `display_rules` (Eligibility Mode + Selected Product IDs)
+- `visual_identity` (Brand color, styles, and effects)
+- `button_settings` (Button text and modes)
+- `window_settings` (Dialog presets and behavior)
 
 ---
 
@@ -323,3 +323,20 @@ Any older references to:
 **Design**: If a product's visibility is toggled "OFF" in our dashboard, the backend widget config API always returns that product as if it were not enabled, overriding any automated selection logic.
 
 **Status**: [APPROVED/IMPLEMENTED]
+---
+
+## 16. Unified Architecture & Widget Settings Consolidation
+
+**Decision**: Merge the fragmented V1 and V2 settings models into a single, unified architecture centered on the `shared-types` package.
+
+**Context**:
+- Maintaining separate V1 (Legacy flat fields) and V2 (Fragmented nested objects) architectures caused inconsistent state, widespread linting/TypeScript errors, and duplicated UI components.
+- Direct property access on redundant fields (e.g., `widget_mode` vs `display_rules.eligibility_mode`) led to runtime confusion.
+
+**Design**:
+- **Single Source of Truth**: All validation and type definitions live in `packages/shared-types`.
+- **Nested Consolidation**: All widget settings are now grouped logically into `display_rules`, `visual_identity`, `button_settings`, and `window_settings`.
+- **Master Toggle**: Re-introduced `widget_enabled` at the root for a simple global switch.
+- **Implementation Status**: ALL legacy files and local schema proxies in the API and Dashboard have been purged.
+
+**Status**: [APPROVED/IMPLEMENTED - 2026-04-09]

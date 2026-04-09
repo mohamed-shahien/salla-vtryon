@@ -1,5 +1,20 @@
 # DECISIONS LOG
 
+## 2026-04-09 - Unified Architecture and Widget Settings Schema
+**Status:** accepted
+
+The project infrastructure has been consolidated into a single, unified architecture. 
+The previous split between V1 (Legacy) and V2 (Fragmented) has been eliminated in favor of a single source of truth.
+
+**Reason:**
+Operating two parallel schemas caused widespread TypeScript errors, duplicated logic in the dashboard UI, and increased the risk of state drift between the Backend and Frontend.
+
+**Impact:**
+- **Single Source of Truth**: `packages/shared-types` now owns the absolute definition of `WidgetSettings`.
+- **Nested Schema**: Adopted the nested `display_rules` structure for product eligibility and appearance settings.
+- **Legacy Purge**: All V1/V2 specific subdirectories and local schema proxies have been deleted.
+- **Master Toggle**: Re-introduced `widget_enabled` at the top level for global control.
+
 ## 2026-04-05 - Source docs realigned to external dashboard and widget-first shopper flow
 **Status:** accepted
 
@@ -169,12 +184,13 @@ This is the current commercial and technical operating model of the product.
 Any job creation flow that skips these rules is invalid.
 
 ## 2026-04-06 - Hybrid Product Visibility with Legacy Fallback
-**Status:** accepted
+**Status:** superseded (by 2026-04-09 Unified Architecture)
 
-The system now supports a hybrid model for determining widget visibility on storefront product pages:
-1. **Rule-Based Visibility**: A new `merchant_product_rules` table stores explicit per-product overrides.
-2. **Global Setting**: Validated against `settings.widget_mode` (`all` vs `selected`).
-3. **Legacy Fallback**: If no specific rule exists for a product, the system falls back to checking the legacy `settings.widget_products` array to ensure no disruption for existing merchants.
+The system previously supported a hybrid model for determining widget visibility. This has been consolidated into the unified `display_rules` schema.
+
+1. **Rule-Based Visibility**: Consolidated into `display_rules.eligibility_mode` and `display_rules.selected_product_ids`.
+2. **Global Setting**: Now part of the nested `display_rules` object.
+3. **Legacy Fallback**: The legacy fields `widget_mode` and `widget_products` are purged; the logic now uses the unified nested structure exclusively.
 
 **Reason:**
 To provide granular product-level control (Bulk Enable/Disable) without breaking the existing storefront configuration or requiring a complex data migration for active users.
