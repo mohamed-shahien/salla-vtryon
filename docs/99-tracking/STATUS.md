@@ -7,7 +7,7 @@ Virtual Try-On for Salla
 Phase 7 - Storefront UX Hardening and Live Validation
 
 ## Current Task
-Execute **Module 3: Smart Category Rules** (Zero-Configuration). Implement automated category detection and Dashboard Category Management UI.
+Execute **Module 2: Conversion Attribution (ROI Engine)**. Connect `order.created` webhooks to try-on activity and build the Dashboard Analytics UI.
 
 ## Overall Status
 The project has achieved a major milestone: **Merchant Onboarding & Granular Product Control**.
@@ -15,9 +15,11 @@ Merchants now have a guided first-run experience and can toggle the storefront w
 The backend supports a hybrid visibility model (`all` vs `selected`).
 
 ## Done
+- **Premium Branding & UX (Module 4)**: Added Sharp.js watermarking, Comparison Slider, and Session Gallery.
 - **Full Architecture Unification**: Combined legacy V1/V2 into a single `WidgetSettings` schema in `@virtual-tryon/shared-types`.
 - **Merchant Onboarding**: Guided setup flow for new merchants.
 - **Granular Product Control**: Individual product rules (`merchant_product_rules`) and `display_rules`.
+- **Smart Category Rules (Module 3)**: Batch enablement and batch-eligible category logic.
 - **Premium Dashboard**: Refined UI for products, jobs, and credits.
 - **Safe Storefront Injection**: Isolated widget script (`/widget.js`) with cross-origin safeguards.
 - **Atomic Credits & Refunding**: Verified worker-side failure refund handling as per ERD.

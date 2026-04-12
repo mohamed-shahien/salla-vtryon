@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Unified Widget Settings Schema
  * 
  * Centralized source of truth for all widget configuration.
@@ -328,7 +328,7 @@ export function createDefaultWidgetSettings(): WidgetSettings {
     widget_enabled: true,
     button: {
       preset: 'core-solid',
-      label: 'Ø¬Ø±Ù‘Ø¨ Ø§Ù„Ø¢Ù†',
+      label: 'جرّب الآن',
       icon: {
         enabled: true,
         name: 'sparkles',
@@ -391,7 +391,7 @@ export function createDefaultWidgetSettings(): WidgetSettings {
     },
     runtime_safeguards: {
       zero_credit_behavior: 'disabled-with-message',
-      zero_credit_message: 'Ù„Ù‚Ø¯ Ø§Ø³ØªÙ‡Ù„ÙƒØª Ø±ØµÙŠØ¯Ùƒ. ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù… Ù„Ø´Ø­Ù† Ø¥Ø¶Ø§ÙÙŠ.',
+      zero_credit_message: 'لقد استهلكت رصيدك. تواصل مع الدعم لشحن إضافي.',
       max_daily_requests: undefined,
       require_product_image: true,
       enable_diagnostics: false,

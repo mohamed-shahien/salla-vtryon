@@ -3,7 +3,7 @@
   --vtryon-text: #f8fafc;
   --vtryon-muted: #cbd5e1;
   --vtryon-accent: var(--vtryon-brand-color, #10b981);
-  --vtryon-accent-soft: rgba(16, 185, 129, 0.16);
+  --vtryon-accent-soft: color-mix(in srgb, var(--vtryon-accent), transparent 84%);
   
   position: fixed;
   inset-inline-end: 16px;
