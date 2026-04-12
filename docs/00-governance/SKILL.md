@@ -175,6 +175,13 @@ Canonical widget behavior:
 - `GET /api/auth/salla/callback`
 - `POST /api/auth/verify`
 - `GET /api/auth/me`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/set-password`
+- `POST /api/auth/reset-password`
+- `PATCH /api/auth/profile`
+- `POST /api/auth/change-password`
 - `POST /webhooks/salla`
 - `GET /api/credits`
 - `POST /api/jobs`
@@ -188,6 +195,7 @@ Canonical widget behavior:
 - `PUT /api/widget/settings`
 - `POST /api/widget/job`
 - `GET /api/widget/job/:id`
+- `GET /api/widget/embed-script`
 - `GET /health`
 
 ## 10. Anti-Drift Rules

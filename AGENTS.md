@@ -23,10 +23,11 @@ Read these files first at the beginning of every session and before every non-tr
 3. `/docs/02-architecture/erd-virtual-tryon.md`
 4. `/docs/02-architecture/salla-virtual-tryon-decision-pack.md`
 5. `/docs/03-delivery/virtual-tryon-execution-plan.md`
-6. `/docs/03-delivery/virtual-tryon-project-plan.md`
-7. `/docs/99-tracking/STATUS.md`
-8. `/docs/99-tracking/DECISIONS_LOG.md`
-9. `/docs/99-tracking/HANDOFF.md`
+6. `/docs/03-delivery/virtual-tryon-level-up-plan.md` (Level Up Features - READ THIS)
+7. `/docs/03-delivery/virtual-tryon-project-plan.md`
+8. `/docs/99-tracking/STATUS.md`
+9. `/docs/99-tracking/DECISIONS_LOG.md`
+10. `/docs/99-tracking/HANDOFF.md`
 
 If any code conflicts with these documents, the docs win unless the user explicitly overrides them.
 
@@ -115,6 +116,11 @@ The widget must remain:
 - mobile-friendly
 - RTL-friendly
 - safe to inject into Salla storefront pages
+- **Pro Rule (Context):** Use Salla Storefront SDK `salla.config.get('page.slug')` and `page.id` for context resolution.
+- **Pro Rule (Execution):** Follow "Full-Stack Feature Closure" — complete Backend + Frontend before starting the next module.
+
+## Current Task
+Execute **Module 1: SDK-Aware Context** (Full-Stack). Refactor the widget to use native Salla SDK and update backend validation logic.
 
 ---
 
@@ -165,6 +171,11 @@ Use these routes as the canonical baseline unless the user explicitly changes th
 - `GET /api/auth/salla/callback`
 - `POST /api/auth/verify`
 - `GET /api/auth/me`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/set-password`
+- `POST /api/auth/reset-password`
 - `PATCH /api/auth/profile`
 - `POST /api/auth/change-password`
 - `POST /webhooks/salla`
@@ -180,7 +191,7 @@ Use these routes as the canonical baseline unless the user explicitly changes th
 - `PUT /api/widget/settings`
 - `POST /api/widget/job`
 - `GET /api/widget/job/:id`
-- `GET /api/widget/script-tag`
+- `GET /api/widget/embed-script`
 - `GET /health`
 
 ### Schema Governance

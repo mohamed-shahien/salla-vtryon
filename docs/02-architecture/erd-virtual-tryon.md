@@ -36,6 +36,11 @@ erDiagram
     MERCHANTS ||--|| CREDITS : has
     MERCHANTS ||--o{ TRYON_JOBS : owns
     MERCHANTS ||--o{ CREDIT_TRANSACTIONS : logs
+    MERCHANTS ||--o{ MERCHANT_USERS : mapped_to
+    USERS ||--o{ MERCHANT_USERS : belongs_to
+    USERS ||--o{ AUTH_TOKENS : has
+    USERS ||--o{ AUDIT_EVENTS : triggers
+    MERCHANTS ||--o{ AUDIT_EVENTS : logs_for
     TRYON_JOBS ||--o| CREDIT_TRANSACTIONS : may_trigger
 
     MERCHANTS {
@@ -51,6 +56,15 @@ erDiagram
         jsonb settings
         timestamptz installed_at
         timestamptz uninstalled_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    MERCHANT_PRODUCT_RULES {
+        uuid id PK
+        uuid merchant_id FK
+        bigint product_id
+        boolean enabled
         timestamptz created_at
         timestamptz updated_at
     }
@@ -71,6 +85,15 @@ erDiagram
         text password_hash
         text full_name
         timestamptz email_verified_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    MERCHANT_USERS {
+        uuid id PK
+        uuid merchant_id FK
+        uuid user_id FK
+        text role
         timestamptz created_at
         timestamptz updated_at
     }
@@ -112,6 +135,27 @@ erDiagram
         uuid job_id FK
         timestamptz created_at
     }
+
+    AUTH_TOKENS {
+        uuid id PK
+        uuid user_id FK
+        text token UK
+        text type
+        timestamptz expires_at
+        timestamptz used_at
+        timestamptz created_at
+    }
+
+    AUDIT_EVENTS {
+        uuid id PK
+        uuid merchant_id FK
+        uuid user_id FK
+        text event_type
+        jsonb metadata
+        text ip_address
+        text user_agent
+        timestamptz created_at
+    }
 ```
 
 ---
@@ -139,38 +183,49 @@ Source of truth for every installed Salla store.
 | `created_at` | `timestamptz` | NOT NULL | Row creation time |
 | `updated_at` | `timestamptz` | NOT NULL | Row update time |
 
-### Canonical `settings` shape (Unified)
+### Canonical `settings` shape (Unified V2)
 
 ```json
 {
+  "schema_version": 2,
   "widget_enabled": true,
-  "display_rules": {
-    "eligibility_mode": "all",
-    "selected_product_ids": []
+  "button": {
+    "preset": "core-solid",
+    "label": "جرّب الآن",
+    "icon": {
+      "enabled": true,
+      "name": "sparkles",
+      "position": "start"
+    },
+    "size": "md",
+    "placement_mode": "inline",
+    "mobile_mode": "sticky",
+    "full_width": false
   },
-  "visual_identity": {
-    "brand_color": "#000000",
-    "surface_style": "solid",
-    "corner_radius": "balanced",
-    "spacing_density": "comfortable",
-    "typography_tone": "neutral",
-    "visual_intensity": "balanced",
-    "icon_style": "line",
-    "backdrop_style": "blur-dark",
-    "motion_energy": "smooth",
-    "state_emphasis": "balanced"
-  },
-  "button_settings": {
-    "text": "جرّب الآن",
-    "mobile_mode": "compact",
-    "desktop_mode": "expanded"
-  },
-  "window_settings": {
-    "preset": "standard",
-    "motion_profile": "smooth",
+  "window": {
+    "preset": "classic-center-modal",
+    "motion_profile": "soft-scale",
     "backdrop": "blur-dark",
     "close_style": "icon-top-inline",
     "result_layout": "before-after-prominent"
+  },
+  "visual_identity": {
+    "brand_color": "#7c3aed",
+    "surface_style": "glass",
+    "corner_radius": "balanced",
+    "spacing_density": "comfortable",
+    "typography_tone": "modern"
+  },
+  "display_rules": {
+    "eligibility_mode": "all",
+    "selected_product_ids": [],
+    "selected_category_ids": [],
+    "placement_target": "above-product-options",
+    "display_timing": "immediate"
+  },
+  "runtime_safeguards": {
+    "zero_credit_behavior": "disabled-with-message",
+    "require_product_image": true
   }
 }
 ```
@@ -254,6 +309,69 @@ Audit trail for every credit movement.
 | `reason` | `text` | nullable | Human-readable reason |
 | `job_id` | `uuid` | FK, nullable | Related try-on job if present |
 | `created_at` | `timestamptz` | NOT NULL | Transaction time |
+
+---
+
+### 6. `merchant_product_rules`
+
+Granular, product-specific widget visibility rules.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Internal rule id |
+| `merchant_id` | `uuid` | FK, NOT NULL | Owning merchant |
+| `product_id` | `bigint` | NOT NULL | Target sibling product (Salla ID) |
+| `enabled` | `boolean` | DEFAULT true | Whether the widget should show for this product |
+| `created_at` | `timestamptz` | NOT NULL | Creation time |
+| `updated_at` | `timestamptz` | NOT NULL | Update time |
+
+---
+
+### 7. `merchant_users`
+
+Mapping between local users and merchant tenants.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Internal mapping id |
+| `merchant_id` | `uuid` | FK, NOT NULL | Target merchant |
+| `user_id` | `uuid` | FK, NOT NULL | Target user |
+| `role` | `text` | NOT NULL | owner, admin |
+| `created_at` | `timestamptz` | NOT NULL | Creation time |
+| `updated_at` | `timestamptz` | NOT NULL | Update time |
+
+---
+
+### 8. `auth_tokens`
+
+Security tokens for password resets and set-password flows.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Token id |
+| `user_id` | `uuid` | FK, NOT NULL | Owning user |
+| `token` | `text` | UNIQUE, NOT NULL | Secure token string |
+| `type` | `text` | NOT NULL | set-password, reset-password |
+| `expires_at` | `timestamptz` | NOT NULL | Expiry time |
+| `used_at` | `timestamptz` | nullable | When the token was consumed |
+| `created_at` | `timestamptz` | NOT NULL | Creation time |
+
+---
+
+### 9. `audit_events`
+
+Global security and system audit log.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `uuid` | PK | Event id |
+| `merchant_id` | `uuid` | FK, nullable | Related merchant |
+| `user_id` | `uuid` | FK, nullable | Related user |
+| `event_type` | `text` | NOT NULL | login, logout, password_change, etc. |
+| `metadata` | `jsonb` | NOT NULL | Contextual event data |
+| `ip_address` | `text` | nullable | Actor IP |
+| `user_agent` | `text` | nullable | Actor Device |
+| `created_at` | `timestamptz` | NOT NULL | Log time |
 
 ---
 

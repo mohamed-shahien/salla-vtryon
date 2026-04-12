@@ -1,94 +1,75 @@
 # Virtual Try-On for Salla
 
 AI-powered Virtual Try-On SaaS for Salla merchants.
+This repository is currently in **Phase 7 - Storefront UX Hardening and Live Validation**.
 
-This repository follows the governance and planning documents under `docs/` and is currently scoped to **Phase 0 - Project Setup & Infrastructure** only.
+## Project Surface Area
 
-## Source of truth
+- **Merchant Dashboard**: External React 19 application for management and monitoring.
+- **Storefront Widget**: Lightweight Vanilla JS bundle injected into Salla product pages.
+- **Backend API**: Node.js/Express 5 orchestration layer for jobs, credits, and Salla integration.
+- **Shared Types**: Centralized schema definition for full architecture unification.
+
+## Source of Truth
 
 Read these before non-trivial work:
 
-- `AGENTS.md`
+- `AGENTS.md` (Root)
 - `docs/00-governance/SKILL.md`
 - `docs/01-product/prd-virtual-tryon.md`
 - `docs/02-architecture/erd-virtual-tryon.md`
-- `docs/02-architecture/salla-virtual-tryon-decision-pack.md`
-- `docs/03-delivery/virtual-tryon-execution-plan.md`
-- `docs/03-delivery/virtual-tryon-project-plan.md`
 - `docs/99-tracking/STATUS.md`
-- `docs/99-tracking/DECISIONS_LOG.md`
 - `docs/99-tracking/HANDOFF.md`
 
-## Locked stack
+## Locked Stack
 
-- Dashboard: React 19 + Vite + shadcn/ui + Tailwind CSS 4
-- API: Node.js 20 + Express 5
-- Database: Supabase PostgreSQL + Realtime via direct Supabase JS client
-- AI: Replicate API
-- Storage/CDN: Bunny.net
-- Storefront widget: Vanilla JS bundled as IIFE
-- Validation: Zod
-- Image processing: Sharp
-- Dashboard state: Zustand
+- **Dashboard**: React 19 + Vite + shadcn/ui + Tailwind CSS 4
+- **API**: Node.js 20 + Express 5
+- **Database**: Supabase PostgreSQL + Realtime
+- **AI**: Replicate API (Async Predictions)
+- **Storage/CDN**: Bunny.net
+- **Storefront Widget**: Vanilla JS IIFE
+- **Validation**: Zod
+- **Image Processing**: Sharp
+- **Dashboard State**: Zustand
 
-## Workspace layout
+## Workspace Layout
 
 ```txt
 apps/
-  api/
-  dashboard/
-  widget/
-docs/
+  api/          # Express 5 Backend
+  dashboard/    # React 19 Merchant Admin
+  widget/       # Vanilla JS Storefront Script
+docs/           # Project Governance & Tracking
 packages/
-  shared-types/
+  shared-types/ # Unified Schema (Single Source of Truth)
 supabase/
-  migrations/
+  migrations/   # Database Schema & Migrations
 ```
-
-## Phase 0 scope
-
-This scaffold is limited to infrastructure only:
-
-- monorepo workspace setup
-- API bootstrap with `GET /health`
-- dashboard bootstrap shell
-- widget bootstrap shell
-- shared types package
-- environment template
-- Supabase migrations directory
-
-Do not treat this scaffold as feature-complete. Salla auth, webhook handling, credit logic, AI jobs, and storefront behavior are intentionally left for later phases.
 
 ## Commands
 
 Run from the repository root:
 
 ```bash
+# Install dependencies
 pnpm install
+
+# Start development servers
 pnpm dev:api
 pnpm dev:dashboard
 pnpm dev:widget
+
+# Build all packages
 pnpm build
+
+# Lint and Typecheck
 pnpm lint
+pnpm typecheck
 ```
 
-API health check after starting the backend:
+## Quick Links
 
-```bash
-curl http://localhost:3001/health
-```
-
-# add shadcn component
-npx.cmd shadcn@latest add [component] -c apps/dashboard
-
-# run ngrok
-/c/Users/ITS/Downloads/ngrok-v3-stable-windows-amd64/ngrok.exe http 3001
-
-
-pnpm dev:api
-
-
-pnpm dev:dashboard
-
-
-pnpm dev:widget
+- [Root Status](file:///c:/Users/ITS/Desktop/order_theme/salla-vtryon/STATUS.md)
+- [Root Handoff](file:///c:/Users/ITS/Desktop/order_theme/salla-vtryon/HANDOFF.md)
+- [API Health](http://localhost:3001/health)

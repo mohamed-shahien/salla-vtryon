@@ -7,64 +7,41 @@ Canonical docs folder remains `docs/99-tracking/`; keep this file aligned with `
 Virtual Try-On for Salla
 
 ## Current Phase
-Phase 0 - Project Setup & Infrastructure
+Phase 7 - Storefront UX Hardening and Live Validation
 
 ## Current Task
-Create and lock the repository governance layer before starting implementation.
+Finish the storefront widget CTA and dialog behavior on a real enabled product page.
 
 ## Overall Status
-Not started in code yet.
-Project docs exist.
-Execution docs are loaded.
-Governance layer is in place.
+The project has achieved a major milestone: **Merchant Onboarding & Granular Product Control**.
+Merchants now have a guided first-run experience and can toggle the storefront widget on a per-product basis.
+The backend supports a hybrid visibility model (`all` vs `selected`).
 
 ## Done
-- Product requirements document prepared
-- Execution plan prepared
-- Project master plan prepared
-- ERD prepared
-- Governance skill prepared
-- Initial architecture direction locked
-- Canonical docs structure defined
-- Root status and handoff entrypoints added
+- completed Full Architecture Unification (Unified Schema V2)
+- completed merchant onboarding wizard
+- completed granular product-based widget visibility rules
+- completed premium products dashboard
+- completed widget safety contract and verification script
+- completed external Salla OAuth and webhook handling
+- completed atomic credits and async job orchestration
 
 ## In Progress
-- Establishing Codex continuity entrypoints at repository root
-- Locking implementation boundaries for Phase 0
+- storefront widget production hardening on real Salla product pages
+- live end-to-end validation of a successful completion
 
 ## Next Recommended Task
-Initialize the monorepo and create the base repository structure:
-
-- `apps/api`
-- `apps/dashboard`
-- `apps/widget`
-- `supabase/migrations`
-- `packages/shared-types`
-
-Then implement:
-
-- root `package.json`
-- `.gitignore`
-- `.env.example`
-
-## Blockers
-- No implementation code scaffold yet
-- Final production secrets not configured yet
-- Salla partner app credentials not added yet
-- Supabase production project not connected yet
-- Bunny production zone not configured yet
-- Replicate production token not configured yet
+1. finish the storefront widget CTA and dialog behavior on a real enabled product page
+2. verify shopper upload or camera flow visually and technically
+3. clear the Replicate billing blocker (402/429 errors)
 
 ## Canonical Implementation Direction
-- Use React 19 dashboard
-- Use Express 5 backend
-- Use Supabase JS client directly
-- Use Replicate for AI
-- Use Bunny for storage/CDN
-- Use vanilla JS storefront widget
-- Use `merchant_id` as tenant identity
-- Keep AI processing async
+- external merchant dashboard
+- storefront shopper widget
+- async backend orchestration
+- `merchant_id` / `salla_merchant_id` tenancy
+- atomic refundable credits
 
 ## Notes
-- `GET /api/auth/me` is the canonical self endpoint for the current repo direction
-- If legacy references to `/api/merchants/me` appear, treat them as old references unless explicitly required
+- `GET /api/auth/me` is the canonical self endpoint
+- `GET /api/widget/embed-script` is the correct endpoint for the widget script tag

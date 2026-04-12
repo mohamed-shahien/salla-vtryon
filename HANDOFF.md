@@ -7,13 +7,11 @@ Canonical docs folder remains `docs/99-tracking/`; keep this file aligned with `
 Virtual Try-On for Salla
 
 ## Current State
-The repository is still in governance and setup mode.
-Core planning and architecture documents already exist.
-Repository-level execution control files are now discoverable from the project root.
+The project is in **Phase 7 - Storefront UX Hardening**.
+Core infrastructure, API, Dashboard, and Widget baseline are complete.
+The system is now a unified, multi-tenant SaaS.
 
 ## Latest Completed Work
-- Defined `AGENTS.md`
-- Defined `README.md`
 - Defined `docs/02-architecture/salla-virtual-tryon-decision-pack.md`
 - Defined `docs/99-tracking/STATUS.md`
 - Defined `docs/99-tracking/DECISIONS_LOG.md`
