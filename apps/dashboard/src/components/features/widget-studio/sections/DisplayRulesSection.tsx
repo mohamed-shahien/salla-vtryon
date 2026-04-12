@@ -14,13 +14,20 @@ import {
   Globe,
   MessageSquare,
   Users,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Tags,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, Toggle } from '@/components/animate-ui/components/base/toggle-group'
+import { useSallaCategories } from '@/hooks/use-salla-categories'
 
 import type { 
   DisplayRules,
@@ -40,6 +47,26 @@ interface DisplayRulesSectionProps {
 }
 
 export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProps) {
+  const {
+    categories,
+    isLoading: isLoadingCategories,
+    error: categoriesError,
+    mutate: refreshCategories,
+  } = useSallaCategories()
+
+  const selectedCategoryIds = new Set(rules.selected_category_ids)
+
+  function toggleCategory(categoryId: string, checked: boolean) {
+    const nextCategoryIds = checked
+      ? Array.from(new Set([...rules.selected_category_ids, categoryId])).slice(0, 50)
+      : rules.selected_category_ids.filter((id) => id !== categoryId)
+
+    onUpdate({
+      eligibility_mode: nextCategoryIds.length > 0 ? 'selected-categories' : rules.eligibility_mode,
+      selected_category_ids: nextCategoryIds,
+    })
+  }
+
   return (
     <Card className="border-border/40 shadow-sm bg-card/60 backdrop-blur-md rounded-lg text-right">
       <CardHeader className="p-3 border-b border-border/10">
@@ -77,6 +104,89 @@ export function DisplayRulesSection({ rules, onUpdate }: DisplayRulesSectionProp
               تصنيفات محددة فقط
             </Toggle>
           </ToggleGroup>
+        </div>
+
+        {/* Category Picker */}
+        <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border/10">
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => void refreshCategories()}
+              disabled={isLoadingCategories}
+              className="h-7 px-2 rounded-lg text-[9px] font-black"
+            >
+              {isLoadingCategories ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3" />
+              )}
+              ØªØ­Ø¯ÙŠØ«
+            </Button>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="rounded-lg text-[8px] font-black px-2">
+                {rules.selected_category_ids.length}/50
+              </Badge>
+              <Label className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-1.5 justify-end">
+                ØªØµÙ†ÙŠÙØ§Øª Ø³Ù„Ø© Ø§Ù„Ù…ÙØ¹Ù„Ø©
+                <Tags className="size-3.5" />
+              </Label>
+            </div>
+          </div>
+
+          {categoriesError ? (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-right">
+              <p className="text-[9px] font-black text-destructive">ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ ØªØµÙ†ÙŠÙØ§Øª Ø³Ù„Ø©.</p>
+              <p className="text-[8px] font-bold text-destructive/70 mt-1">{categoriesError.message}</p>
+            </div>
+          ) : isLoadingCategories ? (
+            <div className="flex items-center justify-center gap-2 rounded-lg border border-border/10 bg-background/40 p-4 text-[9px] font-black text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" />
+              Ø¬Ø§Ø±ÙŠ Ø¬Ù„Ø¨ ØªØµÙ†ÙŠÙØ§Øª Ø§Ù„Ù…ØªØ¬Ø±...
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border/30 bg-background/40 p-4 text-center">
+              <p className="text-[9px] font-black text-muted-foreground">Ù„Ø§ ØªÙˆØ¬Ø¯ ØªØµÙ†ÙŠÙØ§Øª Ù…ØªØ§Ø­Ø© Ù„Ù„Ø§Ø®ØªÙŠØ§Ø±.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {categories.map((category) => {
+                const categoryId = String(category.id)
+                const isSelected = selectedCategoryIds.has(categoryId)
+                const isDisabled = !isSelected && rules.selected_category_ids.length >= 50
+
+                return (
+                  <label
+                    key={categoryId}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border/20 bg-background/50 p-2 text-right transition-colors hover:bg-background"
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      disabled={isDisabled}
+                      onCheckedChange={(checked) => toggleCategory(categoryId, checked === true)}
+                      className="size-4 rounded-md"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[9px] font-black text-foreground">
+                        {category.name}
+                      </span>
+                      <span className="block truncate text-[7px] font-bold text-muted-foreground/60">
+                        #{categoryId}
+                        {typeof category.products_count === 'number' ? ` Â· ${category.products_count} Ù…Ù†ØªØ¬` : ''}
+                      </span>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+
+          {rules.eligibility_mode === 'selected-categories' && rules.selected_category_ids.length === 0 && (
+            <p className="text-[8px] font-bold text-amber-600 text-right">
+              Ø§Ø®ØªØ± ØªØµÙ†ÙŠÙØ§Ù‹ ÙˆØ§Ø­Ø¯Ø§Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„ Ø­ØªÙ‰ ÙŠØ¸Ù‡Ø± Ø§Ù„ÙˆÙŠØ¯Ø¬Øª.
+            </p>
+          )}
         </div>
 
         {/* Placement Target */}

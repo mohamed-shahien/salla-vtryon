@@ -74,7 +74,7 @@ export interface MerchantCreditsSummary {
 
 export type TryOnJobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'canceled'
 export type TryOnCategory = 'upper_body' | 'lower_body' | 'dresses'
-export type WidgetMode = 'all' | 'selected'
+export type WidgetMode = 'all' | 'selected' | 'selected-categories'
 
 export interface MerchantWidgetSettings {
   widget_enabled: boolean
@@ -140,7 +140,21 @@ export interface SallaProduct {
     amount: number
     currency: string
   }
+  category_ids?: string[]
   widget_enabled?: boolean
+}
+
+export interface SallaCategory {
+  id: number | string
+  name: string
+  parent_id?: number | string | null
+  status?: string
+  image?: string | null
+  products_count?: number
+  urls?: {
+    customer?: string
+    admin?: string
+  }
 }
 
 export interface MerchantUploadResult {
@@ -288,6 +302,17 @@ export async function fetchMerchantProducts(page = 1) {
   return parseApiResponse<SallaProduct[]>(
     response,
     `Products lookup failed with status ${response.status}`,
+  )
+}
+
+export async function fetchMerchantCategories(page = 1) {
+  const response = await fetch(`/api/products/categories?page=${page}`, {
+    credentials: 'same-origin',
+  })
+
+  return parseApiResponse<SallaCategory[]>(
+    response,
+    `Categories lookup failed with status ${response.status}`,
   )
 }
 

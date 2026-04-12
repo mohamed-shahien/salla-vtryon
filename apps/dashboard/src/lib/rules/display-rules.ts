@@ -46,6 +46,12 @@ export const PLACEMENT_SELECTOR_MAP: Record<PlacementTarget, PlacementSelector> 
     position: 'before',
     container: null,
   },
+  'under-add-to-cart': {
+    primary: '.s-product-options-wrapper-add-to-cart',
+    fallbacks: ['.s-add-to-cart-container', '[data-add-to-cart-button]', 'button[type="submit"].s-button-primary'],
+    position: 'after',
+    container: null,
+  },
   'floating-bottom': {
     primary: 'body',
     fallbacks: [],

@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto'
 
 import { AppError } from '../utils/app-error.js'
-import { widgetConfigCache, productRulesCache, productDetailsCache } from '../lib/cache.js'
+import { widgetConfigCache, productDetailsCache } from '../lib/cache.js'
 import {
   analyzeGarmentImage,
   analyzeHumanImage,
 } from './image-analysis.service.js'
-import { getMerchantProductDetail } from './products.service.js'
+import { extractSallaProductCategoryIds, getMerchantProductDetail } from './products.service.js'
 import {
   createMerchantTryOnJob,
   findMerchantJobByRequestId,
@@ -143,6 +143,8 @@ export async function getWidgetConfig(
     merchant = await ensureMerchantRecord({ sallaMerchantId })
   }
 
+  const settings = normalizeWidgetSettings(merchant.settings)
+
   // Parallel queries where possible
   const [productRule, productDetail, productRules, creditsRecord] = await Promise.all([
     currentProductId ? getMerchantProductRule(merchant.id, currentProductId).catch(() => null) : Promise.resolve(null),
@@ -155,22 +157,21 @@ export async function getWidgetConfig(
       : Promise.resolve(null),
     // Pre-fetch rules if we'll need them
     (async () => {
-      const settings = normalizeWidgetSettings(merchant.settings)
       return settings.display_rules.eligibility_mode === 'selected' ? getMerchantProductRules(merchant.id).catch(() => []) : []
     })(),
     getCreditsForMerchant(merchant.id),
   ])
 
-  const settings = normalizeWidgetSettings(merchant.settings)
   const remainingCredits = creditsRecord ? Math.max(creditsRecord.total_credits - creditsRecord.used_credits, 0) : 0
   const overallEnabled =
     merchant.is_active === true && merchant.plan_status === 'active' && settings.widget_enabled
 
   const productName = extractProductName(productDetail?.data) || ''
+  const productCategoryIds = extractSallaProductCategoryIds(productDetail?.data)
 
   const currentProductEnabled =
     overallEnabled && currentProductId
-      ? isWidgetEnabledForProduct(settings, currentProductId, productRule)
+      ? isWidgetEnabledForProduct(settings, currentProductId, productRule, productCategoryIds)
       : overallEnabled && settings.display_rules.eligibility_mode === 'all'
 
   let widgetProducts = settings.display_rules.selected_product_ids
@@ -186,16 +187,22 @@ export async function getWidgetConfig(
     )
   }
 
-  const finalProductEnabled =
-    currentProductEnabled &&
-    (settings.display_rules.eligibility_mode === 'all' || widgetProducts.length > 0)
+  const hasConfiguredEligibilityScope =
+    settings.display_rules.eligibility_mode === 'all' ||
+    (settings.display_rules.eligibility_mode === 'selected' && widgetProducts.length > 0) ||
+    (
+      settings.display_rules.eligibility_mode === 'selected-categories' &&
+      settings.display_rules.selected_category_ids.length > 0
+    )
+
+  const finalProductEnabled = currentProductEnabled && hasConfiguredEligibilityScope
 
   const reason = !overallEnabled
     ? 'Widget is disabled for this merchant.'
     : !currentProductId
       ? 'Product context is missing for this storefront page.'
       : currentProductId && !finalProductEnabled
-        ? 'Widget is not enabled for this product or no products are selected.'
+        ? 'Widget is not enabled for this product or no matching category rule is selected.'
         : null
 
   const config = {
@@ -282,7 +289,34 @@ export async function createWidgetTryOnJob(options: {
     return { job: existingJob, upload: null }
   }
 
-  if (!isWidgetEnabledForProduct(settings, widgetContext.product_id, rule)) {
+  const clientProductImageUrl = options.productImageUrl?.trim() || null
+
+  let productPayload: Awaited<ReturnType<typeof getMerchantProductDetail>> | null = null
+  let productFetchFailed = false
+  try {
+    productPayload = await productDetailsCache.getOrSet(
+      `product:${widgetContext.merchant_id}:${widgetContext.product_id}`,
+      () => getMerchantProductDetail(widgetContext.merchant_id, widgetContext.product_id),
+      2 * 60 * 1000,
+    )
+  } catch {
+    productFetchFailed = true
+  }
+
+  const productCategoryIds = extractSallaProductCategoryIds(productPayload?.data)
+
+  if (
+    settings.display_rules.eligibility_mode === 'selected-categories' &&
+    productFetchFailed
+  ) {
+    throw new AppError(
+      'Product category context could not be retrieved for widget try-on.',
+      422,
+      'PRODUCT_CATEGORY_CONTEXT_MISSING',
+    )
+  }
+
+  if (!isWidgetEnabledForProduct(settings, widgetContext.product_id, rule, productCategoryIds)) {
     throw new AppError('This product is not enabled for widget try-on.', 403, 'PRODUCT_NOT_ENABLED')
   }
 
@@ -291,17 +325,7 @@ export async function createWidgetTryOnJob(options: {
     buffer: options.shopperImageBuffer,
   })
 
-  const clientProductImageUrl = options.productImageUrl?.trim() || null
-
-  // Get product detail (cached)
-  let productPayload: Awaited<ReturnType<typeof getMerchantProductDetail>> | null = null
-  try {
-    productPayload = await productDetailsCache.getOrSet(
-      `product:${widgetContext.merchant_id}:${widgetContext.product_id}`,
-      () => getMerchantProductDetail(widgetContext.merchant_id, widgetContext.product_id),
-      2 * 60 * 1000 // 2 minutes
-    )
-  } catch (fetchError) {
+  if (productFetchFailed) {
     if (!clientProductImageUrl) {
       throw new AppError(
         'Product image could not be retrieved. Re-authorize the app in your Salla dashboard.',
@@ -326,6 +350,7 @@ export async function createWidgetTryOnJob(options: {
   const metadata: Record<string, unknown> = {
     source: 'widget',
     product_name: extractProductName(productPayload?.data ?? null),
+    product_category_ids: productCategoryIds,
     product_thumbnail: productImageUrl,
     upload_storage_path: upload.storage_path,
   }

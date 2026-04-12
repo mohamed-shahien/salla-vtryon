@@ -6,14 +6,12 @@ export interface WidgetConfigResponse {
   current_product_id: string | null
   overall_enabled: boolean
   current_product_enabled: boolean
-  widget_mode: 'all' | 'selected'
-  widget_products: number[]
-  button_text: string
-  default_category: WidgetCategory
   widget_token: string | null
   credits_remaining: number
   reason: string | null
   settings: Record<string, any>
+  schema_version: number
+  button_text: string
 }
 
 export interface WidgetJobResponse {

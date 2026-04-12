@@ -779,7 +779,15 @@ export function createDisplayRulesEngine(rules: DisplayRules) {
   return {
     isEligible: (productId: string) => {
       const id = Number.parseInt(productId, 10)
-      return rules.eligibility_mode === 'all' ? true : rules.selected_product_ids.includes(id)
+      if (rules.eligibility_mode === 'all') {
+        return true
+      }
+
+      if (rules.eligibility_mode === 'selected') {
+        return rules.selected_product_ids.includes(id)
+      }
+
+      return rules.selected_category_ids.length > 0
     },
     getPlacementTarget: () => target,
     getPlacementSelectors: () => {

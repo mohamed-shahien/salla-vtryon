@@ -6,6 +6,8 @@ import {
   type DashboardAuthenticatedRequest,
 } from '../middleware/require-dashboard-session.js'
 import {
+  extractSallaProductCategoryIds,
+  getMerchantCategoriesPage,
   getMerchantProductDetail,
   getMerchantProductsPage,
 } from '../services/products.service.js'
@@ -54,26 +56,27 @@ productsRouter.get(
 
       const rulesMap = new Map(rules.map((r) => [r.product_id, r.enabled]))
       const legacyEnabled = new Set(settings.display_rules.selected_product_ids)
+      const selectedCategoryIds = new Set(settings.display_rules.selected_category_ids)
 
       const productsWithStatus = payload.data.map((product: SallaProduct) => {
         const productId = product.id
-        let enabled = false
+        const categoryIds = extractSallaProductCategoryIds(product)
+        const rule = rulesMap.get(productId)
+        let enabled = rule ?? false
 
-        if (settings.display_rules.eligibility_mode === 'all') {
+        if (rule === false) {
+          enabled = false
+        } else if (settings.display_rules.eligibility_mode === 'all') {
           enabled = true
-        } else {
-          // Mode is 'selected'
-          const rule = rulesMap.get(productId)
-          if (rule !== undefined) {
-            enabled = rule
-          } else {
-            // Fallback to legacy
-            enabled = legacyEnabled.has(productId)
-          }
+        } else if (settings.display_rules.eligibility_mode === 'selected') {
+          enabled = rule ?? legacyEnabled.has(productId)
+        } else if (settings.display_rules.eligibility_mode === 'selected-categories') {
+          enabled = rule === true || categoryIds.some((categoryId) => selectedCategoryIds.has(categoryId))
         }
 
         return {
           ...product,
+          category_ids: categoryIds,
           widget_enabled: enabled,
         }
       })
@@ -81,6 +84,29 @@ productsRouter.get(
       response.status(200).json({
         ok: true,
         data: productsWithStatus,
+        pagination: payload.pagination ?? null,
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+productsRouter.get(
+  '/categories',
+  requireDashboardSession,
+  async (request: DashboardAuthenticatedRequest, response, next) => {
+    try {
+      if (!request.dashboardSession) {
+        throw new AppError('Dashboard session context is missing.', 401, 'DASHBOARD_AUTH_REQUIRED')
+      }
+
+      const query = productsQuerySchema.parse(request.query)
+      const payload = await getMerchantCategoriesPage(request.dashboardSession.merchant_id, query.page)
+
+      response.status(200).json({
+        ok: true,
+        data: payload.data,
         pagination: payload.pagination ?? null,
       })
     } catch (error) {
@@ -136,7 +162,7 @@ productsRouter.post(
         display_rules: {
           eligibility_mode: 'selected',
         },
-      } as any)
+      })
 
       response.status(200).json({ ok: true, data: settings })
     } catch (error) {
@@ -166,7 +192,7 @@ productsRouter.post(
         display_rules: {
           eligibility_mode: 'selected',
         },
-      } as any)
+      })
 
       response.status(200).json({ ok: true, data: settings })
     } catch (error) {

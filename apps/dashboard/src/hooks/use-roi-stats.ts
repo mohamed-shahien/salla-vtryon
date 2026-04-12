@@ -6,11 +6,14 @@ export function useRoiStats() {
   const [stats, setStats] = useState<RoiStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const session = useAuthStore((state) => state.session)
+  const status = useAuthStore((state) => state.status)
 
   useEffect(() => {
     async function getStats() {
-      if (!session) return
+      if (status !== 'authenticated') {
+        setLoading(false)
+        return
+      }
 
       try {
         setLoading(true)
@@ -23,8 +26,8 @@ export function useRoiStats() {
       }
     }
 
-    getStats()
-  }, [session])
+    void getStats()
+  }, [status])
 
   return { stats, loading, error }
 }

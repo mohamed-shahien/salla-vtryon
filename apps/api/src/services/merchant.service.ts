@@ -16,6 +16,14 @@ const CREDITS_SELECT =
 
 const DEFAULT_SETTINGS = createDefaultWidgetSettings()
 
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends readonly unknown[]
+    ? T[K]
+    : T[K] extends object
+      ? DeepPartial<T[K]>
+      : T[K]
+}
+
 export const PLAN_CREDIT_ALLOCATIONS = {
   free: 10,
   trial: 5,
@@ -52,6 +60,12 @@ export interface CreditsRecord {
   reset_at: string | null
   created_at: string
   updated_at: string
+}
+
+export interface MerchantCategoryRule {
+  category_id: string
+  category_name: string | null
+  enabled: boolean
 }
 
 export interface DashboardMerchantProfile {
@@ -99,13 +113,61 @@ export function normalizeWidgetSettings(settings: Record<string, unknown> | null
   return parseWidgetSettings(settings)
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function deepMergeRecords(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...target }
+
+  for (const [key, sourceValue] of Object.entries(source)) {
+    const targetValue = result[key]
+
+    if (isRecord(targetValue) && isRecord(sourceValue)) {
+      result[key] = deepMergeRecords(targetValue, sourceValue)
+      continue
+    }
+
+    if (sourceValue !== undefined) {
+      result[key] = sourceValue
+    }
+  }
+
+  return result
+}
+
+function mergeWidgetSettings(
+  base: WidgetSettings,
+  patch: DeepPartial<WidgetSettings> | Record<string, unknown>,
+): WidgetSettings {
+  return parseWidgetSettings(deepMergeRecords(base as unknown as Record<string, unknown>, patch as Record<string, unknown>))
+}
+
+function normalizeCategoryIds(categoryIds: readonly string[]) {
+  return Array.from(
+    new Set(
+      categoryIds
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0),
+    ),
+  )
+}
+
 export function isWidgetEnabledForProduct(
   settings: WidgetSettings,
   productId: string | number,
   rule?: { enabled: boolean } | null,
+  productCategoryIds: readonly string[] = [],
 ) {
   // Use display_rules from unified schema
-  const { eligibility_mode, selected_product_ids } = settings.display_rules
+  const { eligibility_mode, selected_product_ids, selected_category_ids } = settings.display_rules
+
+  if (rule?.enabled === false) {
+    return false
+  }
 
   if (eligibility_mode === 'all') {
     return true
@@ -120,12 +182,23 @@ export function isWidgetEnabledForProduct(
   }
 
   // 1) check rules table override
-  if (rule != null) {
+  if (
+    rule?.enabled === true &&
+    (eligibility_mode === 'selected' || eligibility_mode === 'selected-categories')
+  ) {
     return rule.enabled
   }
 
-  // 2) check selected_product_ids from settings
-  return selected_product_ids.includes(normalizedProductId)
+  if (eligibility_mode === 'selected') {
+    return selected_product_ids.includes(normalizedProductId)
+  }
+
+  if (eligibility_mode === 'selected-categories') {
+    const selectedCategories = new Set(normalizeCategoryIds(selected_category_ids))
+    return productCategoryIds.some((categoryId) => selectedCategories.has(categoryId))
+  }
+
+  return false
 }
 
 export function getSupabaseClient() {
@@ -406,12 +479,15 @@ export async function updateMerchantSettings(
 ) {
   const merchant = await ensureMerchantRecord({ sallaMerchantId })
 
-  return patchMerchant(merchant.id, {
-    settings: normalizeWidgetSettings({
-      ...normalizeWidgetSettings(merchant.settings),
-      ...settings,
-    }),
+  const nextSettings = mergeWidgetSettings(normalizeWidgetSettings(merchant.settings), settings)
+
+  const updatedMerchant = await patchMerchant(merchant.id, {
+    settings: nextSettings,
   })
+
+  await replaceMerchantCategoryRules(merchant.id, nextSettings.display_rules.selected_category_ids)
+
+  return updatedMerchant
 }
 
 export async function getMerchantWidgetSettings(merchantId: string) {
@@ -426,7 +502,7 @@ export async function getMerchantWidgetSettings(merchantId: string) {
 
 export async function updateMerchantWidgetSettings(
   merchantId: string,
-  settingsPatch: Partial<WidgetSettings>,
+  settingsPatch: DeepPartial<WidgetSettings>,
 ) {
   const merchant = await findMerchantById(merchantId)
 
@@ -434,14 +510,13 @@ export async function updateMerchantWidgetSettings(
     throw new AppError('Merchant record was not found.', 404, 'MERCHANT_NOT_FOUND')
   }
 
-  const nextSettings = normalizeWidgetSettings({
-    ...normalizeWidgetSettings(merchant.settings),
-    ...settingsPatch,
-  })
+  const nextSettings = mergeWidgetSettings(normalizeWidgetSettings(merchant.settings), settingsPatch)
 
   const updatedMerchant = await patchMerchant(merchantId, {
     settings: nextSettings,
   })
+
+  await replaceMerchantCategoryRules(merchantId, nextSettings.display_rules.selected_category_ids)
 
   return normalizeWidgetSettings(updatedMerchant.settings)
 }
@@ -507,6 +582,58 @@ export async function updateMerchantProductRules(
 
   if (error) {
     throw new AppError(error.message, 500, 'PRODUCT_RULES_UPDATE_FAILED')
+  }
+}
+
+export async function getMerchantCategoryRules(merchantId: string) {
+  const db = getSupabaseClient()
+
+  const { data, error } = await db
+    .from('merchant_category_rules')
+    .select('category_id, category_name, enabled')
+    .eq('merchant_id', merchantId)
+
+  if (error) {
+    throw new AppError(error.message, 500, 'CATEGORY_RULES_LOOKUP_FAILED')
+  }
+
+  return data as MerchantCategoryRule[]
+}
+
+export async function replaceMerchantCategoryRules(
+  merchantId: string,
+  categoryIds: readonly string[],
+) {
+  const db = getSupabaseClient()
+  const normalizedIds = normalizeCategoryIds(categoryIds)
+
+  const { error: deleteError } = await db
+    .from('merchant_category_rules')
+    .delete()
+    .eq('merchant_id', merchantId)
+
+  if (deleteError) {
+    throw new AppError(deleteError.message, 500, 'CATEGORY_RULES_UPDATE_FAILED')
+  }
+
+  if (normalizedIds.length === 0) {
+    return
+  }
+
+  const rows = normalizedIds.map((id) => ({
+    merchant_id: merchantId,
+    category_id: id,
+    category_name: null,
+    enabled: true,
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { error } = await db
+    .from('merchant_category_rules')
+    .upsert(rows, { onConflict: 'merchant_id, category_id' })
+
+  if (error) {
+    throw new AppError(error.message, 500, 'CATEGORY_RULES_UPDATE_FAILED')
   }
 }
 

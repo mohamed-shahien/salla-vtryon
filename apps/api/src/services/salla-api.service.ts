@@ -68,6 +68,19 @@ export interface SallaProduct {
   }
 }
 
+export interface SallaCategory {
+  id: number | string
+  name: string
+  parent_id?: number | string | null
+  status?: string
+  image?: string | null
+  products_count?: number
+  urls?: {
+    customer?: string
+    admin?: string
+  }
+}
+
 export interface SallaMerchantUserInfo {
   id: number
   name: string
@@ -212,8 +225,12 @@ async function runMerchantApiRequest<TData>(
     }
 
     const scopeHint =
-      (response.status === 401 || response.status === 403) && path.startsWith('/products')
-        ? ' Ensure the Salla app has `products.read` scope and then re-authorize the merchant.'
+      response.status === 401 || response.status === 403
+        ? path.startsWith('/products')
+          ? ' Ensure the Salla app has `products.read` scope and then re-authorize the merchant.'
+          : path.startsWith('/categories')
+            ? ' Ensure the Salla app can read categories and then re-authorize the merchant.'
+            : ''
         : ''
 
     throw new AppError(
@@ -240,6 +257,10 @@ async function runMerchantApiRequest<TData>(
 
 export async function listMerchantProducts(sallaMerchantId: number, page = 1) {
   return runMerchantApiRequest<SallaProduct[]>(sallaMerchantId, `/products?page=${page}`)
+}
+
+export async function listMerchantCategories(sallaMerchantId: number, page = 1) {
+  return runMerchantApiRequest<SallaCategory[]>(sallaMerchantId, `/categories?page=${page}`)
 }
 
 export async function getMerchantProduct(sallaMerchantId: number, productId: string | number) {

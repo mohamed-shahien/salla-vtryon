@@ -4,16 +4,15 @@
 Virtual Try-On for Salla
 
 ## Current State (Handoff)
-- **Completed:** SDK-Aware context (Module 1) and ROI/Conversion Attribution (Module 2).
-- **Stable:** 0 TypeScript errors across all apps.
-- **Next Task:** Module 3 (Smart Category Rules).
-- **Core Files to check:** `apps/api/src/services/attribution.service.ts` (latest ROI logic).
+- **Completed:** SDK-Aware context (Module 1), ROI Engine (Module 2), and Smart Category Rules (Module 3).
+- **Stable:** 0 TypeScript errors across the entire workspace (Backend, Dashboard, Widget).
+- **Next Task:** Module 4 (Premium Branding & UX). This is the start of **Phase 2**.
+- **Core Files to check:** `apps/api/src/services/merchant.service.ts` (new category logic), `apps/widget/src/widget.ts` (UI entry points).
 
-## Instructions for Next Agent
-1. Read `AGENTS.md` and `docs/` first.
-2. Implement Category-based eligibility logic.
-3. Add UI in Dashboard for category selection.
-4. Ensure 0 TS errors.
+## Instructions for Next Agent (Phase 2)
+1. Implement Watermarking in the image delivery path using `sharp`.
+2. Add "Compare Mode" (Slider) to the widget results view.
+3. Add "Session Gallery" to the widget to persist history.
 
 ## What Is Working
 
