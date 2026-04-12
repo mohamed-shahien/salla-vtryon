@@ -110,7 +110,25 @@ function detectCategory(name: string): TryOnCategory {
 export async function getWidgetConfig(
   sallaMerchantId: number,
   currentProductId?: string | null,
+  pageSlug?: string | null,
 ) {
+  // SDK-Aware Context: If pageSlug is provided and is NOT 'product.single',
+  // short-circuit with a disabled response — this is not a product page.
+  if (pageSlug && pageSlug !== 'product.single') {
+    return {
+      merchant_id: sallaMerchantId,
+      current_product_id: null,
+      overall_enabled: false,
+      current_product_enabled: false,
+      enabled: false,
+      widget_token: null,
+      credits_remaining: 0,
+      reason: 'Widget is only available on product pages.',
+      settings: {} as Record<string, unknown>,
+      schema_version: 2,
+    } satisfies WidgetConfigPayload
+  }
+
   // Use cache for widget config - only cache when no current product to avoid stale per-product state
   const cacheKey = `widget:${sallaMerchantId}:${currentProductId || 'no-product'}`
 
@@ -241,6 +259,7 @@ export async function createWidgetTryOnJob(options: {
   shopperImageBuffer: Buffer
   productImageUrl?: string | null
   requestId?: string | null
+  customerId?: string | null
 }) {
   const widgetContext = readWidgetToken(options.token)
 
@@ -313,6 +332,10 @@ export async function createWidgetTryOnJob(options: {
 
   if (options.requestId) {
     metadata.request_id = options.requestId
+  }
+
+  if (options.customerId) {
+    metadata.customer_id = options.customerId
   }
 
   const job = await createMerchantTryOnJob({

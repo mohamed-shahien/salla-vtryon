@@ -128,7 +128,7 @@ export function isWidgetEnabledForProduct(
   return selected_product_ids.includes(normalizedProductId)
 }
 
-function getSupabaseClient() {
+export function getSupabaseClient() {
   if (!supabase) {
     throw new AppError('Supabase is not configured for merchant operations.', 500, 'SUPABASE_NOT_CONFIGURED')
   }

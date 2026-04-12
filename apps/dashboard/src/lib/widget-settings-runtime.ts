@@ -700,15 +700,11 @@ export function generateVisualIdentityCSSVariables(settings: VisualIdentity): Re
     dynamic: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
   }
 
-  const surfaceBgMap: Record<VisualIdentity['surface_style'], string> = { solid: '#ffffff', soft: '#f9fafb', elevated: '#ffffff', glass: 'rgba(255, 255, 255, 0.8)', outline: '#ffffff' }
-  const surfaceBorderMap: Record<VisualIdentity['surface_style'], string> = { solid: '1px solid #e5e7eb', soft: '1px solid #f3f4f6', elevated: 'none', glass: '1px solid rgba(255, 255, 255, 0.2)', outline: '1px solid #d1d5db' }
-  const surfaceShadowMap: Record<VisualIdentity['surface_style'], string> = { solid: 'none', soft: 'none', elevated: '0 4px 12px rgba(0, 0, 0, 0.1)', glass: '0 8px 32px rgba(0, 0, 0, 0.08)', outline: 'none' }
-
   return {
     '--vtryon-brand-color': settings.brand_color,
-    '--vtryon-surface-bg': surfaceBgMap[settings.surface_style],
-    '--vtryon-surface-shadow': surfaceShadowMap[settings.surface_style],
-    '--vtryon-surface-border': surfaceBorderMap[settings.surface_style],
+    '--vtryon-surface-bg': surfaceBackground[settings.surface_style],
+    '--vtryon-surface-shadow': surfaceShadow[settings.surface_style],
+    '--vtryon-surface-border': surfaceBorder[settings.surface_style],
     '--vtryon-radius': radiusMap[settings.corner_radius],
     '--vtryon-spacing': spacingMap[settings.spacing_density],
     '--vtryon-backdrop-filter': backdropFilter[settings.backdrop_style],

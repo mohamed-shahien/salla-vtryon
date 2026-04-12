@@ -7,7 +7,7 @@ Virtual Try-On for Salla
 Phase 7 - Storefront UX Hardening and Live Validation
 
 ## Current Task
-Execute **Module 1: SDK-Aware Context** (Full-Stack). Refactor the widget to use native Salla SDK and update backend validation logic.
+Execute **Module 3: Smart Category Rules** (Zero-Configuration). Implement automated category detection and Dashboard Category Management UI.
 
 ## Overall Status
 The project has achieved a major milestone: **Merchant Onboarding & Granular Product Control**.
@@ -30,7 +30,8 @@ The backend supports a hybrid visibility model (`all` vs `selected`).
 - Webhook signature verification and idempotency.
 
 ## In Progress
-- **Level Up Implementation**:
+- **SDK-Aware Context**: Completed Full-Stack integration for zero-latency page resolution.
+- **Conversion Attribution**: Completed ROI Engine. `order.created` webhooks now attribute revenue to try-on activity.
   - **Conversion Attribution Engine**: Connecting `order.created` webhooks to try-on activity.
   - **Premium UX Hardening**: Comparison Slider and Session Gallery.
   - **Salla SDK Integration**: Moving widget context resolution to native `salla.product.get()`.
@@ -39,10 +40,9 @@ The backend supports a hybrid visibility model (`all` vs `selected`).
 - Live end-to-end validation (blocked by Replicate billing/429).
 
 ## Next Recommended Task
-1. Execute **Module 1: SDK-Aware Context** (Backend API + Widget Refactor).
-2. Execute **Module 2: Conversion Attribution** (order.created Webhook + Dashboard Analytics UI).
-3. Execute **Module 3: Smart Category Rules** (REST API Fetching + Dashboard UI).
-4. Execute **Module 4: Premium Branding** (Sharp.js Watermarking + Widget UX).
+1. Execute **Module 2: Conversion Attribution** (order.created Webhook + Dashboard Analytics UI).
+2. Execute **Module 3: Smart Category Rules** (REST API Fetching + Dashboard UI).
+3. Execute **Module 4: Premium Branding** (Sharp.js Watermarking + Widget UX).
 
 ## Canonical Direction
 - external merchant dashboard

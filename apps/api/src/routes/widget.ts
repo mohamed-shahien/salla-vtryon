@@ -37,6 +37,7 @@ const widgetConfigParamsSchema = z.object({
 
 const widgetConfigQuerySchema = z.object({
   productId: z.string().trim().min(1).optional(),
+  pageSlug: z.string().trim().min(1).optional(),
 })
 
 const widgetJobParamsSchema = z.object({
@@ -50,6 +51,7 @@ type WidgetSettingsInput = z.infer<typeof widgetSettingsSchema>
 const widgetJobBodySchema = z.object({
   product_image_url: z.string().url().optional(),
   request_id: z.string().trim().min(1).max(100).optional(),
+  customer_id: z.string().trim().min(1).max(100).optional(),
 })
 
 function getWidgetTokenFromRequest(request: DashboardAuthenticatedRequest) {
@@ -69,7 +71,7 @@ widgetRouter.get('/config/:merchantId', async (request, response, next) => {
   try {
     const params = widgetConfigParamsSchema.parse(request.params)
     const query = widgetConfigQuerySchema.parse(request.query)
-    const config = await getWidgetConfig(params.merchantId, query.productId)
+    const config = await getWidgetConfig(params.merchantId, query.productId, query.pageSlug)
 
     response.status(200).json({
       ok: true,
@@ -186,6 +188,7 @@ widgetRouter.post(
         shopperImageBuffer: request.file.buffer,
         productImageUrl: body.product_image_url,
         requestId: body.request_id,
+        customerId: body.customer_id,
       })
 
       response.status(201).json({

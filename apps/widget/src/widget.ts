@@ -38,6 +38,32 @@ declare global {
   }
 }
 
+// ============================================================================
+// SDK-Aware Context: Page Slug Detection
+// ============================================================================
+
+/**
+ * Reads `page.slug` from the Salla Storefront SDK.
+ * Returns the slug string (e.g. 'product.single') or null if SDK is unavailable.
+ */
+function readSallaPageSlug(): string | null {
+  const value = window.salla?.config?.get?.('page.slug')
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim()
+  }
+  return null
+}
+
+/**
+ * Returns true if the current page is a product page via Salla SDK.
+ * Returns null if the SDK is unavailable (unknown state — fall back to DOM heuristics).
+ */
+function isProductPage(): boolean | null {
+  const slug = readSallaPageSlug()
+  if (slug === null) return null // SDK not available, can't determine
+  return slug === 'product.single'
+}
+
 const DEFAULT_BUTTON_TEXT = 'جرّب الآن'
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
@@ -45,6 +71,7 @@ interface BootstrapConfig {
   apiBaseUrl: string
   merchantId: number
   initialProductId: string | null
+  pageSlug: string | null
 }
 
 interface WidgetElements {
@@ -148,21 +175,37 @@ function readSallaMerchantId(): string | null {
   return null
 }
 
+/**
+ * SDK-First Product ID Resolution.
+ * Priority: salla.config.get('page.id') → salla.config.get('product.id') → DOM fallbacks
+ * This is the recommended Salla developer pattern for zero-latency product detection.
+ */
 function readSallaProductId(): string | null {
-  const configKeys = ['product.id', 'page.id', 'page.entity_id', 'product_id']
-
-  for (const key of configKeys) {
+  // Primary: Salla SDK page.id (fastest, most reliable on product.single pages)
+  const sdkPrimaryKeys = ['page.id', 'product.id']
+  for (const key of sdkPrimaryKeys) {
     const value = window.salla?.config?.get?.(key)
-
     if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
       return String(value)
     }
-
-    if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+    if (typeof value === 'string' && /^\d+$/.test(value.trim()) && value.trim() !== '0') {
       return value.trim()
     }
   }
 
+  // Secondary: Other SDK keys (less common but still SDK-native)
+  const sdkSecondaryKeys = ['page.entity_id', 'product_id']
+  for (const key of sdkSecondaryKeys) {
+    const value = window.salla?.config?.get?.(key)
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+      return String(value)
+    }
+    if (typeof value === 'string' && /^\d+$/.test(value.trim()) && value.trim() !== '0') {
+      return value.trim()
+    }
+  }
+
+  // Tertiary: DOM meta tag fallback (degraded path)
   const metaTag = document.querySelector<HTMLMetaElement>(
     'meta[name="product-id"], meta[name="entity-id"]',
   )
@@ -254,6 +297,7 @@ function resolveBootstrapConfig(script: HTMLScriptElement | null): BootstrapConf
     apiBaseUrl: apiUrlValue.replace(/\/$/, ''),
     merchantId,
     initialProductId: initialProductId ?? null,
+    pageSlug: readSallaPageSlug(),
   }
 }
 
@@ -647,6 +691,14 @@ async function initWidget() {
     return
   }
 
+  // SDK-Aware Context: Fast page-type guard
+  // If Salla SDK is available and page.slug is NOT 'product.single', bail immediately.
+  // This avoids all DOM scraping and API calls on non-product pages.
+  const productPageCheck = isProductPage()
+  if (productPageCheck === false) {
+    return
+  }
+
   const bootstrapScript = getBootstrapScript()
   const bootstrapConfig = await waitForBootstrapConfig(bootstrapScript)
 
@@ -930,6 +982,7 @@ async function initWidget() {
         bootstrapConfig?.apiBaseUrl ?? '',
         bootstrapConfig?.merchantId ?? 0,
         productId,
+        bootstrapConfig?.pageSlug ?? readSallaPageSlug(),
       )
         .then((response) => {
           applyWidgetConfig(response.data)
@@ -1175,6 +1228,7 @@ async function initWidget() {
           selectedFile as File,
           sliderImageUrl,
           requestId,
+          (window.salla?.config?.get?.('user.id') as string | number | undefined) || null,
         )
 
         await pollJob(jobResponse.data.id)

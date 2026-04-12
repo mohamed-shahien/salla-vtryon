@@ -82,9 +82,17 @@ export function getWidgetApiUrl(baseUrl: string, path: string) {
   return `${normalizeBaseUrl(baseUrl)}${normalizedPath}`
 }
 
-export async function fetchWidgetConfig(baseUrl: string, merchantId: number, productId: string) {
+export async function fetchWidgetConfig(
+  baseUrl: string,
+  merchantId: number,
+  productId: string,
+  pageSlug?: string | null,
+) {
   const url = new URL(getWidgetApiUrl(baseUrl, `/api/widget/config/${merchantId}`))
   url.searchParams.set('productId', productId)
+  if (pageSlug) {
+    url.searchParams.set('pageSlug', pageSlug)
+  }
 
   const response = await fetch(url.toString(), {
     headers: baseHeaders(),
@@ -102,6 +110,7 @@ export async function createWidgetJob(
   file: File,
   productImageUrl?: string | null,
   requestId?: string | null,
+  customerId?: string | number | null,
 ) {
   const formData = new FormData()
   formData.append('file', file)
@@ -110,6 +119,9 @@ export async function createWidgetJob(
   }
   if (requestId) {
     formData.append('request_id', requestId)
+  }
+  if (customerId) {
+    formData.append('customer_id', String(customerId))
   }
 
   const response = await fetch(getWidgetApiUrl(baseUrl, '/api/widget/job'), {

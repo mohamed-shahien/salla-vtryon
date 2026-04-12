@@ -199,12 +199,19 @@ export function mapTypographyToneToCSS(tone: TypographyTone): {
         letterSpacing: '0.01em',
       }
 
-    case 'bold-commerce':
+    case 'bold':
       return {
         fontFamily: 'Montserrat, system-ui, sans-serif',
         fontWeightNormal: '600',
         fontWeightBold: '800',
         letterSpacing: '-0.02em',
+      }
+    default:
+      return {
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontWeightNormal: '400',
+        fontWeightBold: '600',
+        letterSpacing: '0',
       }
   }
 }
@@ -256,6 +263,8 @@ export function mapIconStyleToCSS(style: IconStyle): {
       return { strokeWidth: '1.5px', fill: 'currentColor' }
     case 'filled':
       return { strokeWidth: '0', fill: 'currentColor' }
+    default:
+      return { strokeWidth: '1.5px', fill: 'none' }
   }
 }
 export function mapBackdropStyleToCSS(style: BackdropStyle): {

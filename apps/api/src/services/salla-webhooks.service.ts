@@ -19,6 +19,7 @@ import {
 } from './merchant.service.js'
 import { resetMerchantCredits } from './credits.service.js'
 import { inferMerchantPlanFromSalla } from './salla-api.service.js'
+import { attributeOrderToJobs } from './attribution.service.js'
 
 const webhookSchema = z.object({
   event: z.string().min(1),
@@ -41,6 +42,7 @@ const handledWebhookEvents = new Set([
   'app.trial.expired',
   'app.trial.canceled',
   'app.settings.updated',
+  'order.created',
 ])
 
 function getSupabaseClient() {
@@ -331,6 +333,13 @@ async function handleSettingsUpdated(payload: SallaWebhookPayload) {
   await updateMerchantSettings(payload.merchant, settings)
 }
 
+async function handleOrderCreated(payload: SallaWebhookPayload) {
+  // Salla sends order details inside the data object
+  if (payload.data && typeof payload.data === 'object') {
+    await attributeOrderToJobs(payload.data as any)
+  }
+}
+
 async function dispatchWebhook(payload: SallaWebhookPayload) {
   switch (payload.event) {
     case 'app.installed':
@@ -361,6 +370,9 @@ async function dispatchWebhook(payload: SallaWebhookPayload) {
       return
     case 'app.settings.updated':
       await handleSettingsUpdated(payload)
+      return
+    case 'order.created':
+      await handleOrderCreated(payload)
       return
     default:
       return

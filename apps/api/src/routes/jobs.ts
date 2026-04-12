@@ -8,6 +8,7 @@ import {
 import {
   createMerchantTryOnJob,
   getMerchantJobById,
+  getMerchantRoiStats,
   listMerchantJobs,
   TRYON_CATEGORIES,
   TRYON_JOB_STATUSES,
@@ -33,6 +34,27 @@ const jobParamsSchema = z.object({
 })
 
 export const jobsRouter = Router()
+
+jobsRouter.get(
+  '/stats/roi',
+  requireDashboardSession,
+  async (request: DashboardAuthenticatedRequest, response, next) => {
+    try {
+      if (!request.dashboardSession) {
+        throw new AppError('Dashboard session context is missing.', 401, 'DASHBOARD_AUTH_REQUIRED')
+      }
+
+      const stats = await getMerchantRoiStats(request.dashboardSession.merchant_uuid)
+
+      response.status(200).json({
+        ok: true,
+        data: stats,
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
 
 jobsRouter.post(
   '/',

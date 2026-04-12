@@ -165,6 +165,14 @@ interface ApiErrorResponse {
   details?: unknown
 }
 
+export interface RoiStats {
+  total_tryons: number
+  converted_tryons: number
+  conversion_rate: number
+  total_revenue: number
+  currency: string
+}
+
 function getApiErrorMessage(text: string, fallbackMessage: string) {
   if (!text) {
     return fallbackMessage
@@ -310,6 +318,17 @@ export async function fetchMerchantJobs(options?: {
   return parseApiResponse<TryOnJob[]>(
     response,
     `Jobs lookup failed with status ${response.status}`,
+  )
+}
+
+export async function fetchRoiStats() {
+  const response = await fetch('/api/jobs/stats/roi', {
+    credentials: 'same-origin',
+  })
+
+  return parseApiResponse<RoiStats>(
+    response,
+    `ROI stats lookup failed with status ${response.status}`,
   )
 }
 

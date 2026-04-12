@@ -41,12 +41,14 @@ import {
 import { useAuthStore } from "@/stores/auth-store"
 import { useMerchantJobs } from "@/hooks/use-merchant-jobs"
 import { useSallaProducts } from "@/hooks/use-salla-products"
+import { useRoiStats } from "@/hooks/use-roi-stats"
 import { cn } from "@/lib/utils"
 
 export function DashboardPage() {
   const identity = useAuthStore((state) => state.identity)
   const { jobs, loading: jobsLoading } = useMerchantJobs(5)
   const { products } = useSallaProducts()
+  const { stats, loading: statsLoading } = useRoiStats()
 
   // Memoize computed values to prevent unnecessary recalculations
   const merchantName = useMemo(
@@ -112,8 +114,8 @@ export function DashboardPage() {
       bg: "bg-emerald-50"
     },
     {
-      label: "طلبات الشراء",
-      value: "84",
+      label: "طلبات مؤكدة",
+      value: statsLoading ? "..." : (stats?.converted_tryons || 0).toLocaleString(),
       trend: "+5 جـدد",
       icon: ShoppingCart,
       color: "text-amber-600",
@@ -121,11 +123,19 @@ export function DashboardPage() {
     },
     {
       label: "معدل التحويل",
-      value: "4.2%",
+      value: statsLoading ? "..." : `${(stats?.conversion_rate || 0).toFixed(1)}%`,
       trend: "+0.8%",
       icon: UserCheck,
       color: "text-purple-600",
       bg: "bg-purple-50"
+    },
+    {
+      label: "إجمالي العائد (ROI)",
+      value: statsLoading ? "..." : `${(stats?.total_revenue || 0).toLocaleString()} ${stats?.currency || 'SAR'}`,
+      trend: "أرباح محققة",
+      icon: Wallet,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50"
     },
   ]
 

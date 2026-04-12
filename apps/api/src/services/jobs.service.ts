@@ -3,6 +3,7 @@ import { AppError } from '../utils/app-error.js'
 import {
   ensureMerchantCreditsBaseline,
   findMerchantById,
+  getSupabaseClient,
   type MerchantRecord,
 } from './merchant.service.js'
 
@@ -42,9 +43,10 @@ export interface TryOnJobMetadata extends Record<string, unknown> {
   garment_analysis?: Record<string, unknown>
   prepared_garment_url?: string
   prepared_garment_storage_path?: string
-  product_name?: string | null
   product_thumbnail?: string | null
   upload_storage_path?: string | null
+  customer_id?: string | number | null
+  customer_name?: string | null
 }
 
 export interface TryOnJobRecord {
@@ -81,14 +83,6 @@ interface JobCompletionPayload {
 
 const JOB_SELECT =
   'id,merchant_id,status,user_image_url,product_image_url,product_id,category,result_image_url,replicate_prediction_id,error_message,metadata,processing_started_at,completed_at,created_at,updated_at'
-
-function getSupabaseClient() {
-  if (!supabase) {
-    throw new AppError('Supabase is not configured for job operations.', 500, 'SUPABASE_NOT_CONFIGURED')
-  }
-
-  return supabase
-}
 
 function normalizeSupabaseMessage(value: string) {
   const lines = value
@@ -619,4 +613,30 @@ async function createMerchantTryOnJobFallback(
   }
 
   return createdJob
+}
+
+export async function getMerchantRoiStats(merchantId: string) {
+  const db = getSupabaseClient()
+
+  const { data: stats, error } = await db
+    .from('tryon_jobs')
+    .select('is_converted, revenue_impact')
+    .eq('merchant_id', merchantId)
+    .eq('status', 'completed')
+
+  if (error) {
+    throw new AppError(error.message, 500, 'ROI_STATS_FAILED')
+  }
+
+  const totalJobs = stats.length
+  const convertedJobs = stats.filter((s) => s.is_converted).length
+  const totalRevenue = stats.reduce((acc, s) => acc + Number(s.revenue_impact || 0), 0)
+
+  return {
+    total_tryons: totalJobs,
+    converted_tryons: convertedJobs,
+    conversion_rate: totalJobs > 0 ? (convertedJobs / totalJobs) * 100 : 0,
+    total_revenue: totalRevenue,
+    currency: 'SAR', // Default for Salla, could be dynamic later
+  }
 }

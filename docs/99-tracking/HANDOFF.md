@@ -3,15 +3,17 @@
 ## Project
 Virtual Try-On for Salla
 
-## Current State
+## Current State (Handoff)
+- **Completed:** SDK-Aware context (Module 1) and ROI/Conversion Attribution (Module 2).
+- **Stable:** 0 TypeScript errors across all apps.
+- **Next Task:** Module 3 (Smart Category Rules).
+- **Core Files to check:** `apps/api/src/services/attribution.service.ts` (latest ROI logic).
 
-The product direction is now explicitly documented and aligned:
-
-- merchant uses an external dashboard
-- shopper uses a storefront widget on the product page
-- backend handles credits, jobs, AI, and storage asynchronously
-
-The repo no longer treats embedded dashboard auth or dashboard-first try-on as the canonical product story.
+## Instructions for Next Agent
+1. Read `AGENTS.md` and `docs/` first.
+2. Implement Category-based eligibility logic.
+3. Add UI in Dashboard for category selection.
+4. Ensure 0 TS errors.
 
 ## What Is Working
 
@@ -35,7 +37,10 @@ The repo no longer treats embedded dashboard auth or dashboard-first try-on as t
 - realigned architecture docs to external dashboard plus widget-first shopper flow
 - realigned delivery docs and the master plan to the same model
 - updated the decisions log to mark the old direct embedded token auth decision as superseded
-- updated status tracking so the current phase is clearly Phase 7 storefront UX hardening and live validation
+- updated status tracking so the current phase is clearly Phase 7 storefront UX hardening
+- [x] **Module 1: SDK-Aware Context** (Stabilization) - Complete.
+- [x] **Module 2: Conversion Attribution** (ROI Engine) - Complete.
+- [ ] **Module 3: Smart Category Rules** (Catalog Scale) - Next.
 - **Unification**: Purged all legacy V1/V2 folders the dashboard and API local proxies.
 - **Shared Types**: Centralized all settings validation in `packages/shared-types`.
 
