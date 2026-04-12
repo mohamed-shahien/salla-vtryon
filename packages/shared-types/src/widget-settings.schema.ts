@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Unified Widget Settings Schema
  * 
  * Centralized source of truth for all widget configuration.
@@ -154,8 +154,27 @@ export type MotionEnergy = (typeof MOTION_ENERGY_OPTIONS)[number]
 export const STATE_EMPHASIS_OPTIONS = ['result-first', 'upload-first', 'balanced'] as const
 export type StateEmphasis = (typeof STATE_EMPHASIS_OPTIONS)[number]
 
+export const WATERMARK_POSITION_OPTIONS = [
+  'top-left',
+  'top-right',
+  'bottom-left',
+  'bottom-right',
+  'center',
+] as const
+export type WatermarkPosition = (typeof WATERMARK_POSITION_OPTIONS)[number]
+
+export const watermarkSettingsSchema = z.object({
+  enabled: z.boolean(),
+  logo_url: z.string().max(2048).default(''),
+  opacity: z.number().min(0).max(1),
+  position: z.enum(WATERMARK_POSITION_OPTIONS),
+  size: z.number().int().min(24).max(600),
+})
+
+export type WatermarkSettings = z.infer<typeof watermarkSettingsSchema>
+
 export const visualIdentitySchema = z.object({
-  brand_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'يجب أن يكون لون HEX صالح'),
+  brand_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Invalid HEX color'),
   surface_style: z.enum(SURFACE_STYLE_OPTIONS),
   corner_radius: z.enum(CORNER_RADIUS_OPTIONS),
   spacing_density: z.enum(SPACING_DENSITY_OPTIONS),
@@ -165,6 +184,13 @@ export const visualIdentitySchema = z.object({
   backdrop_style: z.enum(BACKDROP_STYLE_OPTIONS),
   motion_energy: z.enum(MOTION_ENERGY_OPTIONS),
   state_emphasis: z.enum(STATE_EMPHASIS_OPTIONS),
+  watermark: watermarkSettingsSchema.default({
+    enabled: false,
+    logo_url: '',
+    opacity: 0.72,
+    position: 'bottom-right',
+    size: 120,
+  }),
 })
 
 export type VisualIdentity = z.infer<typeof visualIdentitySchema>
@@ -258,6 +284,18 @@ export const runtimeSafeguardsSchema = z.object({
 export type RuntimeSafeguards = z.infer<typeof runtimeSafeguardsSchema>
 
 // ============================================================================
+// UX Feature Flags
+// ============================================================================
+
+export const uxFeaturesSchema = z.object({
+  compare_mode: z.boolean(),
+  session_gallery: z.boolean(),
+  allow_download: z.boolean(),
+})
+
+export type UxFeatures = z.infer<typeof uxFeaturesSchema>
+
+// ============================================================================
 // Widget Settings - Unified Schema
 // ============================================================================
 
@@ -271,6 +309,11 @@ export const widgetSettingsSchema = z.object({
   visual_identity: visualIdentitySchema,
   display_rules: displayRulesSchema,
   runtime_safeguards: runtimeSafeguardsSchema,
+  ux_features: uxFeaturesSchema.default({
+    compare_mode: true,
+    session_gallery: true,
+    allow_download: true,
+  }),
 })
 
 export type WidgetSettings = z.infer<typeof widgetSettingsSchema>
@@ -285,7 +328,7 @@ export function createDefaultWidgetSettings(): WidgetSettings {
     widget_enabled: true,
     button: {
       preset: 'core-solid',
-      label: 'جرّب الآن',
+      label: 'Ø¬Ø±Ù‘Ø¨ Ø§Ù„Ø¢Ù†',
       icon: {
         enabled: true,
         name: 'sparkles',
@@ -314,6 +357,13 @@ export function createDefaultWidgetSettings(): WidgetSettings {
       backdrop_style: 'blur-dark',
       motion_energy: 'smooth',
       state_emphasis: 'result-first',
+      watermark: {
+        enabled: false,
+        logo_url: '',
+        opacity: 0.72,
+        position: 'bottom-right',
+        size: 120,
+      },
     },
     display_rules: {
       eligibility_mode: 'all',
@@ -341,10 +391,15 @@ export function createDefaultWidgetSettings(): WidgetSettings {
     },
     runtime_safeguards: {
       zero_credit_behavior: 'disabled-with-message',
-      zero_credit_message: 'لقد استهلكت رصيدك. تواصل مع الدعم لشحن إضافي.',
+      zero_credit_message: 'Ù„Ù‚Ø¯ Ø§Ø³ØªÙ‡Ù„ÙƒØª Ø±ØµÙŠØ¯Ùƒ. ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù… Ù„Ø´Ø­Ù† Ø¥Ø¶Ø§ÙÙŠ.',
       max_daily_requests: undefined,
       require_product_image: true,
       enable_diagnostics: false,
+    },
+    ux_features: {
+      compare_mode: true,
+      session_gallery: true,
+      allow_download: true,
     },
   }
 }

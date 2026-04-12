@@ -340,6 +340,8 @@
 .vtryon-widget__retry:focus-visible,
 .vtryon-widget__category:focus-visible,
 .vtryon-widget__download:focus-visible,
+.vtryon-widget__compare-range:focus-visible,
+.vtryon-widget__gallery-item:focus-visible,
 .vtryon-widget__entry-button:focus-visible {
   outline: 2px solid rgba(94, 234, 212, 0.95);
   outline-offset: 3px;
@@ -370,6 +372,109 @@
 .vtryon-widget__result-actions {
   display: grid;
   gap: 10px;
+}
+
+.vtryon-widget__compare {
+  margin-top: 16px;
+}
+
+.vtryon-widget__compare-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--vtryon-border);
+  border-radius: 8px;
+  background: rgba(8, 15, 30, 0.72);
+  aspect-ratio: 4 / 5;
+  direction: ltr;
+}
+
+.vtryon-widget__compare-before,
+.vtryon-widget__compare-after {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vtryon-widget__compare-after-frame {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 0 0 50%);
+}
+
+.vtryon-widget__compare-range {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: ew-resize;
+}
+
+.vtryon-widget__compare-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 2;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.32);
+  pointer-events: none;
+}
+
+.vtryon-widget__compare-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.32);
+}
+
+.vtryon-widget__compare-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  color: var(--vtryon-muted);
+  font-size: 11px;
+  font-weight: 700;
+  direction: ltr;
+}
+
+.vtryon-widget__session-gallery {
+  margin-top: 16px;
+}
+
+.vtryon-widget__gallery-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.vtryon-widget__gallery-item {
+  overflow: hidden;
+  border: 1px solid var(--vtryon-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0;
+  cursor: pointer;
+}
+
+.vtryon-widget__gallery-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
 }
 
 .vtryon-widget__retry {

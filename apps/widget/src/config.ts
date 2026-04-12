@@ -30,6 +30,8 @@ import type {
   IconStyle,
   MotionEnergy,
   StateEmphasis,
+  WatermarkPosition,
+  WatermarkSettings,
   CloseStyle,
   ResultLayout,
   EligibilityMode,
@@ -41,6 +43,7 @@ import type {
   LocalizationMode,
   StateMessagingPolicy,
   ZeroCreditBehavior,
+  UxFeatures,
 } from '@virtual-tryon/shared-types'
 
 export type {
@@ -68,6 +71,8 @@ export type {
   IconStyle,
   MotionEnergy,
   StateEmphasis,
+  WatermarkPosition,
+  WatermarkSettings,
   CloseStyle,
   ResultLayout,
   EligibilityMode,
@@ -79,6 +84,7 @@ export type {
   LocalizationMode,
   StateMessagingPolicy,
   ZeroCreditBehavior,
+  UxFeatures,
 }
 
 // ============================================================================
@@ -123,6 +129,13 @@ export const createDefaultWidgetSettings = (): WidgetSettings => ({
     backdrop_style: 'blur-dark',
     motion_energy: 'smooth',
     state_emphasis: 'result-first',
+    watermark: {
+      enabled: false,
+      logo_url: '',
+      opacity: 0.72,
+      position: 'bottom-right',
+      size: 120,
+    },
   },
   display_rules: {
     eligibility_mode: 'all',
@@ -153,6 +166,11 @@ export const createDefaultWidgetSettings = (): WidgetSettings => ({
     max_daily_requests: undefined,
     require_product_image: true,
     enable_diagnostics: false,
+  },
+  ux_features: {
+    compare_mode: true,
+    session_gallery: true,
+    allow_download: true,
   },
 })
 

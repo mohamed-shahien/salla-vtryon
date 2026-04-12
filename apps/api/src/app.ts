@@ -15,6 +15,7 @@ import { apiLimiter } from './middleware/rate-limit.js'
 import { authRouter } from './routes/auth.js'
 import { creditsRouter } from './routes/credits.js'
 import { healthRouter } from './routes/health.js'
+import { imagesRouter } from './routes/images.js'
 import { jobsRouter } from './routes/jobs.js'
 import { productsRouter } from './routes/products.js'
 import { uploadRouter } from './routes/upload.js'
@@ -63,14 +64,22 @@ export function createApp() {
   // Widget routes are loaded by Salla storefronts (cross-origin) — override it here,
   // after Helmet runs, so the correct header reaches the browser.
   app.use((request, response, next) => {
-    if (request.path.startsWith('/api/widget') || request.path === '/widget.js') {
+    if (
+      request.path.startsWith('/api/widget') ||
+      request.path.startsWith('/api/images') ||
+      request.path === '/widget.js'
+    ) {
       response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
     }
     next()
   })
 
   app.use((request, response, next) => {
-    if (request.path.startsWith('/api/widget') || request.path === '/widget.js') {
+    if (
+      request.path.startsWith('/api/widget') ||
+      request.path.startsWith('/api/images') ||
+      request.path === '/widget.js'
+    ) {
       return widgetCors(request, response, next)
     }
 
@@ -103,6 +112,7 @@ export function createApp() {
 
   app.use('/api/auth', authRouter)
   app.use('/api/credits', creditsRouter)
+  app.use('/api/images', imagesRouter)
   app.use('/api/jobs', jobsRouter)
   app.use('/api/products', productsRouter)
   app.use('/api/upload', uploadRouter)

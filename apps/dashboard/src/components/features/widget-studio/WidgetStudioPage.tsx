@@ -8,7 +8,8 @@ import {
   Palette,
   LayoutPanelTop,
   MousePointer2,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Sparkles
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -32,6 +33,7 @@ import { VisualIdentitySection } from './sections/VisualIdentitySection'
 import { ButtonPresetsSection } from './sections/ButtonPresetsSection'
 import { WindowPresetsSection } from './sections/WindowPresetsSection'
 import { DisplayRulesSection } from './sections/DisplayRulesSection'
+import { BrandingUxSection } from './sections/BrandingUxSection'
 import { DiagnosticsSection } from './sections/DiagnosticsSection'
 import { RuntimeSafeguardsSection } from './sections/RuntimeSafeguardsSection'
 import { WidgetLivePreview } from './preview/WidgetLivePreview'
@@ -166,7 +168,7 @@ export function WidgetStudioPage() {
                   <Separator className="bg-border/40 opacity-50" />
 
 
-                  <Accordion type="multiple" defaultValue={["presets", "rules"]} className="w-full">
+                  <Accordion type="multiple" defaultValue={["presets", "rules", "branding"]} className="w-full">
 
                     <AccordionItem value="presets" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
                       <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
@@ -210,6 +212,28 @@ export function WidgetStudioPage() {
                         <DisplayRulesSection
                           rules={studio.config.display_rules}
                           onUpdate={studio.updateDisplayRules}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="branding" className="border-b-0 mb-3 bg-muted/20 rounded-lg overflow-hidden border border-border/5">
+                      <AccordionTrigger className="hover:no-underline py-3 px-3 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <Sparkles className="size-4.5 text-primary" />
+                          </div>
+                          <div className="flex flex-col items-start text-right">
+                            <span className="text-[11px] font-black tracking-tight">Branding & UX</span>
+                            <span className="text-[9px] font-medium text-muted-foreground opacity-70">Watermark results and enable richer shopper interactions.</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-3 pb-3 pt-1">
+                        <BrandingUxSection
+                          visualIdentity={studio.config.visual_identity}
+                          uxFeatures={studio.config.ux_features}
+                          onUpdateVisualIdentity={studio.updateVisualIdentity}
+                          onUpdateUxFeatures={studio.updateUxFeatures}
                         />
                       </AccordionContent>
                     </AccordionItem>

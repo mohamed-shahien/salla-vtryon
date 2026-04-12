@@ -138,6 +138,10 @@ export function useWidgetStudio({
     updateConfig('runtime_safeguards', patch)
   }, [updateConfig])
 
+  const updateUxFeatures = useCallback((patch: Partial<WidgetSettings['ux_features']>) => {
+    updateConfig('ux_features', patch)
+  }, [updateConfig])
+
   const setFullConfig = useCallback((next: WidgetSettings) => {
     setConfig(next)
   }, [])
@@ -226,6 +230,7 @@ export function useWidgetStudio({
     updateVisualIdentity,
     updateDisplayRules,
     updateRuntimeSafeguards,
+    updateUxFeatures,
     setFullConfig,
     save,
     resetToDefaults,

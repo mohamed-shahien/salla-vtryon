@@ -9,9 +9,8 @@ export interface WidgetConfigResponse {
   widget_token: string | null
   credits_remaining: number
   reason: string | null
-  settings: Record<string, any>
+  settings: Record<string, unknown>
   schema_version: number
-  button_text: string
 }
 
 export interface WidgetJobResponse {
@@ -78,6 +77,10 @@ async function parseApiResponse<TData>(response: Response, fallbackMessage: stri
 export function getWidgetApiUrl(baseUrl: string, path: string) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${normalizeBaseUrl(baseUrl)}${normalizedPath}`
+}
+
+export function getBrandedImageUrl(baseUrl: string, jobId: string) {
+  return getWidgetApiUrl(baseUrl, `/api/images/branded/${jobId}`)
 }
 
 export async function fetchWidgetConfig(

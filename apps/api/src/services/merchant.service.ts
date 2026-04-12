@@ -156,6 +156,52 @@ function normalizeCategoryIds(categoryIds: readonly string[]) {
   )
 }
 
+function normalizeWatermarkLogoUrl(value: string | null | undefined) {
+  const trimmed = value?.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  return /^https?:\/\//i.test(trimmed) ? trimmed : null
+}
+
+function createDefaultSettingsWithWatermarkLogo(storeLogoUrl?: string | null) {
+  const settings = createDefaultWidgetSettings()
+  const logoUrl = normalizeWatermarkLogoUrl(storeLogoUrl)
+
+  if (logoUrl) {
+    settings.visual_identity.watermark.logo_url = logoUrl
+  }
+
+  return settings
+}
+
+function applyDefaultWatermarkLogo(
+  settings: Record<string, unknown> | null | undefined,
+  storeLogoUrl?: string | null,
+) {
+  const logoUrl = normalizeWatermarkLogoUrl(storeLogoUrl)
+  if (!logoUrl) {
+    return null
+  }
+
+  const normalizedSettings = normalizeWidgetSettings(settings)
+  if (normalizedSettings.visual_identity.watermark.logo_url.trim().length > 0) {
+    return null
+  }
+
+  return {
+    ...normalizedSettings,
+    visual_identity: {
+      ...normalizedSettings.visual_identity,
+      watermark: {
+        ...normalizedSettings.visual_identity.watermark,
+        logo_url: logoUrl,
+      },
+    },
+  } satisfies WidgetSettings
+}
+
 export function isWidgetEnabledForProduct(
   settings: WidgetSettings,
   productId: string | number,
@@ -280,6 +326,7 @@ export async function findMerchantById(merchantId: string) {
 export async function ensureMerchantRecord(options: {
   sallaMerchantId: number
   storeName?: string | null
+  storeLogoUrl?: string | null
   installedAt?: string | null
   plan?: SupportedPlan
   planStatus?: 'active' | 'inactive'
@@ -302,6 +349,11 @@ export async function ensureMerchantRecord(options: {
       patch.uninstalled_at = null
     }
 
+    const settingsWithLogo = applyDefaultWatermarkLogo(existing.settings, options.storeLogoUrl)
+    if (settingsWithLogo) {
+      patch.settings = settingsWithLogo
+    }
+
     if (Object.keys(patch).length === 0) {
       await ensureMerchantCreditsBaseline(existing)
       return existing
@@ -322,7 +374,7 @@ export async function ensureMerchantRecord(options: {
       plan: options.plan ?? 'free',
       plan_status: options.planStatus ?? 'active',
       is_active: true,
-      settings: DEFAULT_SETTINGS,
+      settings: createDefaultSettingsWithWatermarkLogo(options.storeLogoUrl),
       installed_at: options.installedAt ?? new Date().toISOString(),
       uninstalled_at: null,
     })
@@ -408,10 +460,12 @@ export async function storeMerchantOauthTokens(options: {
   refreshToken: string
   expiresAt?: number | string | null
   storeName?: string | null
+  storeLogoUrl?: string | null
 }) {
   const merchant = await ensureMerchantRecord({
     sallaMerchantId: options.sallaMerchantId,
     storeName: options.storeName ?? null,
+    storeLogoUrl: options.storeLogoUrl ?? null,
   })
 
   return patchMerchant(merchant.id, {

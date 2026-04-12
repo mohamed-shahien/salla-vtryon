@@ -117,6 +117,7 @@ authRouter.get('/salla/callback', authLimiter, async (request, response, next) =
     const merchant = await ensureMerchantRecord({
       sallaMerchantId: userInfo.merchant.id,
       storeName: userInfo.merchant.name,
+      storeLogoUrl: userInfo.merchant.avatar ?? null,
     })
 
     await storeMerchantOauthTokens({
@@ -125,6 +126,7 @@ authRouter.get('/salla/callback', authLimiter, async (request, response, next) =
       refreshToken: oauthTokens.refresh_token,
       expiresAt: oauthTokens.expires ?? null,
       storeName: userInfo.merchant.name,
+      storeLogoUrl: userInfo.merchant.avatar ?? null,
     })
 
     // Ensure local user exists and is linked

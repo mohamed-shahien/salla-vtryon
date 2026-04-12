@@ -2,6 +2,7 @@ import {
   createWidgetJob,
   fetchWidgetConfig,
   fetchWidgetJob,
+  getBrandedImageUrl,
   getPollInterval,
   type WidgetCategory,
   type WidgetConfigResponse,
@@ -66,6 +67,13 @@ function isProductPage(): boolean | null {
 
 const DEFAULT_BUTTON_TEXT = 'جرّب الآن'
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+const SESSION_GALLERY_LIMIT = 6
+
+interface SessionGalleryItem {
+  jobId: string
+  resultUrl: string
+  createdAt: string
+}
 
 interface BootstrapConfig {
   apiBaseUrl: string
@@ -92,8 +100,17 @@ interface WidgetElements {
   uploadState: HTMLDivElement
   processingState: HTMLDivElement
   resultState: HTMLDivElement
+  resultGrid: HTMLDivElement
   resultUserImages: HTMLImageElement[]
   resultImage: HTMLImageElement
+  comparePanel: HTMLDivElement
+  compareBeforeImage: HTMLImageElement
+  compareAfterImage: HTMLImageElement
+  compareAfterFrame: HTMLDivElement
+  compareRange: HTMLInputElement
+  compareHandle: HTMLDivElement
+  sessionGallery: HTMLDivElement
+  galleryList: HTMLDivElement
   downloadLink: HTMLAnchorElement
   retryButton: HTMLButtonElement
   modalSvg: SVGSVGElement
@@ -487,6 +504,24 @@ function createWidgetElements() {
             <img class="vtryon-widget__result-image" alt="نتيجة القياس" />
           </div>
         </div>
+        <div class="vtryon-widget__compare" hidden>
+          <div class="vtryon-widget__compare-frame">
+            <img class="vtryon-widget__compare-before" alt="Before try-on" />
+            <div class="vtryon-widget__compare-after-frame">
+              <img class="vtryon-widget__compare-after" alt="After try-on" />
+            </div>
+            <div class="vtryon-widget__compare-handle" aria-hidden="true"></div>
+            <input class="vtryon-widget__compare-range" type="range" min="0" max="100" value="50" aria-label="Compare before and after" />
+          </div>
+          <div class="vtryon-widget__compare-labels" aria-hidden="true">
+            <span>Before</span>
+            <span>After</span>
+          </div>
+        </div>
+        <div class="vtryon-widget__session-gallery" hidden>
+          <p class="vtryon-widget__result-label">Session gallery</p>
+          <div class="vtryon-widget__gallery-list"></div>
+        </div>
         <div class="vtryon-widget__result-actions">
           <a class="vtryon-widget__download" href="#" target="_blank" rel="noreferrer">تحميل النتيجة</a>
           <button class="vtryon-widget__retry" type="button">جرّب صورة أخرى</button>
@@ -532,10 +567,19 @@ function createWidgetElements() {
   const uploadState = host.querySelector('.vtryon-widget__state--upload')
   const processingState = host.querySelector('.vtryon-widget__state--processing')
   const resultState = host.querySelector('.vtryon-widget__state--result')
+  const resultGrid = host.querySelector('.vtryon-widget__result-grid')
   const resultUserImages = Array.from(
     host.querySelectorAll('.vtryon-widget__result-user'),
   )
   const resultImage = host.querySelector('.vtryon-widget__result-image')
+  const comparePanel = host.querySelector('.vtryon-widget__compare')
+  const compareBeforeImage = host.querySelector('.vtryon-widget__compare-before')
+  const compareAfterImage = host.querySelector('.vtryon-widget__compare-after')
+  const compareAfterFrame = host.querySelector('.vtryon-widget__compare-after-frame')
+  const compareRange = host.querySelector('.vtryon-widget__compare-range')
+  const compareHandle = host.querySelector('.vtryon-widget__compare-handle')
+  const sessionGallery = host.querySelector('.vtryon-widget__session-gallery')
+  const galleryList = host.querySelector('.vtryon-widget__gallery-list')
   const downloadLink = host.querySelector('.vtryon-widget__download')
   const retryButton = host.querySelector('.vtryon-widget__retry')
   const modalSvg = host.querySelector('.vtryon-modal-svg')
@@ -559,9 +603,18 @@ function createWidgetElements() {
     !(uploadState instanceof HTMLDivElement) ||
     !(processingState instanceof HTMLDivElement) ||
     !(resultState instanceof HTMLDivElement) ||
+    !(resultGrid instanceof HTMLDivElement) ||
     resultUserImages.length < 2 ||
     resultUserImages.some((image) => !(image instanceof HTMLImageElement)) ||
     !(resultImage instanceof HTMLImageElement) ||
+    !(comparePanel instanceof HTMLDivElement) ||
+    !(compareBeforeImage instanceof HTMLImageElement) ||
+    !(compareAfterImage instanceof HTMLImageElement) ||
+    !(compareAfterFrame instanceof HTMLDivElement) ||
+    !(compareRange instanceof HTMLInputElement) ||
+    !(compareHandle instanceof HTMLDivElement) ||
+    !(sessionGallery instanceof HTMLDivElement) ||
+    !(galleryList instanceof HTMLDivElement) ||
     !(downloadLink instanceof HTMLAnchorElement) ||
     !(retryButton instanceof HTMLButtonElement) ||
     !(modalSvg instanceof SVGSVGElement) ||
@@ -589,8 +642,17 @@ function createWidgetElements() {
     uploadState,
     processingState,
     resultState,
+    resultGrid,
     resultUserImages: resultUserImages as HTMLImageElement[],
     resultImage,
+    comparePanel,
+    compareBeforeImage,
+    compareAfterImage,
+    compareAfterFrame,
+    compareRange,
+    compareHandle,
+    sessionGallery,
+    galleryList,
     downloadLink,
     retryButton,
     modalSvg,
@@ -682,6 +744,118 @@ function setPreviewProcessing(elements: WidgetElements, processing: boolean) {
   elements.previewFrame.classList.toggle('is-processing', processing)
 }
 
+function getSessionGalleryKey(merchantId: number | null | undefined) {
+  return `vtryon_gallery_${merchantId ?? 'store'}`
+}
+
+function readSessionGallery(key: string): SessionGalleryItem[] {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) {
+      return []
+    }
+
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+
+    return parsed
+      .filter((item): item is SessionGalleryItem => {
+        if (!item || typeof item !== 'object') {
+          return false
+        }
+
+        const candidate = item as Record<string, unknown>
+        return (
+          typeof candidate.jobId === 'string' &&
+          typeof candidate.resultUrl === 'string' &&
+          typeof candidate.createdAt === 'string'
+        )
+      })
+      .slice(0, SESSION_GALLERY_LIMIT)
+  } catch {
+    return []
+  }
+}
+
+function saveSessionGallery(key: string, items: SessionGalleryItem[]) {
+  try {
+    localStorage.setItem(key, JSON.stringify(items.slice(0, SESSION_GALLERY_LIMIT)))
+  } catch {
+    // Ignore storage failures; the gallery is a shopper convenience only.
+  }
+}
+
+function addSessionGalleryItem(key: string, item: SessionGalleryItem) {
+  const nextItems = [
+    item,
+    ...readSessionGallery(key).filter((existingItem) => existingItem.jobId !== item.jobId),
+  ].slice(0, SESSION_GALLERY_LIMIT)
+
+  saveSessionGallery(key, nextItems)
+  return nextItems
+}
+
+function setCompareValue(elements: WidgetElements, value: number) {
+  const percentage = Math.min(Math.max(value, 0), 100)
+  const position = `${percentage}%`
+
+  elements.compareRange.value = String(percentage)
+  elements.compareAfterFrame.style.clipPath = `inset(0 0 0 ${position})`
+  elements.compareHandle.style.left = position
+}
+
+function setResultPresentation(elements: WidgetElements, settings: WidgetSettings | null) {
+  const compareEnabled = settings?.ux_features.compare_mode === true
+  elements.resultGrid.hidden = compareEnabled
+  elements.comparePanel.hidden = !compareEnabled
+  elements.downloadLink.hidden = settings?.ux_features.allow_download === false
+  setCompareValue(elements, Number.parseInt(elements.compareRange.value, 10) || 50)
+}
+
+function setResultImageSources(
+  elements: WidgetElements,
+  resultUrl: string,
+  beforeUrl: string | null,
+) {
+  elements.resultImage.src = resultUrl
+  elements.compareAfterImage.src = resultUrl
+
+  if (beforeUrl) {
+    elements.compareBeforeImage.src = beforeUrl
+  }
+}
+
+function renderSessionGallery(
+  elements: WidgetElements,
+  items: SessionGalleryItem[],
+  onSelect: (item: SessionGalleryItem) => void,
+) {
+  elements.galleryList.replaceChildren()
+  elements.sessionGallery.hidden = items.length === 0
+
+  for (const item of items) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'vtryon-widget__gallery-item'
+    button.setAttribute('aria-label', 'Open previous try-on result')
+
+    const image = document.createElement('img')
+    image.src = item.resultUrl
+    image.alt = 'Previous try-on result'
+    button.appendChild(image)
+
+    button.addEventListener('click', () => onSelect(item))
+    elements.galleryList.appendChild(button)
+  }
+}
+
+function shouldUseBrandedProxy(settings: WidgetSettings | null) {
+  const watermark = settings?.visual_identity.watermark
+  return watermark?.enabled === true && watermark.logo_url.trim().length > 0
+}
+
 async function initWidget() {
   if (typeof document === 'undefined' || !document.body) {
     return
@@ -720,6 +894,24 @@ async function initWidget() {
     let selectedFile: File | null = null
     let previewUrl: string | null = null
     let disposed = false
+    const galleryKey = getSessionGalleryKey(bootstrapConfig.merchantId)
+
+    function selectGalleryItem(item: SessionGalleryItem) {
+      setResultImageSources(elements, item.resultUrl, previewUrl)
+      elements.downloadLink.href = item.resultUrl
+      setResultPresentation(elements, v2Settings)
+      setStatus(elements, 'success', 'Previous result loaded.')
+      setStage(elements, 'result')
+    }
+
+    function refreshSessionGallery() {
+      const enabled = v2Settings?.ux_features.session_gallery === true
+      renderSessionGallery(
+        elements,
+        enabled ? readSessionGallery(galleryKey) : [],
+        selectGalleryItem,
+      )
+    }
 
     async function checkAvailability(settings: WidgetSettings, config: WidgetConfigResponse) {
       const cond = settings.display_rules.availability_conditions
@@ -748,7 +940,7 @@ async function initWidget() {
         const key = `vtryon_stats_${date}`
         const statsStr = localStorage.getItem(key)
         const stats = statsStr ? JSON.parse(statsStr) : { requests: 0 }
-        
+
         if (stats.requests >= settings.runtime_safeguards.max_daily_requests) {
           return false
         }
@@ -760,10 +952,15 @@ async function initWidget() {
     function applyWidgetConfig(config: WidgetConfigResponse | null) {
       widgetConfig = config
       v2Settings = config ? parseWidgetConfigResponse(config) : null
+      refreshSessionGallery()
+      setResultPresentation(elements, v2Settings)
 
       if (!config) {
         elements.shell.hidden = false
-        elements.launchButton.textContent = DEFAULT_BUTTON_TEXT
+        const labelEl = elements.launchButton.querySelector('.vtryon-label')
+        if (labelEl) {
+          labelEl.textContent = DEFAULT_BUTTON_TEXT
+        }
         return
       }
 
@@ -805,7 +1002,10 @@ async function initWidget() {
           }
 
           // Apply button label
-          elements.launchButton.textContent = v2Settings!.button.label || DEFAULT_BUTTON_TEXT
+          const buttonLabelEl = elements.launchButton.querySelector('.vtryon-label')
+          if (buttonLabelEl) {
+            buttonLabelEl.textContent = v2Settings!.button.label || DEFAULT_BUTTON_TEXT
+          }
 
           // Apply button icon
           const iconContainer = elements.launchButton.querySelector('.vtryon-icon') as HTMLElement
@@ -848,8 +1048,11 @@ async function initWidget() {
         })
       } else {
         // Fallback to legacy
-        elements.launchButton.textContent = config.button_text || DEFAULT_BUTTON_TEXT
-        if (!config.overall_enabled || !config.current_product_enabled || !config.widget_token) {
+        const labelEl = elements.launchButton.querySelector('.vtryon-label')
+        if (labelEl) {
+          labelEl.textContent = DEFAULT_BUTTON_TEXT
+        }
+         if (!config.overall_enabled || !config.current_product_enabled || !config.widget_token) {
           elements.shell.hidden = true
           setOpen(elements, false, config)
           return
@@ -879,7 +1082,7 @@ async function initWidget() {
         shell.style.position = 'fixed'
         shell.style.zIndex = '99999'
         shell.style.bottom = target === 'floating-bottom' ? `${20 + offset.vertical}px` : '50%'
-        
+
         if (side === 'center') {
           shell.style.left = '50%'
           shell.style.transform = target === 'floating-middle' ? 'translate(-50%, 50%)' : 'translateX(-50%)'
@@ -889,13 +1092,13 @@ async function initWidget() {
             shell.style.transform = 'translateY(50%)'
           }
         }
-        
+
         document.body.appendChild(host)
       } else {
         shell.classList.add('vtryon-widget--inline')
         const rules = createDisplayRulesEngine(v2Settings!.display_rules)
         const selectors = rules.getPlacementSelectors()
-        
+
         let targetEl: HTMLElement | null = null
         for (const selector of selectors) {
           targetEl = document.querySelector(selector)
@@ -921,7 +1124,7 @@ async function initWidget() {
             host.style.marginBottom = `${offset.vertical}px`
             host.style.marginLeft = side === 'left' ? `${offset.horizontal}px` : '0'
             host.style.marginRight = side === 'right' ? `${offset.horizontal}px` : '0'
-            
+
             if (side === 'center') {
               host.style.textAlign = 'center'
               shell.style.margin = '0 auto'
@@ -1005,13 +1208,17 @@ async function initWidget() {
       setStatus(elements, 'info', null)
       setPreviewProcessing(elements, false)
       elements.resultImage.removeAttribute('src')
+      elements.compareBeforeImage.removeAttribute('src')
+      elements.compareAfterImage.removeAttribute('src')
       elements.downloadLink.href = '#'
+      setCompareValue(elements, 50)
     }
 
     function applyPreviewUrl(nextPreviewUrl: string | null) {
       if (!nextPreviewUrl) {
         elements.previewImage.hidden = true
         elements.previewImage.removeAttribute('src')
+        elements.compareBeforeImage.removeAttribute('src')
         elements.previewEmpty.hidden = false
         elements.submitButton.disabled = true
         return
@@ -1024,6 +1231,8 @@ async function initWidget() {
       for (const image of elements.resultUserImages) {
         image.src = nextPreviewUrl
       }
+
+      elements.compareBeforeImage.src = nextPreviewUrl
 
       elements.submitButton.disabled = false
     }
@@ -1105,8 +1314,21 @@ async function initWidget() {
         }
 
         if (job.status === 'completed' && job.result_image_url) {
-          elements.resultImage.src = job.result_image_url
-          elements.downloadLink.href = job.result_image_url
+          const resultUrl = shouldUseBrandedProxy(v2Settings)
+            ? getBrandedImageUrl(bootstrapConfig?.apiBaseUrl ?? '', job.id)
+            : job.result_image_url
+
+          setResultImageSources(elements, resultUrl, previewUrl)
+          elements.downloadLink.href = resultUrl
+          setResultPresentation(elements, v2Settings)
+          if (v2Settings?.ux_features.session_gallery) {
+            const galleryItems = addSessionGalleryItem(galleryKey, {
+              jobId: job.id,
+              resultUrl,
+              createdAt: new Date().toISOString(),
+            })
+            renderSessionGallery(elements, galleryItems, selectGalleryItem)
+          }
           setStatus(elements, 'success', 'تم تجهيز النتيجة بنجاح.')
           setPreviewProcessing(elements, false)
           setStage(elements, 'result')
@@ -1247,6 +1469,10 @@ async function initWidget() {
 
     elements.retryButton.addEventListener('click', () => {
       resetForRetry()
+    })
+
+    elements.compareRange.addEventListener('input', () => {
+      setCompareValue(elements, Number.parseInt(elements.compareRange.value, 10) || 50)
     })
 
     window.addEventListener(
